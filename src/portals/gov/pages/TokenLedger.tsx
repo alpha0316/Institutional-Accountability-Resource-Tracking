@@ -1,0 +1,118 @@
+import { useState } from 'react'
+import { Download } from 'lucide-react'
+import { PageHeader } from '../../../components/layout/PageHeader'
+import { Badge } from '../../../components/ui/Badge'
+import { Button } from '../../../components/ui/Button'
+import { DataTable, type Column } from '../../../components/ui/DataTable'
+import type { GovernmentToken } from '../../../types'
+import { clsx } from 'clsx'
+
+const allTokens: GovernmentToken[] = [
+  { id:  '1', tokenCode: 'TKN-2025-00891', supplierId: 's1', supplierName: 'Agric Supplies Ltd',  institutionName: 'Opoku Ware SHS',    value: 420000, issuedDate: '2025-02-01', expiryDate: '2025-07-31', status: 'redeemed' },
+  { id:  '2', tokenCode: 'TKN-2025-00892', supplierId: 's2', supplierName: 'Ghana Foods Co.',     institutionName: 'Mfantsipim SHS',      value: 420000, issuedDate: '2025-02-01', expiryDate: '2025-07-31', status: 'active' },
+  { id:  '3', tokenCode: 'TKN-2025-00893', supplierId: 's3', supplierName: 'Fresh Mart Ltd',      institutionName: 'Tamale SHS',      value: 420000, issuedDate: '2025-02-01', expiryDate: '2025-07-31', status: 'pending' },
+  { id:  '4', tokenCode: 'TKN-2025-00894', supplierId: 's4', supplierName: 'Northern Foods Ltd',  institutionName: 'Achimota SHS', value: 380000, issuedDate: '2025-01-15', expiryDate: '2025-06-30', status: 'expired' },
+  { id:  '5', tokenCode: 'TKN-2025-00895', supplierId: 's1', supplierName: 'Agric Supplies Ltd',  institutionName: 'Wesley Girls SHS',      value: 175000, issuedDate: '2025-01-20', expiryDate: '2025-06-30', status: 'rejected' },
+  { id:  '6', tokenCode: 'TKN-2025-00890', supplierId: 's2', supplierName: 'Ghana Foods Co.',     institutionName: 'Sunyani SHS',     value: 290000, issuedDate: '2025-01-10', expiryDate: '2025-06-30', status: 'redeemed' },
+  { id:  '7', tokenCode: 'TKN-2025-00889', supplierId: 's3', supplierName: 'Fresh Mart Ltd',      institutionName: 'Tarkwa SHS',     value: 210000, issuedDate: '2025-01-05', expiryDate: '2025-06-30', status: 'active' },
+  { id:  '8', tokenCode: 'TKN-2025-00888', supplierId: 's4', supplierName: 'Northern Foods Ltd',  institutionName: 'Tamale Islamic SHS', value: 175000, issuedDate: '2024-12-15', expiryDate: '2025-05-31', status: 'expired' },
+  { id:  '9', tokenCode: 'TKN-2024-00887', supplierId: 's1', supplierName: 'Agric Supplies Ltd',  institutionName: 'Opoku Ware SHS',    value: 420000, issuedDate: '2024-09-01', expiryDate: '2025-01-31', status: 'redeemed' },
+  { id: '10', tokenCode: 'TKN-2024-00886', supplierId: 's2', supplierName: 'Ghana Foods Co.',     institutionName: 'Mfantsipim SHS',      value: 290000, issuedDate: '2024-09-01', expiryDate: '2025-01-31', status: 'redeemed' },
+]
+
+type StatusFilter = 'all' | GovernmentToken['status']
+
+const statusBadge: Record<GovernmentToken['status'], React.ReactNode> = {
+  active:   <Badge variant="green">Active</Badge>,
+  redeemed: <Badge variant="blue">Redeemed</Badge>,
+  expired:  <Badge variant="gray">Expired</Badge>,
+  rejected: <Badge variant="red">Rejected</Badge>,
+  pending:  <Badge variant="orange">Pending</Badge>,
+}
+
+const columns: Column<GovernmentToken>[] = [
+  { key: 'tokenCode',    label: 'Token ID',    width: '20%', primaryKey: true, render: r => r.tokenCode },
+  { key: 'institution',  label: 'Institution', width: '16%', render: r => r.institutionName },
+  { key: 'supplier',     label: 'Supplier',    width: '22%', render: r => r.supplierName },
+  { key: 'value',        label: 'Value',       width: '14%', render: r => `GH₵${r.value.toLocaleString()}` },
+  { key: 'issued',       label: 'Issued',      width: '12%', render: r => new Date(r.issuedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }) },
+  { key: 'expiry',       label: 'Expires',     width: '12%', render: r => new Date(r.expiryDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }) },
+  { key: 'status',       label: 'Status',      width: '14%', render: r => statusBadge[r.status] },
+]
+
+const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
+  { key: 'all',      label: 'All' },
+  { key: 'active',   label: 'Active' },
+  { key: 'pending',  label: 'Pending' },
+  { key: 'redeemed', label: 'Redeemed' },
+  { key: 'expired',  label: 'Expired' },
+  { key: 'rejected', label: 'Rejected' },
+]
+
+export default function TokenLedger() {
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+
+  const filtered = statusFilter === 'all' ? allTokens : allTokens.filter(t => t.status === statusFilter)
+  const totalValue = allTokens.reduce((acc, t) => acc + t.value, 0)
+
+  return (
+    <>
+      <PageHeader
+        title="Token Ledger"
+        actions={
+          <Button variant="secondary">
+            <Download size={14} strokeWidth={2.2} />
+            Export CSV
+          </Button>
+        }
+      />
+      <div className="px-[36px] pb-[40px]">
+
+        {/* Stats strip */}
+        <div className="mb-[28px] grid grid-cols-5 gap-[1px] overflow-hidden rounded-[14px] border border-[#f0f0f0] bg-[#f0f0f0]">
+          {[
+            { label: 'Total Tokens',  value: allTokens.length,                                     color: 'text-[#111]' },
+            { label: 'Active',        value: allTokens.filter(t => t.status === 'active').length,   color: 'text-[#0f9f5d]' },
+            { label: 'Pending',       value: allTokens.filter(t => t.status === 'pending').length,  color: 'text-[#df6b13]' },
+            { label: 'Redeemed',      value: allTokens.filter(t => t.status === 'redeemed').length, color: 'text-[#4ea4ff]' },
+            { label: 'Total Value',   value: `GH₵${(totalValue / 1e6).toFixed(1)}M`,               color: 'text-[#111]' },
+          ].map(s => (
+            <div key={s.label} className="bg-white px-[20px] py-[18px]">
+              <p className="text-[12px] font-medium text-[#888]">{s.label}</p>
+              <p className={`mt-[6px] text-[22px] font-bold leading-none ${s.color}`}>{s.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Filter tabs */}
+        <div className="mb-[14px] flex items-center gap-[4px] rounded-[10px] border border-[#efefef] bg-white p-[3px] w-fit">
+          {STATUS_FILTERS.map(f => (
+            <button
+              key={f.key}
+              onClick={() => setStatusFilter(f.key)}
+              className={clsx(
+                'rounded-[7px] px-[12px] py-[5px] text-[13px] font-medium transition-colors',
+                statusFilter === f.key
+                  ? 'bg-[#f4f4f4] text-[#111] shadow-sm'
+                  : 'text-[#888] hover:text-[#555]'
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        <DataTable
+          columns={columns}
+          data={filtered}
+          rowKey={r => r.id}
+          rowActions={r => [
+            { label: 'View Token',    onClick: () => {} },
+            { label: 'Download PDF',  onClick: () => {} },
+            { label: 'Revoke Token',  onClick: () => {}, destructive: true, disabled: r.status !== 'active' && r.status !== 'pending' },
+          ]}
+        />
+      </div>
+    </>
+  )
+}
