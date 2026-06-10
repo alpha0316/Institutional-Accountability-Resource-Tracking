@@ -4,17 +4,11 @@ import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 
-interface PendingToken {
-  id: string; code: string; supplier: string; institution: string; amount: number
-  submittedAt: string; expiryDate: string | null; priority: 'high' | 'normal'
-}
+import { BANK_PENDING_TOKENS, type BankPendingToken } from '../../../lib/mockData'
 
-const tokens: PendingToken[] = [
-  { id: '1', code: 'TKN-2025-00892', supplier: 'Ghana Foods Co.',    institution: 'Mfantsipim SHS',      amount: 380000, submittedAt: '2025-04-03', expiryDate: '2025-07-31', priority: 'high' },
-  { id: '2', code: 'TKN-2025-00895', supplier: 'Agric Supplies Ltd', institution: 'Wesley Girls SHS',      amount: 175000, submittedAt: '2025-04-04', expiryDate: '2025-07-31', priority: 'normal' },
-  { id: '3', code: 'TKN-2025-00897', supplier: 'Fresh Mart Ltd',     institution: 'Tamale SHS',      amount: 210000, submittedAt: '2025-04-05', expiryDate: '2025-06-30', priority: 'high' },
-  { id: '4', code: 'TKN-2025-00899', supplier: 'Northern Foods Ltd', institution: 'Tamale Islamic SHS', amount: 98000, submittedAt: '2025-04-06', expiryDate: null, priority: 'normal' },
-]
+type PendingToken = BankPendingToken
+
+const tokens: PendingToken[] = BANK_PENDING_TOKENS
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })
 

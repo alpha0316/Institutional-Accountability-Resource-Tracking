@@ -7,16 +7,9 @@ import { DataTable, type Column } from '../../../components/ui/DataTable'
 import type { BankTransaction } from '../../../types'
 import { clsx } from 'clsx'
 
-const transactions: BankTransaction[] = [
-  { id: 't1',  tokenId: '1',  tokenCode: 'TKN-2025-00891', supplierName: 'Agric Supplies Ltd',  amount: 420000, processedAt: '2025-04-01', status: 'released' },
-  { id: 't2',  tokenId: '2',  tokenCode: 'TKN-2025-00893', supplierName: 'Fresh Mart Ltd',      amount: 210000, processedAt: '2025-04-02', status: 'released' },
-  { id: 't3',  tokenId: '3',  tokenCode: 'TKN-2025-00895', supplierName: 'Agric Supplies Ltd',  amount: 175000, processedAt: '2025-04-03', status: 'released' },
-  { id: 't4',  tokenId: '4',  tokenCode: 'TKN-2025-00892', supplierName: 'Ghana Foods Co.',     amount: 380000, processedAt: '2025-03-28', status: 'pending' },
-  { id: 't5',  tokenId: '5',  tokenCode: 'TKN-2025-00880', supplierName: 'Agric Supplies Ltd',  amount: 290000, processedAt: '2025-03-20', status: 'rejected' },
-  { id: 't6',  tokenId: '6',  tokenCode: 'TKN-2025-00871', supplierName: 'Northern Foods Ltd',  amount: 210000, processedAt: '2025-03-15', status: 'released' },
-  { id: 't7',  tokenId: '7',  tokenCode: 'TKN-2024-00860', supplierName: 'Agric Supplies Ltd',  amount: 175000, processedAt: '2025-02-28', status: 'released' },
-  { id: 't8',  tokenId: '8',  tokenCode: 'TKN-2024-00851', supplierName: 'Ghana Foods Co.',     amount: 320000, processedAt: '2025-02-15', status: 'released' },
-]
+import { BANK_TRANSACTIONS } from '../../../lib/mockData'
+
+const transactions: BankTransaction[] = BANK_TRANSACTIONS
 
 type Filter = 'all' | BankTransaction['status']
 

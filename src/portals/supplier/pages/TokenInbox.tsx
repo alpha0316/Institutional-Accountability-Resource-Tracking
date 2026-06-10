@@ -6,26 +6,12 @@ import { Button } from '../../../components/ui/Button'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { clsx } from 'clsx'
 
+import { SUPPLIER_TOKENS, type SupplierTokenItem } from '../../../lib/mockData'
+
 type TokenStatus = 'redeemed' | 'unsubmitted' | 'flagged' | 'active'
+type SupplierToken = SupplierTokenItem
 
-interface SupplierToken {
-  id: string
-  code: string
-  institution: string
-  amount: number
-  issuedDate: string
-  expiry: string | null
-  status: TokenStatus
-  isNew?: boolean
-}
-
-const allTokens: SupplierToken[] = [
-  { id: '1', code: 'TKN-2025-00891', institution: 'Opoku Ware SHS',    amount: 420000, issuedDate: '2025-02-01', expiry: '2026-06-30', status: 'redeemed',    isNew: true },
-  { id: '2', code: 'TKN-2025-00892', institution: 'Mfantsipim SHS',      amount: 380000, issuedDate: '2025-02-01', expiry: null,         status: 'unsubmitted' },
-  { id: '3', code: 'TKN-2025-00880', institution: 'Achimota SHS', amount: 290000, issuedDate: '2025-01-15', expiry: null,         status: 'flagged' },
-  { id: '4', code: 'TKN-2025-00871', institution: 'Tamale SHS',      amount: 210000, issuedDate: '2025-01-10', expiry: '2025-06-30', status: 'active' },
-  { id: '5', code: 'TKN-2024-00860', institution: 'Wesley Girls SHS',      amount: 175000, issuedDate: '2024-09-01', expiry: '2025-01-31', status: 'redeemed' },
-]
+const allTokens: SupplierToken[] = SUPPLIER_TOKENS
 
 type Filter = 'all' | TokenStatus
 

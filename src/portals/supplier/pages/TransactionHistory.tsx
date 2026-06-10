@@ -5,13 +5,9 @@ import { Button } from '../../../components/ui/Button'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import type { BankTransaction } from '../../../types'
 
-const transactions: BankTransaction[] = [
-  { id: 't1', tokenId: '1', tokenCode: 'TKN-2025-00891', supplierName: 'Agric Supplies Ltd', amount: 420000, processedAt: '2025-04-02', status: 'released' },
-  { id: 't2', tokenId: '2', tokenCode: 'TKN-2025-00880', supplierName: 'Agric Supplies Ltd', amount: 290000, processedAt: '2025-03-20', status: 'released' },
-  { id: 't3', tokenId: '3', tokenCode: 'TKN-2025-00871', supplierName: 'Agric Supplies Ltd', amount: 210000, processedAt: '2025-03-10', status: 'released' },
-  { id: 't4', tokenId: '4', tokenCode: 'TKN-2024-00860', supplierName: 'Agric Supplies Ltd', amount: 175000, processedAt: '2025-02-15', status: 'rejected' },
-  { id: 't5', tokenId: '5', tokenCode: 'TKN-2024-00851', supplierName: 'Agric Supplies Ltd', amount: 320000, processedAt: '2025-01-28', status: 'released' },
-]
+import { SUPPLIER_TRANSACTIONS } from '../../../lib/mockData'
+
+const transactions: BankTransaction[] = SUPPLIER_TRANSACTIONS
 
 const statusBadge: Record<BankTransaction['status'], React.ReactNode> = {
   released: <Badge variant="green">Released</Badge>,

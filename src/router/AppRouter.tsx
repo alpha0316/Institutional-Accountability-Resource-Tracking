@@ -1,4 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Monitor } from 'lucide-react'
 import { useAuthStore, roleHomeRoute } from '../store/authStore'
 import { DashboardLayout } from '../components/layout/DashboardLayout'
 
@@ -46,6 +48,65 @@ import SupplyLogger    from '../portals/school-admin/pages/SupplyLogger'
 import FraudAlerts     from '../portals/school-admin/pages/FraudAlerts'
 import MealReports     from '../portals/school-admin/pages/MealReports'
 
+function MobileGate({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation()
+  const [isNarrow, setIsNarrow] = useState(() => window.innerWidth < 1024)
+
+  useEffect(() => {
+    const check = () => setIsNarrow(window.innerWidth < 1024)
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  if (isNarrow && !pathname.startsWith('/scanner')) {
+    return (
+      <div style={{
+        minHeight: '100dvh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        padding: '32px 24px',
+        background: '#f5f6fa',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      }}>
+        <div style={{
+          width: 72, height: 72, borderRadius: 20,
+          background: '#e8f0fe', display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+          marginBottom: 24,
+        }}>
+          <Monitor size={36} color="#4ea4ff" strokeWidth={1.6} />
+        </div>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111', marginBottom: 10, lineHeight: 1.3 }}>
+          Desktop Only
+        </h1>
+        <p style={{ fontSize: 15, color: '#666', maxWidth: 300, lineHeight: 1.6, marginBottom: 28 }}>
+          The IARTS Dining Hall system is designed for desktop use. Please open it on a laptop or desktop computer for the best experience.
+        </p>
+        <div style={{
+          background: '#fff', border: '1px solid #e5e5e5',
+          borderRadius: 14, padding: '16px 20px',
+          maxWidth: 300, width: '100%',
+        }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
+            Looking for the Scanner?
+          </p>
+          <p style={{ fontSize: 14, color: '#444', lineHeight: 1.5 }}>
+            The meal validation scanner is mobile-friendly.{' '}
+            <a href="/scanner" style={{ color: '#4ea4ff', fontWeight: 600, textDecoration: 'none' }}>
+              Open Scanner →
+            </a>
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return <>{children}</>
+}
+
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />
@@ -60,6 +121,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 export default function AppRouter() {
   return (
     <BrowserRouter>
+      <MobileGate>
       <Routes>
 
         {/* public */}
@@ -116,6 +178,7 @@ export default function AppRouter() {
         <Route path="*" element={<Navigate to="/login" replace />} />
 
       </Routes>
+      </MobileGate>
     </BrowserRouter>
   )
 }

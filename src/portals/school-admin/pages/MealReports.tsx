@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, Search, FileText, Users, Settings, AlertTriangle, Package, Clock } from 'lucide-react'
+import { Plus, Search, FileText, Users, Settings, AlertTriangle, Package, Clock, CheckCircle2, Circle } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
@@ -12,54 +12,81 @@ import {
   ATTENDANCE_SESSIONS,
   WORKFLOW_COLUMNS,
   REPORT_STATUS_MAP,
+  WEEKLY_BATCHES,
+  MONTHLY_BATCHES,
+  SEMESTER_POOL,
   type MockDailyReport,
+  type WeeklyBatch,
+  type MonthlyBatch,
+  type SemesterPool,
 } from '../../../lib/mockData'
 
-type PageTab = 'overview' | 'attendance' | 'supply' | 'financial' | 'workflow' | 'claim'
+type PageTab  = 'overview' | 'attendance' | 'supply' | 'financial' | 'workflow' | 'claim'
 type ModalTab = 'overview' | 'operational' | 'risks' | 'finances' | 'logs'
+type BatchKind =
+  | { kind: 'week';     data: WeeklyBatch  }
+  | { kind: 'month';    data: MonthlyBatch }
+  | { kind: 'semester'; data: SemesterPool }
 
 const PAGE_TABS: { label: string; value: PageTab }[] = [
-  { label: 'Overview',           value: 'overview'    },
-  { label: 'Meal Attendance',    value: 'attendance'  },
-  { label: 'Supply Usage',       value: 'supply'      },
-  { label: 'Financial Summary',  value: 'financial'   },
-  { label: 'Approval Workflow',  value: 'workflow'    },
-  { label: 'Claim Readiness',    value: 'claim'       },
+  { label: 'Overview',          value: 'overview'   },
+  { label: 'Meal Attendance',   value: 'attendance' },
+  { label: 'Supply Usage',      value: 'supply'     },
+  { label: 'Financial Summary', value: 'financial'  },
+  { label: 'Approval Workflow', value: 'workflow'   },
+  { label: 'Claim Readiness',   value: 'claim'      },
 ]
 
 const MODAL_TABS: { label: string; value: ModalTab; count?: number }[] = [
-  { label: 'Overview',     value: 'overview'    },
-  { label: 'Operational',  value: 'operational' },
-  { label: 'Risks',        value: 'risks',       count: 4 },
-  { label: 'Finances',     value: 'finances'    },
-  { label: 'Logs',         value: 'logs'        },
+  { label: 'Overview',    value: 'overview'    },
+  { label: 'Operational', value: 'operational' },
+  { label: 'Risks',       value: 'risks',       count: 4 },
+  { label: 'Finances',    value: 'finances'    },
+  { label: 'Logs',        value: 'logs'        },
 ]
 
 const RISK_TRIGGERS = [
-  { label: 'Attendance Spike',         icon: Users,          bg: 'bg-blue-500'   },
-  { label: 'Duplicate Scan Pattern',   icon: Settings,       bg: 'bg-blue-500'   },
-  { label: 'Dining Hall Imbalance',    icon: AlertTriangle,  bg: 'bg-red-500'    },
-  { label: 'Inventory Variance',       icon: Package,        bg: 'bg-green-600'  },
-  { label: 'Session Timing Conflict',  icon: Clock,          bg: 'bg-violet-500' },
+  { label: 'Attendance Spike',        icon: Users,         bg: 'bg-blue-500'   },
+  { label: 'Duplicate Scan Pattern',  icon: Settings,      bg: 'bg-blue-500'   },
+  { label: 'Dining Hall Imbalance',   icon: AlertTriangle, bg: 'bg-red-500'    },
+  { label: 'Inventory Variance',      icon: Package,       bg: 'bg-green-600'  },
+  { label: 'Session Timing Conflict', icon: Clock,         bg: 'bg-violet-500' },
 ]
 
 const REVIEW_STEPS = ['Operational Review', 'Compliance Review', 'Fraud Analysis', 'Financial Validation']
 
 const OVERVIEW_STATS = [
-  { label: 'Meals Served',             value: '2,413',      description: 'Verified scans today',               tone: 'bg-[#f7fbff]', trend: '↑ (+25%)' },
-  { label: 'Estimated Reimbursement',  value: 'GHS 41,820', description: 'Based on today\'s verified meals',    tone: 'bg-[#f7fdf9]' },
-  { label: 'Supplies Consumed',        value: '38',         description: 'Line Items',                          tone: 'bg-[#fcf8f5]' },
-  { label: 'Fraud Alerts',             value: '2',          description: 'Cards that are no longer valid.',     tone: 'bg-[#fff7f8]', alert: true },
+  { label: 'Meals Served',             value: '2,413',       description: 'Verified scans today',              tone: 'bg-[#f7fbff]', trend: '↑ (+25%)' },
+  { label: 'Estimated Reimbursement',  value: 'GHS 41,820',  description: "Based on today's verified meals",   tone: 'bg-[#f7fdf9]' },
+  { label: 'Supplies Consumed',        value: '38',          description: 'Line Items',                        tone: 'bg-[#fcf8f5]' },
+  { label: 'Fraud Alerts',             value: '2',           description: 'Cards that are no longer valid.',   tone: 'bg-[#fff7f8]', alert: true },
 ]
 
 const FINANCIAL_STATS = [
-  { label: 'Daily Reimb. Estimate',  value: 'GHS 41,820', description: 'Reimbursable value from meals',         tone: 'bg-[#f7fbff]' },
-  { label: 'Semester-to-Date',       value: 'GHS 812,400',description: 'Eligible reimbursement accumulated',    tone: 'bg-[#f7fdf9]' },
-  { label: 'Policy Adjustments',     value: 'GHS -3,500', description: 'Automatic deductions applied',          tone: 'bg-[#fcf8f5]' },
-  { label: 'Net Eligible Amount',    value: 'GHS 38,320', description: 'Amount added to semester claim',        tone: 'bg-[#fff7f8]' },
+  { label: 'Daily Reimb. Estimate', value: 'GHS 41,820',  description: 'Reimbursable value from meals',        tone: 'bg-[#f7fbff]' },
+  { label: 'Semester-to-Date',      value: 'GHS 812,400', description: 'Eligible reimbursement accumulated',   tone: 'bg-[#f7fdf9]' },
+  { label: 'Policy Adjustments',    value: 'GHS -3,500',  description: 'Automatic deductions applied',         tone: 'bg-[#fcf8f5]' },
+  { label: 'Net Eligible Amount',   value: 'GHS 38,320',  description: 'Amount added to semester claim',       tone: 'bg-[#fff7f8]' },
 ]
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
+// ── Risk score helpers ────────────────────────────────────────────────────────
+function riskLevel(score: number): { label: string; color: string; bg: string } {
+  if (score <= 20) return { label: 'Auto Pass',      color: 'text-[#0f9f5d]', bg: 'bg-[#eefbf4]' }
+  if (score <= 50) return { label: 'Review',         color: 'text-[#1d4ed8]', bg: 'bg-[#dbeafe]' }
+  if (score <= 80) return { label: 'Hold',           color: 'text-[#df6b13]', bg: 'bg-[#fff7ed]' }
+  return               { label: 'Investigation',  color: 'text-[#de3d36]', bg: 'bg-[#fff1f0]' }
+}
+
+function RiskBadge({ score }: { score: number }) {
+  const r = riskLevel(score)
+  return (
+    <span className={clsx('ml-auto shrink-0 rounded-full px-[6px] py-[1px] text-[10px] font-medium', r.bg, r.color)}>
+      {score} · {r.label}
+    </span>
+  )
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
 function StatRow({ stats }: { stats: typeof OVERVIEW_STATS }) {
   return (
     <div className="grid grid-cols-4 gap-[30px]">
@@ -99,50 +126,72 @@ function SidebarDetailRow({ label, value, valueClass = '' }: { label: string; va
   )
 }
 
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <p className="mb-[8px] mt-[20px] text-[11px] font-semibold uppercase tracking-wide text-[#aaa]">{children}</p>
+}
+
+// ── Kanban card styles by stage ───────────────────────────────────────────────
+const STAGE_BORDER: Record<string, string> = {
+  generated:          '3px solid #fb923c',
+  operational_review: '3px solid #3b82f6',
+  compliance_review:  '3px solid #ef4444',
+  approve_lock:       '3px solid #eab308',
+  claim_eligible:     '3px solid #22c55e',
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 export default function MealReports() {
-  const [pageTab, setPageTab] = useState<PageTab>('overview')
+  const [pageTab, setPageTab]         = useState<PageTab>('overview')
   const [selectedReport, setSelectedReport] = useState<MockDailyReport | null>(null)
-  const [modalTab, setModalTab] = useState<ModalTab>('overview')
+  const [modalTab, setModalTab]       = useState<ModalTab>('overview')
+  const [selectedBatch, setSelectedBatch]   = useState<BatchKind | null>(null)
 
   function openReport(r: MockDailyReport) {
+    setSelectedBatch(null)
     setSelectedReport(r)
     setModalTab('overview')
   }
-
   function closeReport() { setSelectedReport(null) }
+
+  function openBatch(b: BatchKind) {
+    setSelectedReport(null)
+    setSelectedBatch(b)
+  }
+  function closeBatch() { setSelectedBatch(null) }
 
   function reportActions(report: MockDailyReport): DropdownMenuItem[] {
     return [
-      { label: 'View Details',          onClick: () => openReport(report) },
-      { label: 'Export PDF',            onClick: () => {} },
-      { label: 'Export Excel',          onClick: () => {} },
-      { label: 'Approve Report',        onClick: () => {}, disabled: report.workflowStage === 'claim_eligible' },
-      { label: 'Lock Report',           onClick: () => {}, disabled: report.workflowStage !== 'approve_lock' },
+      { label: 'View Details',   onClick: () => openReport(report) },
+      { label: 'Export PDF',     onClick: () => {} },
+      { label: 'Export Excel',   onClick: () => {} },
+      { label: 'Approve Report', onClick: () => {}, disabled: report.workflowStage === 'claim_eligible' },
+      { label: 'Lock Report',    onClick: () => {}, disabled: report.workflowStage !== 'approve_lock' },
     ]
   }
 
-  // ── Report columns ──
   const reportColumns: Column<MockDailyReport>[] = [
-    { key: 'reportId',  label: 'Report ID',   width: '15%', primaryKey: true, render: (r) => r.reportId },
-    { key: 'date',      label: 'Date',         width: '14%', render: (r) => r.date },
-    { key: 'meals',     label: 'Meals',        width: '10%', render: (r) => r.mealsServed.toLocaleString() },
-    { key: 'alerts',    label: 'Alerts',       width: '9%', render: (r) => <span className={r.fraudAlerts > 0 ? 'text-[#ff3333] font-semibold' : ''}>{r.fraudAlerts}</span> },
-    { key: 'net',       label: 'Net Eligible', width: '14%', render: (r) => r.netEligible },
-    { key: 'status',    label: 'Status',       width: '16%', render: (r) => { const m = REPORT_STATUS_MAP[r.status]; return <Badge variant={m.variant}>{m.label}</Badge> } },
-    { key: 'updated',   label: 'Updated',      width: '14%', render: (r) => r.updatedAt },
+    { key: 'reportId', label: 'Report ID',   width: '15%', primaryKey: true, render: (r) => r.reportId },
+    { key: 'date',     label: 'Date',        width: '14%', render: (r) => r.date },
+    { key: 'meals',    label: 'Meals',       width: '10%', render: (r) => r.mealsServed.toLocaleString() },
+    { key: 'risk',     label: 'Risk',        width: '12%', render: (r) => {
+      const rl = riskLevel(r.riskScore)
+      return <span className={clsx('text-[13px] font-semibold', rl.color)}>{r.riskScore}</span>
+    }},
+    { key: 'alerts',   label: 'Alerts',      width: '9%',  render: (r) => <span className={r.fraudAlerts > 0 ? 'text-[#ff3333] font-semibold' : ''}>{r.fraudAlerts}</span> },
+    { key: 'net',      label: 'Net Eligible',width: '14%', render: (r) => r.netEligible },
+    { key: 'status',   label: 'Status',      width: '16%', render: (r) => { const m = REPORT_STATUS_MAP[r.status]; return <Badge variant={m.variant}>{m.label}</Badge> } },
+    { key: 'updated',  label: 'Updated',     width: '14%', render: (r) => r.updatedAt },
   ]
 
-  // ── Kanban groups ──
   const kanbanGroups = useMemo(() => {
     const groups: Record<string, MockDailyReport[]> = {}
     for (const col of WORKFLOW_COLUMNS) groups[col.id] = []
     for (const r of MOCK_DAILY_REPORTS) {
-      groups[r.workflowStage]?.push(r)
+      if (r.workflowStage !== 'claim_eligible') groups[r.workflowStage]?.push(r)
     }
     return groups
   }, [])
 
-  // ── CTA per tab ──
   const cta: Partial<Record<PageTab, React.ReactNode>> = {
     overview:  <Button onClick={() => MOCK_DAILY_REPORTS[0] && openReport(MOCK_DAILY_REPORTS[0])}>Generate Report</Button>,
     supply:    <Button><Plus size={14} />Record Supply</Button>,
@@ -150,6 +199,9 @@ export default function MealReports() {
     workflow:  <Button>Approve &amp; Lock Report</Button>,
     claim:     <Button><Plus size={14} />Record Supply</Button>,
   }
+
+  // ── Batch claim count for claim_eligible column ──
+  const claimEligibleCount = WEEKLY_BATCHES.length + MONTHLY_BATCHES.length + 1
 
   return (
     <div>
@@ -180,15 +232,14 @@ export default function MealReports() {
           <>
             <StatRow stats={OVERVIEW_STATS} />
 
-            {/* Claim Readiness mini-card */}
             <div className="mt-[30px] rounded-[14px] border border-[#efefef] bg-white p-[20px]">
               <h3 className="text-[16px] font-semibold text-black mb-[14px]">Semester Progress</h3>
               <div className="grid grid-cols-4 gap-[20px]">
                 {[
-                  { label: 'Locked Reports',       value: '57 / 60', sub: 'Reports secured for claim' },
-                  { label: 'Eligible Reports',     value: '57',      sub: 'Ready for semester submission' },
-                  { label: 'Pending Reviews',      value: '3',       sub: 'Awaiting admin approval' },
-                  { label: 'Projected Claim',      value: 'GHS 1,765,000', sub: 'Based on locked reports' },
+                  { label: 'Locked Reports',   value: '57 / 60',       sub: 'Reports secured for claim' },
+                  { label: 'Eligible Reports', value: '57',            sub: 'Ready for semester submission' },
+                  { label: 'Pending Reviews',  value: '3',             sub: 'Awaiting admin approval' },
+                  { label: 'Projected Claim',  value: 'GHS 1,765,000', sub: 'Based on locked reports' },
                 ].map((s) => (
                   <div key={s.label}>
                     <p className="text-[13px] text-[#888]">{s.label}</p>
@@ -261,9 +312,9 @@ export default function MealReports() {
               </thead>
               <tbody>
                 {[
-                  { item: 'Rice',        expected: '450 Bags',   actual: selectedReport.riceUsed, variance: '-30 Bags'   },
-                  { item: 'Cooking Oil', expected: '280 Litres', actual: selectedReport.oilUsed, variance: '+30 Litres'  },
-                  { item: 'Beans',       expected: '100 Bags',   actual: selectedReport.beansUsed,variance: '-25 Bags'   },
+                  { item: 'Rice',        expected: '450 Bags',   actual: selectedReport.riceUsed,   variance: '-30 Bags'   },
+                  { item: 'Cooking Oil', expected: '280 Litres', actual: selectedReport.oilUsed,    variance: '+30 Litres' },
+                  { item: 'Beans',       expected: '100 Bags',   actual: selectedReport.beansUsed,  variance: '-25 Bags'   },
                 ].map((row) => (
                   <tr key={row.item} className="h-[55px] cursor-pointer transition-colors hover:bg-[#fbfbfb]" onClick={() => MOCK_DAILY_REPORTS[0] && openReport(MOCK_DAILY_REPORTS[0])}>
                     <td className="pl-[5px] text-[15px] font-normal text-[#3f3f3f]">{row.item}</td>
@@ -296,14 +347,14 @@ export default function MealReports() {
                     {REIMBURSEMENT_BREAKDOWN.map((row, i) => (
                       <tr key={i} className="border-b border-[#f8f8f8] last:border-0">
                         <td className={clsx('py-[12px] text-[14px]',
-                          row.type === 'total' ? 'font-semibold text-[#111]' :
-                          row.type === 'final' ? 'font-semibold text-[#4ea4ff]' :
+                          row.type === 'total'      ? 'font-semibold text-[#111]' :
+                          row.type === 'final'      ? 'font-semibold text-[#4ea4ff]' :
                           'text-[#3f3f3f]')}>{row.category}</td>
                         <td className={clsx('py-[12px] text-[14px]', row.type === 'adjustment' ? 'text-[#f97316]' : 'text-[#888]')}>{row.basis}</td>
                         <td className={clsx('py-[12px] text-right text-[14px]',
-                          row.type === 'total' ? 'font-semibold text-[#111]' :
+                          row.type === 'total'      ? 'font-semibold text-[#111]' :
                           row.type === 'adjustment' ? 'font-semibold text-[#ef4444]' :
-                          row.type === 'final' ? 'font-semibold text-[#111]' :
+                          row.type === 'final'      ? 'font-semibold text-[#111]' :
                           'text-[#3f3f3f]')}>{row.amount}</td>
                       </tr>
                     ))}
@@ -314,8 +365,8 @@ export default function MealReports() {
                 <div className="rounded-[14px] border border-[#efefef] bg-white p-[16px]">
                   <h4 className="mb-[10px] text-[14px] font-semibold text-black">Policy Notes</h4>
                   <ul className="space-y-[8px] text-[13px] text-[#555]">
-                    <li className="flex items-start gap-[8px]"><span className="mt-[4px] h-[6px] w-[6px] shrink-0 rounded-full bg-[#888]" />Excess supplies excluded</li>
-                    <li className="flex items-start gap-[8px]"><span className="mt-[4px] h-[6px] w-[6px] shrink-0 rounded-full bg-[#888]" />Policy cap applied (-GHS 3,500)</li>
+                    <li className="flex items-start gap-[8px]"><span className="mt-[4px] h-[6px] w-[6px] shrink-0 rounded-full bg-[#888]" />Excess supplies excluded from claim</li>
+                    <li className="flex items-start gap-[8px]"><span className="mt-[4px] h-[6px] w-[6px] shrink-0 rounded-full bg-[#888]" />Policy cap applied — -GHS 3,500</li>
                   </ul>
                 </div>
                 <div className="rounded-[14px] border border-[#efefef] bg-white p-[16px]">
@@ -340,37 +391,137 @@ export default function MealReports() {
         {/* ── Approval Workflow (kanban) ──────────────────────────────── */}
         {pageTab === 'workflow' && (
           <div className="flex h-[calc(100vh-200px)] gap-0 overflow-x-auto">
-            {WORKFLOW_COLUMNS.map((col, ci) => (
-              <div key={col.id} className={clsx('flex w-[240px] shrink-0 flex-col', ci < WORKFLOW_COLUMNS.length - 1 && 'border-r border-[#f0f0f0]')}>
-                <div className="flex items-center gap-[6px] pb-[12px] pr-[16px]">
-                  <span className={clsx('h-[8px] w-[8px] shrink-0 rounded-full', col.dot)} />
-                  <span className="text-[13px] font-medium text-[#333]">{col.label}</span>
-                  <span className="ml-[2px] flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#f0f0f0] px-[4px] text-[11px] font-medium text-[#555]">
-                    {kanbanGroups[col.id]?.length ?? 0}
-                  </span>
+            {WORKFLOW_COLUMNS.map((col, ci) => {
+              const isClaim = col.id === 'claim_eligible'
+              const count   = isClaim ? claimEligibleCount : (kanbanGroups[col.id]?.length ?? 0)
+
+              return (
+                <div
+                  key={col.id}
+                  className={clsx(
+                    'flex shrink-0 flex-col overflow-y-auto',
+                    isClaim ? 'w-[290px]' : 'w-[240px]',
+                    ci < WORKFLOW_COLUMNS.length - 1 && 'border-r border-[#f0f0f0]'
+                  )}
+                >
+                  {/* Column header */}
+                  <div className="flex items-center gap-[6px] pb-[12px] pr-[16px]">
+                    <span className={clsx('h-[8px] w-[8px] shrink-0 rounded-full', col.dot)} />
+                    <span className="text-[13px] font-medium text-[#333]">{col.label}</span>
+                    <span className="ml-[2px] flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#f0f0f0] px-[4px] text-[11px] font-medium text-[#555]">
+                      {count}
+                    </span>
+                  </div>
+
+                  {/* Claim Eligible — batch cards */}
+                  {isClaim && (
+                    <div className="space-y-[8px] pr-[16px]">
+
+                      {/* Weekly batch cards */}
+                      {WEEKLY_BATCHES.map((wk) => {
+                        const eligibleDays = wk.days.filter(d => d.status === 'eligible').length
+                        return (
+                          <button
+                            key={wk.id}
+                            onClick={() => openBatch({ kind: 'week', data: wk })}
+                            className={clsx(
+                              'w-full rounded-[10px] border border-[#efefef] bg-white p-[12px] text-left shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]',
+                              wk.status === 'complete' ? 'border-l-[3px] border-l-[#7c3aed]' : 'border-l-[3px] border-l-[#f59e0b]'
+                            )}
+                          >
+                            <div className="mb-[3px] flex items-center justify-between">
+                              <span className="text-[13px] font-semibold text-[#111]">{wk.weekLabel}</span>
+                              <span className={clsx(
+                                'rounded-full px-[6px] py-[1px] text-[10px] font-medium',
+                                wk.status === 'complete' ? 'bg-[#eefbf4] text-[#0f9f5d]' : 'bg-[#fff7ed] text-[#df6b13]'
+                              )}>
+                                {wk.status === 'complete' ? 'Complete' : `${eligibleDays}/7 days`}
+                              </span>
+                            </div>
+                            <p className="mb-[8px] text-[11px] text-[#888]">{wk.daysRange}</p>
+                            <div className="mb-[8px] flex gap-[12px]">
+                              <span className="text-[11px] text-[#aaa]">{wk.totalMeals.toLocaleString()} meals</span>
+                              {wk.fraudCases > 0 && <span className="text-[11px] text-[#de3d36]">{wk.fraudCases} fraud</span>}
+                            </div>
+                            <div className="flex items-center justify-between border-t border-[#f5f5f5] pt-[8px]">
+                              <span className="text-[11px] text-[#888]">Net Eligible</span>
+                              <span className={clsx(
+                                'text-[12px] font-semibold',
+                                wk.status === 'complete' ? 'text-[#111]' : 'text-[#aaa] italic'
+                              )}>{wk.netEligible}</span>
+                            </div>
+                          </button>
+                        )
+                      })}
+
+                      {/* Monthly batch cards */}
+                      {MONTHLY_BATCHES.map((mo) => (
+                        <button
+                          key={mo.id}
+                          onClick={() => openBatch({ kind: 'month', data: mo })}
+                          className="w-full rounded-[10px] border border-[#efefef] border-l-[3px] border-l-[#1d4ed8] bg-white p-[12px] text-left shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
+                        >
+                          <div className="mb-[3px] flex items-center justify-between">
+                            <span className="text-[13px] font-semibold text-[#111]">{mo.monthLabel}</span>
+                            <span className="rounded-full bg-[#eefbf4] px-[6px] py-[1px] text-[10px] font-medium text-[#0f9f5d]">Complete</span>
+                          </div>
+                          <p className="mb-[8px] text-[11px] text-[#888]">{mo.weekLabels.join(' · ')}</p>
+                          <div className="flex items-center justify-between border-t border-[#f5f5f5] pt-[8px]">
+                            <span className="text-[11px] text-[#888]">Net Eligible</span>
+                            <span className="text-[12px] font-semibold text-[#111]">{mo.netEligible}</span>
+                          </div>
+                        </button>
+                      ))}
+
+                      {/* Semester pool card */}
+                      <button
+                        onClick={() => openBatch({ kind: 'semester', data: SEMESTER_POOL })}
+                        className="w-full rounded-[10px] border border-[#d1fae5] border-l-[3px] border-l-[#0f9f5d] bg-gradient-to-br from-white to-[#f0faf5] p-[12px] text-left shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
+                      >
+                        <div className="mb-[3px] flex items-center justify-between">
+                          <span className="text-[13px] font-bold text-[#111]">{SEMESTER_POOL.semesterLabel}</span>
+                          <span className="rounded-full bg-[#dbeafe] px-[6px] py-[1px] text-[10px] font-medium text-[#1d4ed8]">Active</span>
+                        </div>
+                        <p className="mb-[8px] text-[11px] text-[#888]">
+                          {SEMESTER_POOL.monthsIncluded.map((m, i) => (
+                            <span key={m}>{i > 0 && ' · '}{m}</span>
+                          ))}
+                        </p>
+                        <div className="flex items-center justify-between border-t border-[#d1fae5] pt-[8px]">
+                          <span className="text-[11px] text-[#555]">Current Eligible</span>
+                          <span className="text-[13px] font-bold text-[#0f9f5d]">{SEMESTER_POOL.currentEligible}</span>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Other columns — daily report cards */}
+                  {!isClaim && kanbanGroups[col.id]?.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => openReport(r)}
+                      className="mb-[8px] mr-[16px] rounded-[10px] border border-[#efefef] bg-white p-[12px] text-left shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
+                      style={{ borderLeft: STAGE_BORDER[r.workflowStage] }}
+                    >
+                      <div className="mb-[4px] flex items-center gap-[6px]">
+                        <FileText size={13} className="shrink-0 text-[#aaa]" />
+                        <span className="text-[13px] font-semibold text-[#111]">{r.reportId}</span>
+                        <RiskBadge score={r.riskScore} />
+                      </div>
+                      <p className="text-[11px] leading-[16px] text-[#aaa]">{r.date}</p>
+                      <p className="mt-[6px] text-[12px] font-medium text-[#444]">{r.mealsServed.toLocaleString()} Meals</p>
+                      {r.fraudAlerts > 0 && (
+                        <p className="mt-[2px] text-[11px] font-medium text-[#de3d36]">{r.fraudAlerts} fraud alert{r.fraudAlerts > 1 ? 's' : ''}</p>
+                      )}
+                      <div className="mt-[8px] flex items-center justify-between border-t border-[#f5f5f5] pt-[8px]">
+                        <span className="text-[11px] text-[#aaa]">Net Eligible</span>
+                        <span className="text-[12px] font-semibold text-[#111]">{r.netEligible}</span>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-                {kanbanGroups[col.id]?.map((r) => (
-                  <button
-                    key={r.id}
-                    onClick={() => openReport(r)}
-                    className="mb-[8px] mr-[16px] rounded-[10px] border border-[#efefef] bg-white p-[12px] text-left shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
-                    style={r.workflowStage === 'generated' ? { borderLeft: '3px solid #fb923c' } : r.workflowStage === 'operational_review' ? { borderLeft: '3px solid #3b82f6' } : r.workflowStage === 'compliance_review' ? { borderLeft: '3px solid #ef4444' } : r.workflowStage === 'approve_lock' ? { borderLeft: '3px solid #eab308' } : { borderLeft: '3px solid #22c55e' }}
-                  >
-                    <div className="mb-[4px] flex items-center gap-[6px]">
-                      <FileText size={13} className="text-red-500 shrink-0" />
-                      <span className="text-[13px] font-semibold text-[#111]">{r.reportId}</span>
-                    </div>
-                    <p className="text-[11px] leading-[16px] text-[#aaa]">Created {r.date}</p>
-                    <p className="text-[11px] leading-[16px] text-[#aaa]">Updated <span className="text-[#555]">{r.updatedAt}</span></p>
-                    <p className="mt-[6px] text-[12px] font-medium text-[#444]">{r.mealsServed.toLocaleString()} Meals Served</p>
-                    <div className="mt-[8px] flex items-center justify-between">
-                      <span className="text-[11px] text-[#aaa]">Net Eligible</span>
-                      <span className="text-[12px] font-semibold text-[#111]">{r.netEligible}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
@@ -383,18 +534,83 @@ export default function MealReports() {
             <div className="mt-[12px]">
               <DataTable
                 columns={reportColumns}
-                data={MOCK_DAILY_REPORTS.filter(r => r.workflowStage === 'approve_lock' || r.workflowStage === 'compliance_review' || r.workflowStage === 'operational_review')}
+                data={MOCK_DAILY_REPORTS.filter(r =>
+                  r.workflowStage === 'approve_lock' ||
+                  r.workflowStage === 'compliance_review' ||
+                  r.workflowStage === 'operational_review'
+                )}
                 rowKey={(r) => r.id}
                 onRowClick={openReport}
                 rowActions={reportActions}
                 emptyMessage="All reports are claim eligible."
               />
             </div>
+
+            {/* Batch hierarchy summary */}
+            <div className="mt-[32px] space-y-[12px]">
+              <h3 className="text-[16px] font-bold text-[#111]">Settlement Pool</h3>
+
+              {/* Semester card */}
+              <div
+                onClick={() => { setPageTab('workflow'); openBatch({ kind: 'semester', data: SEMESTER_POOL }) }}
+                className="cursor-pointer rounded-[14px] border border-[#d1fae5] bg-gradient-to-r from-[#f0faf5] to-white p-[18px] transition-shadow hover:shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-[14px] font-bold text-[#111]">{SEMESTER_POOL.semesterLabel}</p>
+                    <p className="mt-[2px] text-[12px] text-[#888]">{SEMESTER_POOL.monthsIncluded.join(' · ')}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[20px] font-bold text-[#0f9f5d]">{SEMESTER_POOL.currentEligible}</p>
+                    <p className="text-[11px] text-[#888]">current eligible</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Monthly and weekly cards */}
+              <div className="grid grid-cols-2 gap-[12px]">
+                {MONTHLY_BATCHES.map((mo) => (
+                  <div
+                    key={mo.id}
+                    onClick={() => { setPageTab('workflow'); openBatch({ kind: 'month', data: mo }) }}
+                    className="cursor-pointer rounded-[14px] border border-[#efefef] bg-white p-[16px] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.07)]"
+                  >
+                    <p className="text-[13px] font-semibold text-[#111]">{mo.monthLabel}</p>
+                    <p className="mt-[1px] text-[11px] text-[#888]">{mo.weekLabels.join(' · ')}</p>
+                    <p className="mt-[10px] text-[17px] font-bold text-[#111]">{mo.netEligible}</p>
+                    <p className="text-[11px] text-[#aaa]">{mo.totalMeals.toLocaleString()} meals</p>
+                  </div>
+                ))}
+                {WEEKLY_BATCHES.map((wk) => (
+                  <div
+                    key={wk.id}
+                    onClick={() => { setPageTab('workflow'); openBatch({ kind: 'week', data: wk }) }}
+                    className={clsx(
+                      'cursor-pointer rounded-[14px] border bg-white p-[16px] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.07)]',
+                      wk.status === 'complete' ? 'border-[#ede9fe]' : 'border-[#fef3c7]'
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-[13px] font-semibold text-[#111]">{wk.weekLabel}</p>
+                      <span className={clsx(
+                        'rounded-full px-[6px] py-[1px] text-[10px] font-medium',
+                        wk.status === 'complete' ? 'bg-[#eefbf4] text-[#0f9f5d]' : 'bg-[#fff7ed] text-[#df6b13]'
+                      )}>
+                        {wk.status === 'complete' ? 'Complete' : `${wk.days.filter(d => d.status === 'eligible').length}/7`}
+                      </span>
+                    </div>
+                    <p className="mt-[1px] text-[11px] text-[#888]">{wk.daysRange}</p>
+                    <p className="mt-[10px] text-[17px] font-bold text-[#111]">{wk.netEligible}</p>
+                    <p className="text-[11px] text-[#aaa]">{wk.totalMeals.toLocaleString()} meals</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </section>
         )}
       </div>
 
-      {/* ── Report Detail Sidebar ──────────────────────────────────────── */}
+      {/* ── Daily Report Sidebar ──────────────────────────────────────── */}
       {selectedReport && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" onClick={closeReport} />
@@ -405,6 +621,17 @@ export default function MealReports() {
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="4" y1="4" x2="14" y2="14" /><line x1="14" y1="4" x2="4" y2="14" /></svg>
               </button>
             </div>
+
+            {/* Risk score strip */}
+            {(() => {
+              const rl = riskLevel(selectedReport.riskScore)
+              return (
+                <div className={clsx('mx-[20px] mb-[8px] flex items-center justify-between rounded-[8px] px-[12px] py-[8px]', rl.bg)}>
+                  <span className={clsx('text-[13px] font-semibold', rl.color)}>Risk Score: {selectedReport.riskScore} — {rl.label}</span>
+                  <span className={clsx('text-[12px]', rl.color)}>{selectedReport.riskScore <= 20 ? 'Eligible for auto-approval' : selectedReport.riskScore <= 50 ? 'Needs manual review' : selectedReport.riskScore <= 80 ? 'Compliance hold' : 'Fraud investigation open'}</span>
+                </div>
+              )
+            })()}
 
             {/* Modal tabs */}
             <div className="mx-[20px] flex h-[26px] w-fit items-center rounded-[6px] bg-[#f1f1f2] p-[1px]">
@@ -426,15 +653,14 @@ export default function MealReports() {
             </div>
 
             <div className="px-[20px] pb-[24px] pt-[16px]">
-              {/* Overview */}
               {modalTab === 'overview' && (
                 <>
-                  <SidebarDetailRow label="Report ID"      value={selectedReport.reportId} />
-                  <SidebarDetailRow label="Date"           value={selectedReport.date} />
-                  <SidebarDetailRow label="Meals Served"   value={selectedReport.mealsServed.toLocaleString()} />
-                  <SidebarDetailRow label="Fraud Alerts"   value={String(selectedReport.fraudAlerts)} />
-                  <SidebarDetailRow label="Net Eligible"   value={selectedReport.netEligible} />
-                  <SidebarDetailRow label="Status"         value={REPORT_STATUS_MAP[selectedReport.status]?.label ?? selectedReport.status} />
+                  <SidebarDetailRow label="Report ID"    value={selectedReport.reportId} />
+                  <SidebarDetailRow label="Date"         value={selectedReport.date} />
+                  <SidebarDetailRow label="Meals Served" value={selectedReport.mealsServed.toLocaleString()} />
+                  <SidebarDetailRow label="Fraud Alerts" value={String(selectedReport.fraudAlerts)} />
+                  <SidebarDetailRow label="Net Eligible" value={selectedReport.netEligible} />
+                  <SidebarDetailRow label="Status"       value={REPORT_STATUS_MAP[selectedReport.status]?.label ?? selectedReport.status} />
                   <h4 className="mt-[20px] mb-[12px] text-[14px] font-semibold text-black">Review Completion</h4>
                   <div className="space-y-[8px] rounded-[10px] border border-[#efefef] bg-[#fafafa] p-[12px]">
                     {REVIEW_STEPS.map((step) => (
@@ -449,20 +675,33 @@ export default function MealReports() {
                 </>
               )}
 
-              {/* Operational */}
               {modalTab === 'operational' && (
                 <>
-                  <SidebarDetailRow label="Eligible Students"  value={selectedReport.eligibleStudents.toLocaleString()} />
-                  <SidebarDetailRow label="Total Meals"        value={selectedReport.mealsServed.toLocaleString()} />
-                  <SidebarDetailRow label="Breakfast"          value={selectedReport.breakfastServed.toLocaleString()} />
-                  <SidebarDetailRow label="Lunch"              value={selectedReport.lunchServed.toLocaleString()} />
-                  <SidebarDetailRow label="Dinner"             value={selectedReport.dinnerServed.toLocaleString()} />
-                  <SidebarDetailRow label="Sessions"           value={`${selectedReport.sessions} of 3`} />
-                  <SidebarDetailRow label="Utilization"        value={`${((selectedReport.mealsServed / selectedReport.eligibleStudents) * 100).toFixed(1)}%`} />
+                  <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)] mb-[16px]">
+                    <SidebarDetailRow label="Eligible Students"  value={selectedReport.eligibleStudents.toLocaleString()} />
+                    <SidebarDetailRow label="Total Meals Served" value={selectedReport.mealsServed.toLocaleString()} />
+                    <SidebarDetailRow label="Breakfast"          value={selectedReport.breakfastServed.toLocaleString()} />
+                    <SidebarDetailRow label="Lunch"              value={selectedReport.lunchServed.toLocaleString()} />
+                    <SidebarDetailRow label="Dinner"             value={selectedReport.dinnerServed.toLocaleString()} />
+                    <SidebarDetailRow label="Sessions"           value={`${selectedReport.sessions} of 3`} />
+                    <SidebarDetailRow label="Utilization"        value={`${((selectedReport.mealsServed / selectedReport.eligibleStudents) * 100).toFixed(1)}%`} />
+                  </div>
+                  <h4 className="mb-[10px] text-[13px] font-semibold text-[#111]">Supplies Consumed This Day</h4>
+                  <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)] mb-[14px]">
+                    <SidebarDetailRow label="Rice"                          value={selectedReport.riceUsed} />
+                    <SidebarDetailRow label="Cooking Oil"                   value={selectedReport.oilUsed} />
+                    <SidebarDetailRow label="Beans"                         value={selectedReport.beansUsed} />
+                    <SidebarDetailRow label="Approved Supply Contribution"  value={selectedReport.supplyCost} valueClass="text-[#4ea4ff] font-semibold" />
+                  </div>
+                  <div className="rounded-[10px] border border-[#dbeafe] bg-[#eff6ff] p-[13px]">
+                    <p className="text-[12px] font-medium text-[#1e40af] mb-[4px]">How supply logs feed into this report</p>
+                    <p className="text-[12px] text-[#3b82f6] leading-[18px]">
+                      Logged consumption is cross-checked against meal validations. Government-approved rates are applied to verified quantities — the result ({selectedReport.supplyCost}) is added to meal revenue to form the gross estimate.
+                    </p>
+                  </div>
                 </>
               )}
 
-              {/* Risks */}
               {modalTab === 'risks' && (
                 <>
                   <SidebarDetailRow label="Report ID"    value={selectedReport.reportId} />
@@ -496,18 +735,46 @@ export default function MealReports() {
                 </>
               )}
 
-              {/* Finances */}
               {modalTab === 'finances' && (
                 <>
-                  <SidebarDetailRow label="Gross Estimate"           value={selectedReport.grossEstimate} />
-                  <SidebarDetailRow label="Policy Adjustments"       value={selectedReport.policyAdjustments} valueClass="font-semibold text-[#ef4444]" />
-                  <SidebarDetailRow label="Net Eligible"             value={selectedReport.netEligible} />
-                  <SidebarDetailRow label="Semester-to-Date"         value={selectedReport.semesterAccrued} />
-                  <SidebarDetailRow label="Claim Pool Impact"        value={selectedReport.workflowStage === 'claim_eligible' ? 'Added to pool' : 'Pending Approval'} valueClass={selectedReport.workflowStage === 'claim_eligible' ? 'text-[#10b981]' : 'text-[#f97316]'} />
+                  <p className="mb-[8px] text-[12px] font-semibold uppercase tracking-wide text-[#888]">1 · Meal Revenue</p>
+                  <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)] mb-[14px]">
+                    <SidebarDetailRow label={`Breakfast (${selectedReport.breakfastServed.toLocaleString()} × GHS 5.46)`} value={`GHS ${(selectedReport.breakfastServed * 5.46).toLocaleString('en-GH', { maximumFractionDigits: 0 })}`} />
+                    <SidebarDetailRow label={`Lunch (${selectedReport.lunchServed.toLocaleString()} × GHS 5.77)`}     value={`GHS ${(selectedReport.lunchServed * 5.77).toLocaleString('en-GH', { maximumFractionDigits: 0 })}`} />
+                    <SidebarDetailRow label={`Dinner (${selectedReport.dinnerServed.toLocaleString()} × GHS 5.19)`}   value={`GHS ${(selectedReport.dinnerServed * 5.19).toLocaleString('en-GH', { maximumFractionDigits: 0 })}`} />
+                    <SidebarDetailRow label="Subtotal — Meal Revenue" value={selectedReport.mealRevenue} valueClass="font-semibold text-[#111]" />
+                  </div>
+                  <p className="mb-[8px] text-[12px] font-semibold uppercase tracking-wide text-[#888]">2 · Supply Contribution</p>
+                  <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)] mb-[4px]">
+                    <SidebarDetailRow label="Rice consumed"         value={selectedReport.riceUsed} />
+                    <SidebarDetailRow label="Cooking Oil consumed"  value={selectedReport.oilUsed} />
+                    <SidebarDetailRow label="Beans consumed"        value={selectedReport.beansUsed} />
+                    <SidebarDetailRow label="Approved Supply Amount" value={selectedReport.supplyCost} valueClass="font-semibold text-[#4ea4ff]" />
+                  </div>
+                  <p className="mb-[14px] text-[11px] text-[#aaa] leading-[16px] px-[2px]">Only quantities cross-checked against meal validations count.</p>
+                  <p className="mb-[8px] text-[12px] font-semibold uppercase tracking-wide text-[#888]">3 · Claim Calculation</p>
+                  <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)] mb-[14px]">
+                    <SidebarDetailRow label="Meal Revenue"        value={selectedReport.mealRevenue} />
+                    <SidebarDetailRow label="Supply Contribution" value={selectedReport.supplyCost} />
+                    <SidebarDetailRow label="Gross Estimate"      value={selectedReport.grossEstimate} valueClass="font-semibold text-[#111]" />
+                    <SidebarDetailRow
+                      label="Policy Adjustments"
+                      value={selectedReport.policyAdjustments}
+                      valueClass={selectedReport.policyAdjustments.startsWith('-') ? 'font-semibold text-[#ef4444]' : 'font-semibold text-[#888]'}
+                    />
+                    <SidebarDetailRow label="Net Claimable" value={selectedReport.netEligible} valueClass="font-semibold text-[#10b981]" />
+                  </div>
+                  <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                    <SidebarDetailRow label="Semester-to-Date" value={selectedReport.semesterAccrued} />
+                    <SidebarDetailRow
+                      label="Claim Pool"
+                      value={selectedReport.workflowStage === 'claim_eligible' ? 'Added to pool' : 'Pending Approval'}
+                      valueClass={selectedReport.workflowStage === 'claim_eligible' ? 'text-[#10b981]' : 'text-[#f97316]'}
+                    />
+                  </div>
                 </>
               )}
 
-              {/* Logs */}
               {modalTab === 'logs' && (
                 <div className="space-y-[14px]">
                   {selectedReport.logs.map((log, i) => (
@@ -518,6 +785,219 @@ export default function MealReports() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Batch Sidebar ─────────────────────────────────────────────── */}
+      {selectedBatch && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" onClick={closeBatch} />
+          <div className="absolute right-[12px] top-[12px] flex h-[calc(100vh-24px)] w-[460px] flex-col overflow-y-auto rounded-[22px] bg-white shadow-[0_20px_70px_rgba(0,0,0,0.2)]">
+
+            {/* Header */}
+            <div className="relative px-[20px] pb-[12px] pt-[22px]">
+              {selectedBatch.kind === 'week' && (
+                <>
+                  <p className="text-[12px] font-medium text-[#888]">Weekly Batch</p>
+                  <h2 className="mt-[2px] pr-12 text-[20px] font-bold leading-none text-black">{selectedBatch.data.weekLabel}</h2>
+                  <p className="mt-[4px] text-[13px] text-[#888]">{selectedBatch.data.daysRange}</p>
+                </>
+              )}
+              {selectedBatch.kind === 'month' && (
+                <>
+                  <p className="text-[12px] font-medium text-[#888]">Monthly Batch</p>
+                  <h2 className="mt-[2px] pr-12 text-[20px] font-bold leading-none text-black">{selectedBatch.data.monthLabel}</h2>
+                </>
+              )}
+              {selectedBatch.kind === 'semester' && (
+                <>
+                  <p className="text-[12px] font-medium text-[#888]">Settlement Pool</p>
+                  <h2 className="mt-[2px] pr-12 text-[20px] font-bold leading-none text-black">{selectedBatch.data.semesterLabel}</h2>
+                </>
+              )}
+              <button onClick={closeBatch} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="4" y1="4" x2="14" y2="14" /><line x1="14" y1="4" x2="4" y2="14" /></svg>
+              </button>
+            </div>
+
+            <div className="px-[20px] pb-[32px]">
+
+              {/* ── WEEK BATCH CONTENT ── */}
+              {selectedBatch.kind === 'week' && (() => {
+                const wk = selectedBatch.data
+                const eligibleCount = wk.days.filter(d => d.status === 'eligible').length
+                return (
+                  <>
+                    {/* Status strip */}
+                    <div className={clsx(
+                      'mb-[16px] flex items-center justify-between rounded-[10px] px-[14px] py-[10px]',
+                      wk.status === 'complete' ? 'bg-[#eefbf4]' : 'bg-[#fff7ed]'
+                    )}>
+                      <span className={clsx('text-[13px] font-semibold', wk.status === 'complete' ? 'text-[#0f9f5d]' : 'text-[#df6b13]')}>
+                        {wk.status === 'complete' ? 'All 7 days complete — claim eligible' : `${eligibleCount} of 7 days complete — awaiting ${7 - eligibleCount} more`}
+                      </span>
+                    </div>
+
+                    {/* Daily reports checklist */}
+                    <SectionLabel>Daily Reports</SectionLabel>
+                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)] mb-[4px]">
+                      {wk.days.map((d) => (
+                        <div key={d.dayNum} className="flex items-center justify-between border-b border-[#f2f2f2] py-[11px] last:border-0">
+                          <div className="flex items-center gap-[10px]">
+                            {d.status === 'eligible'
+                              ? <CheckCircle2 size={15} className="shrink-0 text-[#0f9f5d]" />
+                              : <Circle size={15} className="shrink-0 text-[#ddd]" />
+                            }
+                            <span className="text-[13px] text-[#333]">{d.reportId}</span>
+                            <span className="text-[12px] text-[#aaa]">{d.date}</span>
+                          </div>
+                          <div className="flex items-center gap-[8px]">
+                            <span className="text-[12px] text-[#555]">{d.meals.toLocaleString()} meals</span>
+                            {d.status === 'pipeline' && (
+                              <span className="rounded-full bg-[#fff7ed] px-[6px] py-[1px] text-[10px] font-medium text-[#df6b13]">In pipeline</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Student validation */}
+                    <SectionLabel>Student Validation</SectionLabel>
+                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                      <SidebarDetailRow label="Total Student Scans" value={wk.studentValidations.total.toLocaleString()} />
+                      <SidebarDetailRow label="Successful"          value={wk.studentValidations.successful.toLocaleString()} valueClass="text-[#0f9f5d]" />
+                      <SidebarDetailRow label="Rejected"            value={wk.studentValidations.rejected.toLocaleString()}   valueClass="text-[#ef4444]" />
+                    </div>
+
+                    {/* Supply logs */}
+                    <SectionLabel>Supply Logs</SectionLabel>
+                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                      {wk.supplyLogs.map((s) => (
+                        <SidebarDetailRow key={s.item} label={s.item} value={`${s.qty} ${s.unit}`} />
+                      ))}
+                    </div>
+
+                    {/* Fraud summary */}
+                    <SectionLabel>Fraud Summary</SectionLabel>
+                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                      <SidebarDetailRow label="Duplicate Cards"  value={String(wk.fraudSummary.duplicateCards)} valueClass={wk.fraudSummary.duplicateCards > 0 ? 'text-[#ef4444]' : ''} />
+                      <SidebarDetailRow label="Unknown Cards"    value={String(wk.fraudSummary.unknownCards)}   valueClass={wk.fraudSummary.unknownCards > 0   ? 'text-[#ef4444]' : ''} />
+                      <SidebarDetailRow label="Supply Anomalies" value={String(wk.fraudSummary.supplyAnomalies)} valueClass={wk.fraudSummary.supplyAnomalies > 0 ? 'text-[#ef4444]' : ''} />
+                    </div>
+
+                    {/* Financial summary */}
+                    <SectionLabel>Financial Summary</SectionLabel>
+                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                      <SidebarDetailRow label="Gross"             value={wk.status === 'complete' ? `GHS ${wk.financial.gross.toLocaleString()}` : '—'} />
+                      <SidebarDetailRow label="Policy Deductions" value={wk.status === 'complete' ? `-GHS ${wk.financial.policyDeductions.toLocaleString()}` : '—'} valueClass="text-[#ef4444]" />
+                      <SidebarDetailRow label="Net Eligible"      value={wk.netEligible} valueClass="text-[#0f9f5d] font-bold text-[16px]" />
+                    </div>
+                  </>
+                )
+              })()}
+
+              {/* ── MONTH BATCH CONTENT ── */}
+              {selectedBatch.kind === 'month' && (() => {
+                const mo = selectedBatch.data
+                return (
+                  <>
+                    <div className="mb-[16px] flex items-center justify-between rounded-[10px] bg-[#eefbf4] px-[14px] py-[10px]">
+                      <span className="text-[13px] font-semibold text-[#0f9f5d]">All 4 weekly batches complete</span>
+                    </div>
+
+                    {/* Weeks included */}
+                    <SectionLabel>Weeks Included</SectionLabel>
+                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                      {mo.weekLabels.map((wl) => (
+                        <div key={wl} className="flex items-center gap-[10px] border-b border-[#f2f2f2] py-[11px] last:border-0">
+                          <CheckCircle2 size={15} className="shrink-0 text-[#0f9f5d]" />
+                          <span className="text-[13px] text-[#333]">{wl}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Student validations */}
+                    <SectionLabel>Monthly Student Validations</SectionLabel>
+                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                      <SidebarDetailRow label="Total Validations" value={mo.studentValidations.toLocaleString()} />
+                      <SidebarDetailRow label="Supply Records"    value={String(mo.supplyRecords)} />
+                      <SidebarDetailRow label="Fraud Cases"       value={String(mo.fraudCases)} valueClass={mo.fraudCases > 0 ? 'text-[#ef4444]' : ''} />
+                    </div>
+
+                    {/* Supply logs */}
+                    <SectionLabel>Monthly Supply Logs</SectionLabel>
+                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                      {mo.supplyLogs.map((s) => (
+                        <SidebarDetailRow key={s.item} label={s.item} value={`${s.qty} ${s.unit}`} />
+                      ))}
+                    </div>
+
+                    {/* Financial */}
+                    <SectionLabel>Net Eligible</SectionLabel>
+                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                      <SidebarDetailRow label="Total Meals"  value={mo.totalMeals.toLocaleString()} />
+                      <SidebarDetailRow label="Net Eligible" value={mo.netEligible} valueClass="text-[#0f9f5d] font-bold text-[16px]" />
+                    </div>
+                  </>
+                )
+              })()}
+
+              {/* ── SEMESTER POOL CONTENT ── */}
+              {selectedBatch.kind === 'semester' && (() => {
+                const sp = selectedBatch.data
+                return (
+                  <>
+                    {/* Months included */}
+                    <SectionLabel>Months Included</SectionLabel>
+                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                      {sp.monthsIncluded.map((m, i) => (
+                        <div key={m} className="flex items-center gap-[10px] border-b border-[#f2f2f2] py-[11px] last:border-0">
+                          {i < sp.monthsIncluded.length - 1
+                            ? <CheckCircle2 size={15} className="shrink-0 text-[#0f9f5d]" />
+                            : <Circle size={15} className="shrink-0 text-[#f59e0b]" />
+                          }
+                          <span className="text-[13px] text-[#333]">{m}</span>
+                          {i === sp.monthsIncluded.length - 1 && (
+                            <span className="ml-auto text-[11px] text-[#df6b13]">Accumulating</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Student activity */}
+                    <SectionLabel>Student Activity</SectionLabel>
+                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                      <SidebarDetailRow label="Meal Validations" value={sp.studentValidations.toLocaleString()} />
+                    </div>
+
+                    {/* Supplies */}
+                    <SectionLabel>Supplies</SectionLabel>
+                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                      {sp.supplyLogs.map((s) => (
+                        <SidebarDetailRow key={s.item} label={s.item} value={`${s.qty.toLocaleString()} ${s.unit}`} />
+                      ))}
+                    </div>
+
+                    {/* Fraud overview */}
+                    <SectionLabel>Fraud Overview</SectionLabel>
+                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                      <SidebarDetailRow label="Unknown Cards"    value={String(sp.fraudOverview.unknownCards)}   valueClass={sp.fraudOverview.unknownCards > 0   ? 'text-[#ef4444]' : ''} />
+                      <SidebarDetailRow label="Duplicate Scans"  value={String(sp.fraudOverview.duplicateScans)} valueClass={sp.fraudOverview.duplicateScans > 0  ? 'text-[#ef4444]' : ''} />
+                      <SidebarDetailRow label="Supply Anomalies" value={String(sp.fraudOverview.supplyAnomalies)} valueClass={sp.fraudOverview.supplyAnomalies > 0 ? 'text-[#ef4444]' : ''} />
+                    </div>
+
+                    {/* Financial overview */}
+                    <SectionLabel>Financial Overview</SectionLabel>
+                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                      <SidebarDetailRow label="Gross Estimate"    value={`GHS ${sp.financial.grossEstimate.toLocaleString()}`} />
+                      <SidebarDetailRow label="Policy Adjustments" value={`-GHS ${sp.financial.policyAdjustments.toLocaleString()}`} valueClass="text-[#ef4444]" />
+                      <SidebarDetailRow label="Net Eligible"       value={sp.currentEligible} valueClass="text-[#0f9f5d] font-bold text-[17px]" />
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           </div>
         </div>

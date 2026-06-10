@@ -4,13 +4,11 @@ import { useState } from 'react'
 import { Banknote, CheckCircle2 } from 'lucide-react'
 import { PageHeader } from '../../../components/layout/PageHeader'
 
-interface ReadyToken { id: string; code: string; supplier: string; institution: string; amount: number; validatedAt: string }
+import { BANK_CASH_READY, type BankReadyToken } from '../../../lib/mockData'
 
-const readyTokens: ReadyToken[] = [
-  { id: '1', code: 'TKN-2025-00891', supplier: 'Agric Supplies Ltd', institution: 'Opoku Ware SHS',    amount: 420000, validatedAt: '2025-04-01' },
-  { id: '2', code: 'TKN-2025-00893', supplier: 'Fresh Mart Ltd',     institution: 'Tamale SHS',      amount: 210000, validatedAt: '2025-04-02' },
-  { id: '3', code: 'TKN-2025-00895', supplier: 'Agric Supplies Ltd', institution: 'Wesley Girls SHS',      amount: 175000, validatedAt: '2025-04-03' },
-]
+type ReadyToken = BankReadyToken
+
+const readyTokens: ReadyToken[] = BANK_CASH_READY
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })
 

@@ -8,8 +8,7 @@ import { clsx } from 'clsx'
 interface SubmittableToken { id: string; code: string; institution: string; amount: number; issuedDate: string }
 
 const tokens: SubmittableToken[] = [
-  { id: '1', code: 'TKN-2025-00892', institution: 'Mfantsipim SHS',      amount: 380000, issuedDate: '2025-02-01' },
-  { id: '2', code: 'TKN-2025-00871', institution: 'Tamale SHS',      amount: 210000, issuedDate: '2025-01-10' },
+  { id: '1', code: 'GOV-SAC-SEM1-005', institution: 'St. Augustine College', amount: 620000, issuedDate: '2026-03-01' },
 ]
 
 export default function SubmitToBank() {

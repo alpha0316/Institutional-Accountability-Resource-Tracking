@@ -21,12 +21,12 @@ interface FraudReport {
 }
 
 const reports: FraudReport[] = [
-  { id: 'FRD-001', institution: 'Mfantsipim SHS',         type: 'Duplicate Scan Cluster',    description: '47 duplicate scans in a single session within 12 minutes.',        severity: 'high',   status: 'investigating', flaggedAt: '2025-04-05', affectedAmount: 58750 },
-  { id: 'FRD-002', institution: 'Tamale Islamic SHS', type: 'Inflated Enrolment Report', description: 'Reported 9,800 students but verified enrolment is 7,200.',          severity: 'high',   status: 'open',          flaggedAt: '2025-04-06', affectedAmount: 130000 },
-  { id: 'FRD-003', institution: 'Tamale SHS',         type: 'Token Misuse',              description: 'Token TKN-2025-00893 redeemed at an unlisted supplier location.',    severity: 'medium', status: 'open',          flaggedAt: '2025-04-04', affectedAmount: 42000 },
-  { id: 'FRD-004', institution: 'Achimota SHS',    type: 'Inactive Card Activity',    description: '12 deactivated student cards scanned successfully at Hall B.',       severity: 'medium', status: 'investigating', flaggedAt: '2025-04-03', affectedAmount: 15000 },
-  { id: 'FRD-005', institution: 'Opoku Ware SHS',       type: 'Off-Hours Scanning',        description: 'Mass scan activity logged between 02:00–03:00 hrs on Fri 04 Apr.',    severity: 'medium', status: 'resolved',      flaggedAt: '2025-04-04', affectedAmount: 8400 },
-  { id: 'FRD-006', institution: 'Wesley Girls SHS',         type: 'Missing Attendance Logs',   description: 'Meals-served logs for 8 Mar–15 Mar are absent from the system.',     severity: 'low',    status: 'dismissed',     flaggedAt: '2025-03-20', affectedAmount: null },
+  { id: 'FRD-001', institution: 'Mfantsipim SHS',      type: 'Duplicate Scan Cluster',    description: '47 duplicate scans in a single session within 12 minutes.',          severity: 'high',   status: 'investigating', flaggedAt: '2026-03-12', affectedAmount: 58750  },
+  { id: 'FRD-002', institution: 'St. Augustine College',type: 'Inflated Attendance',       description: 'Meals-served count exceeded eligible dining students by 240.',        severity: 'high',   status: 'open',          flaggedAt: '2026-03-10', affectedAmount: 130000 },
+  { id: 'FRD-003', institution: 'Mfantsipim SHS',       type: 'Token Misuse',              description: 'Token GOV-MFS-SEM1-001 redeemed at an unlisted supplier location.',   severity: 'medium', status: 'open',          flaggedAt: '2026-03-04', affectedAmount: 42000  },
+  { id: 'FRD-004', institution: 'Achimota SHS',         type: 'Inactive Card Activity',    description: '12 deactivated student cards scanned successfully at Hall B.',         severity: 'medium', status: 'investigating', flaggedAt: '2026-03-08', affectedAmount: 15000  },
+  { id: 'FRD-005', institution: 'Opoku Ware SHS',       type: 'Off-Hours Scanning',        description: 'Mass scan activity logged between 02:00–03:00 hrs on Friday 13 Mar.', severity: 'medium', status: 'resolved',      flaggedAt: '2026-03-13', affectedAmount: 8400   },
+  { id: 'FRD-006', institution: 'Wesley Girls SHS',     type: 'Missing Attendance Logs',   description: 'Meals-served logs for 8 Mar–15 Mar are absent from the system.',       severity: 'low',    status: 'dismissed',     flaggedAt: '2026-03-15', affectedAmount: null   },
 ]
 
 type Filter = 'all' | FraudStatus

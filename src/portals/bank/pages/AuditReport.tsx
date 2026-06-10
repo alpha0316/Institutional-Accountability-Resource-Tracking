@@ -11,13 +11,13 @@ interface AuditEntry {
 }
 
 const entries: AuditEntry[] = [
-  { id: 'a1',  action: 'Cash Released',       actor: 'Dr. Ama Boateng', tokenCode: 'TKN-2025-00891', amount: 420000, timestamp: '2025-04-01T09:14:00', outcome: 'success' },
-  { id: 'a2',  action: 'Token Validated',      actor: 'Kwame Asante',    tokenCode: 'TKN-2025-00893', amount: 210000, timestamp: '2025-04-01T08:52:00', outcome: 'success' },
-  { id: 'a3',  action: 'Token Rejected',       actor: 'Dr. Ama Boateng', tokenCode: 'TKN-2025-00880', amount: 290000, timestamp: '2025-03-28T15:37:00', outcome: 'error' },
-  { id: 'a4',  action: 'Duplicate Submission', actor: 'System',           tokenCode: 'TKN-2025-00871', amount: 210000, timestamp: '2025-03-25T11:20:00', outcome: 'warning' },
-  { id: 'a5',  action: 'Cash Released',        actor: 'Kwame Asante',    tokenCode: 'TKN-2025-00860', amount: 175000, timestamp: '2025-03-20T14:05:00', outcome: 'success' },
-  { id: 'a6',  action: 'Token Validated',      actor: 'Dr. Ama Boateng', tokenCode: 'TKN-2025-00855', amount: 320000, timestamp: '2025-03-18T10:44:00', outcome: 'success' },
-  { id: 'a7',  action: 'Token Rejected',       actor: 'System',           tokenCode: 'TKN-2025-00840', amount:  98000, timestamp: '2025-03-15T16:22:00', outcome: 'error' },
+  { id: 'a1', action: 'Cash Released',       actor: 'Dr. Ama Boateng', tokenCode: 'GOV-SAC-SEM1-001', amount: 420000, timestamp: '2026-01-25T09:14:00', outcome: 'success' },
+  { id: 'a2', action: 'Token Validated',      actor: 'Kwame Asante',    tokenCode: 'GOV-OWS-SEM1-001', amount: 396000, timestamp: '2026-01-12T08:52:00', outcome: 'success' },
+  { id: 'a3', action: 'Token Rejected',       actor: 'Dr. Ama Boateng', tokenCode: 'GOV-SAC-SEM1-003', amount: 210000, timestamp: '2026-03-08T15:37:00', outcome: 'error'   },
+  { id: 'a4', action: 'Token Validated',      actor: 'Kwame Asante',    tokenCode: 'GOV-SAC-SEM1-002', amount: 180000, timestamp: '2026-02-05T10:20:00', outcome: 'success' },
+  { id: 'a5', action: 'Token Validated',      actor: 'Dr. Ama Boateng', tokenCode: 'GOV-SAC-SEM1-004', amount:  95000, timestamp: '2026-02-28T14:05:00', outcome: 'success' },
+  { id: 'a6', action: 'Duplicate Submission', actor: 'System',           tokenCode: 'GOV-SAC-SEM1-007', amount: 200000, timestamp: '2025-08-20T11:44:00', outcome: 'warning' },
+  { id: 'a7', action: 'Token Rejected',       actor: 'System',           tokenCode: 'GOV-ACH-SEM2-001', amount: 178000, timestamp: '2026-03-02T16:22:00', outcome: 'error'   },
 ]
 
 const outcomeBadge: Record<AuditEntry['outcome'], React.ReactNode> = {
@@ -42,7 +42,7 @@ const columns: Column<AuditEntry>[] = [
 ]
 
 export default function AuditReport() {
-  const [period] = useState('April 2025')
+  const [period] = useState('Q1 2026')
 
   return (
     <>

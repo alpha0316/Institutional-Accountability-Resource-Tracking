@@ -10,9 +10,9 @@ interface RejectedToken {
 }
 
 const tokens: RejectedToken[] = [
-  { id: 'r1', code: 'TKN-2025-00880', supplier: 'Agric Supplies Ltd',  institution: 'Achimota SHS', amount: 290000, rejectedAt: '2025-03-28', reason: 'Token expired before submission' },
-  { id: 'r2', code: 'TKN-2025-00840', supplier: 'Northern Foods Ltd',  institution: 'Tamale SHS',      amount:  98000, rejectedAt: '2025-03-15', reason: 'Invalid token signature' },
-  { id: 'r3', code: 'TKN-2024-00851', supplier: 'Ghana Foods Co.',     institution: 'Sunyani SHS',     amount: 175000, rejectedAt: '2025-02-10', reason: 'Duplicate submission attempt' },
+  { id: 'r1', code: 'GOV-SAC-SEM1-003', supplier: 'Ashanti Agro Supplies', institution: 'St. Augustine College', amount: 210000, rejectedAt: '2026-03-08', reason: 'Supplier verification failed — pending re-registration' },
+  { id: 'r2', code: 'GOV-SAC-SEM1-007', supplier: 'Golden Harvest Foods',  institution: 'St. Augustine College', amount: 200000, rejectedAt: '2025-08-20', reason: 'Token submitted after expiry date' },
+  { id: 'r3', code: 'GOV-ACH-SEM2-001', supplier: 'Northern Foods Ltd',    institution: 'Achimota SHS',           amount: 178000, rejectedAt: '2026-03-02', reason: 'Duplicate submission attempt' },
 ]
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })

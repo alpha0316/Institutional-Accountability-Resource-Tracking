@@ -7,18 +7,9 @@ import { DataTable, type Column } from '../../../components/ui/DataTable'
 import type { GovernmentToken } from '../../../types'
 import { clsx } from 'clsx'
 
-const allTokens: GovernmentToken[] = [
-  { id:  '1', tokenCode: 'TKN-2025-00891', supplierId: 's1', supplierName: 'Agric Supplies Ltd',  institutionName: 'Opoku Ware SHS',    value: 420000, issuedDate: '2025-02-01', expiryDate: '2025-07-31', status: 'redeemed' },
-  { id:  '2', tokenCode: 'TKN-2025-00892', supplierId: 's2', supplierName: 'Ghana Foods Co.',     institutionName: 'Mfantsipim SHS',      value: 420000, issuedDate: '2025-02-01', expiryDate: '2025-07-31', status: 'active' },
-  { id:  '3', tokenCode: 'TKN-2025-00893', supplierId: 's3', supplierName: 'Fresh Mart Ltd',      institutionName: 'Tamale SHS',      value: 420000, issuedDate: '2025-02-01', expiryDate: '2025-07-31', status: 'pending' },
-  { id:  '4', tokenCode: 'TKN-2025-00894', supplierId: 's4', supplierName: 'Northern Foods Ltd',  institutionName: 'Achimota SHS', value: 380000, issuedDate: '2025-01-15', expiryDate: '2025-06-30', status: 'expired' },
-  { id:  '5', tokenCode: 'TKN-2025-00895', supplierId: 's1', supplierName: 'Agric Supplies Ltd',  institutionName: 'Wesley Girls SHS',      value: 175000, issuedDate: '2025-01-20', expiryDate: '2025-06-30', status: 'rejected' },
-  { id:  '6', tokenCode: 'TKN-2025-00890', supplierId: 's2', supplierName: 'Ghana Foods Co.',     institutionName: 'Sunyani SHS',     value: 290000, issuedDate: '2025-01-10', expiryDate: '2025-06-30', status: 'redeemed' },
-  { id:  '7', tokenCode: 'TKN-2025-00889', supplierId: 's3', supplierName: 'Fresh Mart Ltd',      institutionName: 'Tarkwa SHS',     value: 210000, issuedDate: '2025-01-05', expiryDate: '2025-06-30', status: 'active' },
-  { id:  '8', tokenCode: 'TKN-2025-00888', supplierId: 's4', supplierName: 'Northern Foods Ltd',  institutionName: 'Tamale Islamic SHS', value: 175000, issuedDate: '2024-12-15', expiryDate: '2025-05-31', status: 'expired' },
-  { id:  '9', tokenCode: 'TKN-2024-00887', supplierId: 's1', supplierName: 'Agric Supplies Ltd',  institutionName: 'Opoku Ware SHS',    value: 420000, issuedDate: '2024-09-01', expiryDate: '2025-01-31', status: 'redeemed' },
-  { id: '10', tokenCode: 'TKN-2024-00886', supplierId: 's2', supplierName: 'Ghana Foods Co.',     institutionName: 'Mfantsipim SHS',      value: 290000, issuedDate: '2024-09-01', expiryDate: '2025-01-31', status: 'redeemed' },
-]
+import { GOV_ALL_TOKENS } from '../../../lib/mockData'
+
+const allTokens: GovernmentToken[] = GOV_ALL_TOKENS
 
 type StatusFilter = 'all' | GovernmentToken['status']
 

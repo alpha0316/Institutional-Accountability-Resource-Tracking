@@ -7,15 +7,16 @@ import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { Modal } from '../../../components/ui/Modal'
 import type { SupplyOrder } from '../../../types'
 
-const INSTITUTIONS = ['Opoku Ware SHS', 'Achimota SHS', 'Mfantsipim SHS', 'Tamale SHS', 'Wesley Girls SHS', 'Sunyani SHS', 'Tarkwa SHS', 'Tamale Islamic SHS']
-const TOKEN_REFS   = ['TKN-2025-00891', 'TKN-2025-00892', 'TKN-2025-00880', 'TKN-2025-00871']
+import { GOV_INSTITUTIONS } from '../../../lib/mockData'
+const INSTITUTIONS = GOV_INSTITUTIONS
+const TOKEN_REFS   = ['GOV-SAC-SEM1-001', 'GOV-SAC-SEM1-005', 'GOV-OWS-SEM2-003', 'GOV-SAC-SEM2-005']
 
 const deliveries: SupplyOrder[] = [
-  { id: 'd1', itemType: 'Rice, Cooking Oil, Tomatoes', quantity: 1200, unit: 'kg',  orderDate: '2025-04-01', supplierId: 's1', schoolId: 'Opoku Ware SHS',    tokenRef: 'TKN-2025-00891', status: 'delivered' },
-  { id: 'd2', itemType: 'Beans, Plantain, Fish',       quantity:  840, unit: 'kg',  orderDate: '2025-04-03', supplierId: 's1', schoolId: 'Mfantsipim SHS',      tokenRef: 'TKN-2025-00892', status: 'pending' },
-  { id: 'd3', itemType: 'Yam, Chicken, Vegetables',    quantity:  960, unit: 'kg',  orderDate: '2025-04-05', supplierId: 's1', schoolId: 'Achimota SHS', tokenRef: 'TKN-2025-00880', status: 'in_transit' },
-  { id: 'd4', itemType: 'Rice, Beans',                 quantity: 2000, unit: 'kg',  orderDate: '2025-03-20', supplierId: 's1', schoolId: 'Tamale SHS',      tokenRef: 'TKN-2025-00871', status: 'delivered' },
-  { id: 'd5', itemType: 'Cooking Oil, Tomatoes',       quantity:  600, unit: 'units', orderDate: '2025-03-15', supplierId: 's1', schoolId: 'Wesley Girls SHS',   tokenRef: 'TKN-2025-00871', status: 'delivered' },
+  { id: 'd1', itemType: 'Rice (500 Bags)',           quantity:  500, unit: 'Bags',  orderDate: '2026-03-14', supplierId: 'SUP-001', schoolId: 'St. Augustine College', tokenRef: 'GOV-SAC-SEM1-001', status: 'delivered'  },
+  { id: 'd2', itemType: 'Rice — Batch 2 (600 Bags)', quantity:  600, unit: 'Bags',  orderDate: '2026-03-20', supplierId: 'SUP-001', schoolId: 'St. Augustine College', tokenRef: 'GOV-SAC-SEM1-005', status: 'pending'    },
+  { id: 'd3', itemType: 'Rice, Maize (800 units)',   quantity:  800, unit: 'Units', orderDate: '2025-11-15', supplierId: 'SUP-001', schoolId: 'Opoku Ware SHS',         tokenRef: 'GOV-OWS-SEM2-003', status: 'delivered'  },
+  { id: 'd4', itemType: 'Rice (prior semester)',     quantity: 1000, unit: 'Bags',  orderDate: '2025-10-05', supplierId: 'SUP-001', schoolId: 'St. Augustine College', tokenRef: 'GOV-SAC-SEM2-005', status: 'delivered'  },
+  { id: 'd5', itemType: 'Rice, Maize, Beans',        quantity:  650, unit: 'Bags',  orderDate: '2025-09-20', supplierId: 'SUP-001', schoolId: 'Wesley Girls SHS',      tokenRef: 'GOV-WGS-SEM1-001', status: 'in_transit' },
 ]
 
 const statusBadge: Record<SupplyOrder['status'], React.ReactNode> = {

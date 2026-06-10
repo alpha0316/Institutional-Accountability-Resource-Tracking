@@ -1,5 +1,8 @@
 // ─── Mock Data — Central registry for all modules ──────────────────────────────
 // Each module has data covering all possible case scenarios (statuses, edge cases)
+// Single source of truth — every portal imports from here so token codes, supplier
+// names, and institution names are consistent across the entire application.
+import type { GovernmentToken, ReimbursementClaim, BankTransaction } from '../types'
 
 // ────────────────────────────────────────────────────────────────────────────────
 // 1. STUDENTS (Master Registry)
@@ -456,12 +459,16 @@ export interface MockDailyReport {
   breakfastServed: number
   lunchServed: number
   dinnerServed: number
-  // Supply
+  // Supply consumed
   riceUsed: string
   oilUsed: string
   beansUsed: string
+  // Financial chain: mealRevenue + supplyCost = grossEstimate
+  mealRevenue: string
+  supplyCost: string
   // Logs
   logs: { time: string; event: string }[]
+  riskScore: number
 }
 
 export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
@@ -480,13 +487,16 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     status: 'analyzing',
     generatedBy: 'Auto',
     updatedAt: 'Today, 8:10 PM',
+    riskScore: 58,
     sessions: 3,
     breakfastServed: 2352,
     lunchServed: 2418,
     dinnerServed: 2469,
-    riceUsed: '420 Bags',
-    oilUsed: '310 Litres',
-    beansUsed: '75 Bags',
+    riceUsed: '33 Bags',
+    oilUsed: '5 Litres',
+    beansUsed: '5 Bags',
+    mealRevenue: 'GHS 39,600',
+    supplyCost: 'GHS 2,220',
     logs: [
       { time: '6:00 AM', event: 'Breakfast session opened' },
       { time: '7:32 AM', event: 'Breakfast session closed' },
@@ -516,13 +526,16 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     status: 'eligible',
     generatedBy: 'Auto',
     updatedAt: '14 Mar, 8:12 PM',
+    riskScore: 0,
     sessions: 3,
     breakfastServed: 2310,
     lunchServed: 2405,
     dinnerServed: 2445,
-    riceUsed: '440 Bags',
-    oilUsed: '295 Litres',
-    beansUsed: '80 Bags',
+    riceUsed: '31 Bags',
+    oilUsed: '4 Litres',
+    beansUsed: '5 Bags',
+    mealRevenue: 'GHS 36,280',
+    supplyCost: 'GHS 1,630',
     logs: [
       { time: '6:00 AM', event: 'Breakfast session opened' },
       { time: '7:30 AM', event: 'Breakfast session closed' },
@@ -550,13 +563,16 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     status: 'locked',
     generatedBy: 'Auto',
     updatedAt: '13 Mar, 9:05 PM',
+    riskScore: 28,
     sessions: 3,
     breakfastServed: 2330,
     lunchServed: 2420,
     dinnerServed: 2450,
-    riceUsed: '430 Bags',
-    oilUsed: '300 Litres',
-    beansUsed: '78 Bags',
+    riceUsed: '32 Bags',
+    oilUsed: '5 Litres',
+    beansUsed: '5 Bags',
+    mealRevenue: 'GHS 37,120',
+    supplyCost: 'GHS 1,530',
     logs: [
       { time: '6:00 AM', event: 'Breakfast session opened' },
       { time: '7:35 AM', event: 'Breakfast session closed' },
@@ -585,13 +601,16 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     status: 'analyzing',
     generatedBy: 'Auto',
     updatedAt: '12 Mar, 8:30 PM',
+    riskScore: 62,
     sessions: 3,
     breakfastServed: 2340,
     lunchServed: 2410,
     dinnerServed: 2430,
-    riceUsed: '425 Bags',
-    oilUsed: '305 Litres',
-    beansUsed: '74 Bags',
+    riceUsed: '30 Bags',
+    oilUsed: '4 Litres',
+    beansUsed: '4 Bags',
+    mealRevenue: 'GHS 36,680',
+    supplyCost: 'GHS 1,420',
     logs: [
       { time: '8:05 PM', event: 'Daily report created' },
       { time: '8:15 PM', event: 'Operational review completed' },
@@ -613,13 +632,16 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     status: 'eligible',
     generatedBy: 'Auto',
     updatedAt: '11 Mar, 8:11 PM',
+    riskScore: 0,
     sessions: 3,
     breakfastServed: 2355,
     lunchServed: 2425,
     dinnerServed: 2480,
-    riceUsed: '445 Bags',
-    oilUsed: '298 Litres',
-    beansUsed: '82 Bags',
+    riceUsed: '34 Bags',
+    oilUsed: '5 Litres',
+    beansUsed: '6 Bags',
+    mealRevenue: 'GHS 36,370',
+    supplyCost: 'GHS 1,580',
     logs: [
       { time: '8:05 PM', event: 'Daily report created' },
       { time: '8:11 PM', event: 'Report approved, locked, and added to claim pool' },
@@ -640,13 +662,16 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     status: 'analyzing',
     generatedBy: 'Auto',
     updatedAt: '10 Mar, 8:45 PM',
+    riskScore: 85,
     sessions: 3,
     breakfastServed: 2000,
     lunchServed: 2150,
     dinnerServed: 2165,
-    riceUsed: '380 Bags',
-    oilUsed: '270 Litres',
-    beansUsed: '65 Bags',
+    riceUsed: '28 Bags',
+    oilUsed: '4 Litres',
+    beansUsed: '4 Bags',
+    mealRevenue: 'GHS 35,460',
+    supplyCost: 'GHS 1,340',
     logs: [
       { time: '8:05 PM', event: 'Daily report created' },
       { time: '8:10 PM', event: 'High fraud alert count detected — flagged for review' },
@@ -669,13 +694,16 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     status: 'eligible',
     generatedBy: 'Auto',
     updatedAt: '09 Mar, 8:08 PM',
+    riskScore: 0,
     sessions: 3,
     breakfastServed: 2330,
     lunchServed: 2410,
     dinnerServed: 2430,
-    riceUsed: '435 Bags',
-    oilUsed: '290 Litres',
-    beansUsed: '77 Bags',
+    riceUsed: '31 Bags',
+    oilUsed: '5 Litres',
+    beansUsed: '5 Bags',
+    mealRevenue: 'GHS 36,290',
+    supplyCost: 'GHS 1,560',
     logs: [
       { time: '8:04 PM', event: 'Daily report created' },
       { time: '8:08 PM', event: 'Clean report — auto-approved and locked' },
@@ -685,12 +713,174 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
 
 // Kanban workflow columns
 export const WORKFLOW_COLUMNS = [
-  { id: 'generated', label: 'Generated', dot: 'bg-orange-400' },
-  { id: 'operational_review', label: 'Operational Review', dot: 'bg-blue-500' },
-  { id: 'compliance_review', label: 'Compliance Review', dot: 'bg-red-500' },
-  { id: 'approve_lock', label: 'Approve And Lock', dot: 'bg-yellow-500' },
-  { id: 'claim_eligible', label: 'Claim Eligible', dot: 'bg-green-500' },
+  { id: 'generated',          label: 'Generated',          dot: 'bg-orange-400' },
+  { id: 'operational_review', label: 'Operational Review', dot: 'bg-blue-500'   },
+  { id: 'compliance_review',  label: 'Compliance Review',  dot: 'bg-red-500'    },
+  { id: 'approve_lock',       label: 'Approve & Lock',     dot: 'bg-yellow-500' },
+  { id: 'claim_eligible',     label: 'Claim Eligible',     dot: 'bg-green-500'  },
 ]
+
+// ── Report Aggregation Hierarchy ─────────────────────────────────────────────
+export interface WeeklyBatch {
+  id: string
+  weekLabel: string
+  weekNumber: number
+  daysRange: string
+  days: { dayNum: number; reportId: string; date: string; meals: number; status: 'eligible' | 'pipeline' }[]
+  totalMeals: number
+  supplyRecords: number
+  fraudCases: number
+  netEligibleNum: number
+  netEligible: string
+  status: 'complete' | 'incomplete'
+  studentValidations: { total: number; successful: number; rejected: number }
+  supplyLogs: { item: string; qty: number; unit: string }[]
+  fraudSummary: { duplicateCards: number; unknownCards: number; supplyAnomalies: number }
+  financial: { gross: number; policyDeductions: number; netEligible: number }
+}
+
+export const WEEKLY_BATCHES: WeeklyBatch[] = [
+  {
+    id: 'wk-9',
+    weekLabel: 'Week 9',
+    weekNumber: 9,
+    daysRange: 'Mar 2 – 8',
+    days: [
+      { dayNum: 1, reportId: 'DR-2026-0302', date: '2 Mar',  meals: 2388, status: 'eligible' },
+      { dayNum: 2, reportId: 'DR-2026-0303', date: '3 Mar',  meals: 2415, status: 'eligible' },
+      { dayNum: 3, reportId: 'DR-2026-0304', date: '4 Mar',  meals: 2402, status: 'eligible' },
+      { dayNum: 4, reportId: 'DR-2026-0305', date: '5 Mar',  meals: 2390, status: 'eligible' },
+      { dayNum: 5, reportId: 'DR-2026-0306', date: '6 Mar',  meals: 2420, status: 'eligible' },
+      { dayNum: 6, reportId: 'DR-2026-0307', date: '7 Mar',  meals: 2397, status: 'eligible' },
+      { dayNum: 7, reportId: 'DR-2026-0308', date: '8 Mar',  meals: 2390, status: 'eligible' },
+    ],
+    totalMeals: 16802,
+    supplyRecords: 21,
+    fraudCases: 1,
+    netEligibleNum: 265200,
+    netEligible: 'GHS 265,200',
+    status: 'complete',
+    studentValidations: { total: 16802, successful: 16775, rejected: 27 },
+    supplyLogs: [
+      { item: 'Rice',        qty: 224, unit: 'Bags'   },
+      { item: 'Beans',       qty:  35, unit: 'Bags'   },
+      { item: 'Cooking Oil', qty:  33, unit: 'Litres' },
+    ],
+    fraudSummary: { duplicateCards: 0, unknownCards: 1, supplyAnomalies: 0 },
+    financial: { gross: 267500, policyDeductions: 2300, netEligible: 265200 },
+  },
+  {
+    id: 'wk-10',
+    weekLabel: 'Week 10',
+    weekNumber: 10,
+    daysRange: 'Mar 9 – 15',
+    days: [
+      { dayNum: 1, reportId: 'DR-2026-0309', date: '9 Mar',  meals: 2390, status: 'eligible' },
+      { dayNum: 2, reportId: 'DR-2026-0310', date: '10 Mar', meals: 2105, status: 'pipeline' },
+      { dayNum: 3, reportId: 'DR-2026-0311', date: '11 Mar', meals: 2420, status: 'eligible' },
+      { dayNum: 4, reportId: 'DR-2026-0312', date: '12 Mar', meals: 2395, status: 'pipeline' },
+      { dayNum: 5, reportId: 'DR-2026-0313', date: '13 Mar', meals: 2401, status: 'pipeline' },
+      { dayNum: 6, reportId: 'DR-2026-0314', date: '14 Mar', meals: 2387, status: 'eligible' },
+      { dayNum: 7, reportId: 'DR-2026-0315', date: '15 Mar', meals: 2413, status: 'pipeline' },
+    ],
+    totalMeals: 16511,
+    supplyRecords: 21,
+    fraudCases: 4,
+    netEligibleNum: 0,
+    netEligible: 'Pending',
+    status: 'incomplete',
+    studentValidations: { total: 9197, successful: 9188, rejected: 9 },
+    supplyLogs: [
+      { item: 'Rice',        qty:  94, unit: 'Bags'   },
+      { item: 'Beans',       qty:  13, unit: 'Bags'   },
+      { item: 'Cooking Oil', qty:  17, unit: 'Litres' },
+    ],
+    fraudSummary: { duplicateCards: 1, unknownCards: 2, supplyAnomalies: 1 },
+    financial: { gross: 0, policyDeductions: 0, netEligible: 0 },
+  },
+]
+
+export interface MonthlyBatch {
+  id: string
+  monthLabel: string
+  weekLabels: string[]
+  weekIds: string[]
+  totalMeals: number
+  supplyRecords: number
+  fraudCases: number
+  netEligibleNum: number
+  netEligible: string
+  status: 'complete' | 'incomplete'
+  studentValidations: number
+  supplyLogs: { item: string; qty: number; unit: string }[]
+}
+
+export const MONTHLY_BATCHES: MonthlyBatch[] = [
+  {
+    id: 'jan-2026',
+    monthLabel: 'January 2026',
+    weekLabels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+    weekIds: ['wk-1', 'wk-2', 'wk-3', 'wk-4'],
+    totalMeals: 66840,
+    supplyRecords: 112,
+    fraudCases: 3,
+    netEligibleNum: 1048000,
+    netEligible: 'GHS 1,048,000',
+    status: 'complete',
+    studentValidations: 66840,
+    supplyLogs: [
+      { item: 'Rice',        qty: 892, unit: 'Bags'   },
+      { item: 'Beans',       qty: 138, unit: 'Bags'   },
+      { item: 'Cooking Oil', qty: 133, unit: 'Litres' },
+    ],
+  },
+  {
+    id: 'feb-2026',
+    monthLabel: 'February 2026',
+    weekLabels: ['Week 5', 'Week 6', 'Week 7', 'Week 8'],
+    weekIds: ['wk-5', 'wk-6', 'wk-7', 'wk-8'],
+    totalMeals: 65100,
+    supplyRecords: 108,
+    fraudCases: 2,
+    netEligibleNum: 1021000,
+    netEligible: 'GHS 1,021,000',
+    status: 'complete',
+    studentValidations: 65100,
+    supplyLogs: [
+      { item: 'Rice',        qty: 870, unit: 'Bags'   },
+      { item: 'Beans',       qty: 134, unit: 'Bags'   },
+      { item: 'Cooking Oil', qty: 130, unit: 'Litres' },
+    ],
+  },
+]
+
+export interface SemesterPool {
+  id: string
+  semesterLabel: string
+  monthsIncluded: string[]
+  currentEligibleNum: number
+  currentEligible: string
+  studentValidations: number
+  supplyLogs: { item: string; qty: number; unit: string }[]
+  fraudOverview: { unknownCards: number; duplicateScans: number; supplyAnomalies: number }
+  financial: { grossEstimate: number; policyAdjustments: number; netEligible: number }
+}
+
+export const SEMESTER_POOL: SemesterPool = {
+  id: 'sem1-2026',
+  semesterLabel: 'Semester One',
+  monthsIncluded: ['January 2026', 'February 2026', 'March 2026 (partial)'],
+  currentEligibleNum: 2334200,
+  currentEligible: 'GHS 2,334,200',
+  studentValidations: 148742,
+  supplyLogs: [
+    { item: 'Rice',        qty: 1986, unit: 'Bags'   },
+    { item: 'Beans',       qty:  307, unit: 'Bags'   },
+    { item: 'Cooking Oil', qty:  296, unit: 'Litres' },
+  ],
+  fraudOverview: { unknownCards: 6, duplicateScans: 8, supplyAnomalies: 1 },
+  financial: { grossEstimate: 2365800, policyAdjustments: 31600, netEligible: 2334200 },
+}
 
 // Reimbursement breakdown
 export const REIMBURSEMENT_BREAKDOWN = [
@@ -702,6 +892,18 @@ export const REIMBURSEMENT_BREAKDOWN = [
   { category: 'Policy Cap Adjustment',basis: 'Ceiling exceeded',      amount: '-GHS 3,500', type: 'adjustment' as const },
   { category: 'Net Claimable Total',  basis: '—',                     amount: 'GHS 38,320', type: 'final' as const },
 ]
+
+// TODO: Supply-to-Claim bridge — shows how each supply item feeds into the reimbursement
+// export const SUPPLY_CLAIM_BRIDGE = [
+//   { item: 'Rice',           unit: 'Bags',   consumed: 33, unitCost: 'GHS 250',   totalCost: 'GHS 8,250',  mealsSupported: 'Breakfast + Lunch + Dinner', claimImpact: 'GHS 8,250'  },
+//   { item: 'Cooking Oil',    unit: 'Litres', consumed: 5,  unitCost: 'GHS 180',   totalCost: 'GHS 900',   mealsSupported: 'Breakfast + Dinner',         claimImpact: 'GHS 900'   },
+//   { item: 'Beans',          unit: 'Bags',   consumed: 5,  unitCost: 'GHS 320',   totalCost: 'GHS 1,600', mealsSupported: 'Lunch',                       claimImpact: 'GHS 1,600' },
+//   { item: 'Tomato Paste',   unit: 'Cartons',consumed: 4,  unitCost: 'GHS 450',   totalCost: 'GHS 1,800', mealsSupported: 'Lunch + Dinner',              claimImpact: 'GHS 1,800' },
+//   { item: 'Maize',          unit: 'Bags',   consumed: 6,  unitCost: 'GHS 200',   totalCost: 'GHS 1,200', mealsSupported: 'Breakfast',                   claimImpact: 'GHS 1,200' },
+//   { item: 'Gas Cylinders',  unit: 'Units',  consumed: 2,  unitCost: 'GHS 300',   totalCost: 'GHS 600',   mealsSupported: 'All sessions (cooking fuel)',    claimImpact: 'GHS 600'  },
+//   { item: 'Salt',           unit: 'Cartons',consumed: 1,  unitCost: 'GHS 150',   totalCost: 'GHS 150',   mealsSupported: 'All sessions (seasoning)',       claimImpact: 'GHS 150'  },
+//   { item: 'Fish (Frozen)',  unit: 'Cartons',consumed: 3,  unitCost: 'GHS 800',   totalCost: 'GHS 2,400', mealsSupported: 'Lunch + Dinner',              claimImpact: 'GHS 2,400' },
+// ]
 
 // Attendance session data
 export const ATTENDANCE_SESSIONS = [
@@ -1161,3 +1363,216 @@ export const CLAIM_STATUS_MAP: Record<string, { label: string; variant: BadgeTon
   rejected: { label: 'Rejected', variant: 'red' },
   partial:  { label: 'Partial',  variant: 'blue' },
 }
+
+// ────────────────────────────────────────────────────────────────────────────────
+// 9. GOV PORTAL — Cross-institution token and claim registry
+//    These tie back to MOCK_TOKENS: GOV-SAC-SEM1-001 through 005 are the same
+//    tokens as in the school-admin supply view. Other schools share the universe.
+// ────────────────────────────────────────────────────────────────────────────────
+
+// Full national token ledger (Gov IssueTokens + TokenLedger pages)
+export const GOV_ALL_TOKENS: GovernmentToken[] = [
+  // St. Augustine College, Kumasi — 2025/2026 Semester 1
+  { id: '1',  tokenCode: 'GOV-SAC-SEM1-001', supplierId: 'SUP-001', supplierName: 'Golden Harvest Foods',  institutionName: 'St. Augustine College', value: 420000, issuedDate: '2026-01-10', expiryDate: '2026-07-10', status: 'redeemed' },
+  { id: '2',  tokenCode: 'GOV-SAC-SEM1-002', supplierId: 'SUP-002', supplierName: 'SunGold Oils',          institutionName: 'St. Augustine College', value: 180000, issuedDate: '2026-01-15', expiryDate: '2026-07-15', status: 'active'   },
+  { id: '3',  tokenCode: 'GOV-SAC-SEM1-003', supplierId: 'SUP-003', supplierName: 'Ashanti Agro Supplies', institutionName: 'St. Augustine College', value: 210000, issuedDate: '2026-01-20', expiryDate: '2026-07-20', status: 'rejected' },
+  { id: '4',  tokenCode: 'GOV-SAC-SEM1-004', supplierId: 'SUP-004', supplierName: 'National School Foods', institutionName: 'St. Augustine College', value:  95000, issuedDate: '2026-02-05', expiryDate: '2026-08-05', status: 'active'   },
+  { id: '5',  tokenCode: 'GOV-SAC-SEM1-005', supplierId: 'SUP-001', supplierName: 'Golden Harvest Foods',  institutionName: 'St. Augustine College', value: 620000, issuedDate: '2026-03-01', expiryDate: '2026-09-01', status: 'pending'  },
+  // Opoku Ware SHS, Kumasi
+  { id: '6',  tokenCode: 'GOV-OWS-SEM1-001', supplierId: 'SUP-005', supplierName: 'Ghana Foods Co.',       institutionName: 'Opoku Ware SHS',         value: 396000, issuedDate: '2026-01-08', expiryDate: '2026-07-08', status: 'redeemed' },
+  { id: '7',  tokenCode: 'GOV-OWS-SEM1-002', supplierId: 'SUP-006', supplierName: 'Northern Foods Ltd',    institutionName: 'Opoku Ware SHS',         value: 215000, issuedDate: '2026-02-12', expiryDate: '2026-08-12', status: 'active'   },
+  // Mfantsipim SHS, Cape Coast
+  { id: '8',  tokenCode: 'GOV-MFS-SEM1-001', supplierId: 'SUP-007', supplierName: 'Fresh Mart Ltd',        institutionName: 'Mfantsipim SHS',         value: 287500, issuedDate: '2026-01-18', expiryDate: '2026-07-18', status: 'pending'  },
+  // Wesley Girls High School, Cape Coast
+  { id: '9',  tokenCode: 'GOV-WGS-SEM1-001', supplierId: 'SUP-005', supplierName: 'Ghana Foods Co.',       institutionName: 'Wesley Girls SHS',       value: 215000, issuedDate: '2026-01-22', expiryDate: '2026-07-22', status: 'active'   },
+  // Achimota SHS — expired prior-semester token
+  { id: '10', tokenCode: 'GOV-ACH-SEM2-001', supplierId: 'SUP-006', supplierName: 'Northern Foods Ltd',    institutionName: 'Achimota SHS',           value: 178000, issuedDate: '2025-09-01', expiryDate: '2026-03-01', status: 'expired'  },
+]
+
+// Gov Overview — multi-institution claims summary
+export interface GovClaim {
+  id: string
+  institution: string
+  claimed: number
+  approved: number | null
+  status: 'approved' | 'pending' | 'flagged'
+}
+
+export const GOV_CLAIMS: GovClaim[] = [
+  // SAC claim = DR-0314 (37,910) + DR-0311 (37,950) + DR-0309 (37,850) = 113,710
+  { id: '1', institution: 'St. Augustine College', claimed: 113710, approved: null,   status: 'pending'  },
+  { id: '2', institution: 'Opoku Ware SHS',         claimed: 396000, approved: 388000, status: 'approved' },
+  { id: '3', institution: 'Mfantsipim SHS',          claimed: 287500, approved: null,   status: 'flagged'  },
+  { id: '4', institution: 'Wesley Girls SHS',        claimed: 215000, approved: 210000, status: 'approved' },
+  { id: '5', institution: 'Achimota SHS',            claimed: 178000, approved: null,   status: 'pending'  },
+]
+
+// Gov Overview — 3 most recently issued tokens
+export interface GovOverviewToken {
+  id: string   // token code used as display ID
+  amount: number
+  supplier: string
+  institution: string
+  status: 'redeemed' | 'active' | 'held'
+}
+
+export const GOV_RECENT_TOKENS: GovOverviewToken[] = [
+  // 'held' = issued but not yet submitted to bank (matches MOCK_TOKENS pending status)
+  { id: 'GOV-SAC-SEM1-005', amount: 620000, supplier: 'Golden Harvest Foods',  institution: 'St. Augustine College', status: 'held'     },
+  { id: 'GOV-SAC-SEM1-002', amount: 180000, supplier: 'SunGold Oils',          institution: 'St. Augustine College', status: 'active'   },
+  { id: 'GOV-SAC-SEM1-001', amount: 420000, supplier: 'Golden Harvest Foods',  institution: 'St. Augustine College', status: 'redeemed' },
+]
+
+// Gov Reimbursements page — full claim list across all institutions
+export const GOV_REIMBURSEMENTS: (ReimbursementClaim & { institution: string; period: string })[] = [
+  { id: 'CLM-2026-S1-001', reportId: 'DR-0314, DR-0311, DR-0309', institutionName: 'St. Augustine College', institution: 'St. Augustine College', amountClaimed:  113710, amountApproved:  null,    status: 'pending',  submittedAt: '2026-03-15', period: 'Sem 1, 2026' },
+  { id: 'CLM-2026-S1-002', reportId: 'DR-0308, DR-0309, DR-0310', institutionName: 'St. Augustine College', institution: 'St. Augustine College', amountClaimed:   41200, amountApproved:  39400,   status: 'partial',  submittedAt: '2026-03-10', period: 'Sem 1, 2026' },
+  { id: 'CLM-2025-S2-005', reportId: 'DR-2025-0120..0180',        institutionName: 'St. Augustine College', institution: 'St. Augustine College', amountClaimed: 1765000, amountApproved: 1720500,  status: 'approved', submittedAt: '2025-12-15', period: 'Sem 2, 2025' },
+  { id: 'CLM-2026-S1-011', reportId: 'OWS-DR-0315..0309',         institutionName: 'Opoku Ware SHS',         institution: 'Opoku Ware SHS',         amountClaimed:  396000, amountApproved:  388000,  status: 'approved', submittedAt: '2026-03-12', period: 'Sem 1, 2026' },
+  { id: 'CLM-2026-S1-012', reportId: 'MFS-DR-0314..0310',         institutionName: 'Mfantsipim SHS',          institution: 'Mfantsipim SHS',          amountClaimed:  287500, amountApproved:  null,    status: 'pending',  submittedAt: '2026-03-14', period: 'Sem 1, 2026' },
+  { id: 'CLM-2026-S1-013', reportId: 'WGS-DR-0311..0309',         institutionName: 'Wesley Girls SHS',       institution: 'Wesley Girls SHS',       amountClaimed:  215000, amountApproved:  null,    status: 'rejected', submittedAt: '2026-03-11', period: 'Sem 1, 2026' },
+  { id: 'CLM-2026-S1-014', reportId: 'ACH-DR-0310..0308',         institutionName: 'Achimota SHS',           institution: 'Achimota SHS',           amountClaimed:  178000, amountApproved:  175500,  status: 'approved', submittedAt: '2026-03-08', period: 'Sem 1, 2026' },
+  { id: 'CLM-2025-S2-008', reportId: 'MFS-2025-0080..0060',       institutionName: 'Mfantsipim SHS',          institution: 'Mfantsipim SHS',          amountClaimed: 1450000, amountApproved:  null,    status: 'rejected', submittedAt: '2025-12-20', period: 'Sem 2, 2025' },
+]
+
+// Institution + Supplier picklists for the "Issue Token" form
+export const GOV_INSTITUTIONS = [
+  'St. Augustine College',
+  'Opoku Ware SHS',
+  'Mfantsipim SHS',
+  'Wesley Girls SHS',
+  'Achimota SHS',
+  'Tamale SHS',
+  'Sunyani SHS',
+  'Tarkwa SHS',
+]
+
+export const GOV_SUPPLIERS = [
+  'Golden Harvest Foods',
+  'SunGold Oils',
+  'Ashanti Agro Supplies',
+  'National School Foods',
+  'Ghana Foods Co.',
+  'Northern Foods Ltd',
+  'Fresh Mart Ltd',
+]
+
+// ────────────────────────────────────────────────────────────────────────────────
+// 10. BANK PORTAL — Token validation and cash release
+// ────────────────────────────────────────────────────────────────────────────────
+
+// Shared transaction ledger — used by both bank and supplier portals.
+// Token codes match GOV_ALL_TOKENS and MOCK_TOKENS exactly.
+export const BANK_TRANSACTIONS: BankTransaction[] = [
+  { id: 'BTX-001', tokenId: '1', tokenCode: 'GOV-SAC-SEM1-001', supplierName: 'Golden Harvest Foods',  amount: 420000, processedAt: '2026-01-25', status: 'released' },
+  { id: 'BTX-002', tokenId: '2', tokenCode: 'GOV-SAC-SEM1-002', supplierName: 'SunGold Oils',          amount: 180000, processedAt: '2026-01-28', status: 'pending'  },
+  { id: 'BTX-003', tokenId: '4', tokenCode: 'GOV-SAC-SEM1-004', supplierName: 'National School Foods', amount:  95000, processedAt: '2026-02-20', status: 'pending'  },
+  { id: 'BTX-004', tokenId: '5', tokenCode: 'GOV-SAC-SEM1-005', supplierName: 'Golden Harvest Foods',  amount: 620000, processedAt: '2026-03-14', status: 'pending'  },
+  { id: 'BTX-005', tokenId: '6', tokenCode: 'GOV-OWS-SEM1-001', supplierName: 'Ghana Foods Co.',       amount: 396000, processedAt: '2026-01-12', status: 'released' },
+  { id: 'BTX-006', tokenId: '7', tokenCode: 'GOV-OWS-SEM1-002', supplierName: 'Northern Foods Ltd',    amount: 215000, processedAt: '2026-02-18', status: 'pending'  },
+  { id: 'BTX-007', tokenId: '3', tokenCode: 'GOV-SAC-SEM1-003', supplierName: 'Ashanti Agro Supplies', amount: 210000, processedAt: '2026-03-08', status: 'rejected' },
+  { id: 'BTX-008', tokenId: '8', tokenCode: 'GOV-MFS-SEM1-001', supplierName: 'Fresh Mart Ltd',        amount: 287500, processedAt: '2026-02-05', status: 'pending'  },
+]
+
+// Bank Overview — 3-item snapshot (status labels match the bank overview's filter tabs)
+export interface BankOverviewToken {
+  id: string
+  code: string
+  amount: number
+  expiry: string | null
+  status: 'pending' | 'released' | 'rejected'
+  isNew?: boolean
+}
+
+export const BANK_OVERVIEW_TOKENS: BankOverviewToken[] = [
+  { id: '1', code: 'GOV-SAC-SEM1-005', amount: 620000, expiry: null,         status: 'pending', isNew: true },
+  { id: '2', code: 'GOV-SAC-SEM1-001', amount: 420000, expiry: '2026-07-10', status: 'released'            },
+  { id: '3', code: 'GOV-SAC-SEM1-003', amount: 210000, expiry: '2026-07-20', status: 'rejected'            },
+]
+
+// Bank PendingTokens — tokens submitted by suppliers, awaiting bank validation
+export interface BankPendingToken {
+  id: string
+  code: string
+  supplier: string
+  institution: string
+  amount: number
+  submittedAt: string
+  expiryDate: string | null
+  priority: 'high' | 'normal'
+}
+
+export const BANK_PENDING_TOKENS: BankPendingToken[] = [
+  { id: '1', code: 'GOV-SAC-SEM1-005', supplier: 'Golden Harvest Foods',  institution: 'St. Augustine College', amount: 620000, submittedAt: '2026-03-14', expiryDate: '2026-09-01', priority: 'high'   },
+  { id: '2', code: 'GOV-SAC-SEM1-002', supplier: 'SunGold Oils',          institution: 'St. Augustine College', amount: 180000, submittedAt: '2026-01-28', expiryDate: '2026-07-15', priority: 'normal' },
+  { id: '3', code: 'GOV-SAC-SEM1-004', supplier: 'National School Foods', institution: 'St. Augustine College', amount:  95000, submittedAt: '2026-02-20', expiryDate: '2026-08-05', priority: 'normal' },
+  { id: '4', code: 'GOV-OWS-SEM1-002', supplier: 'Northern Foods Ltd',    institution: 'Opoku Ware SHS',         amount: 215000, submittedAt: '2026-02-18', expiryDate: '2026-08-12', priority: 'normal' },
+]
+
+// Bank CashRelease — validated tokens ready for disbursement to suppliers
+export interface BankReadyToken {
+  id: string
+  code: string
+  supplier: string
+  institution: string
+  amount: number
+  validatedAt: string
+}
+
+export const BANK_CASH_READY: BankReadyToken[] = [
+  { id: '1', code: 'GOV-SAC-SEM1-002', supplier: 'SunGold Oils',          institution: 'St. Augustine College', amount: 180000, validatedAt: '2026-02-05' },
+  { id: '2', code: 'GOV-SAC-SEM1-004', supplier: 'National School Foods', institution: 'St. Augustine College', amount:  95000, validatedAt: '2026-02-28' },
+  { id: '3', code: 'GOV-OWS-SEM1-002', supplier: 'Northern Foods Ltd',    institution: 'Opoku Ware SHS',         amount: 215000, validatedAt: '2026-03-05' },
+]
+
+// ────────────────────────────────────────────────────────────────────────────────
+// 11. SUPPLIER PORTAL — Golden Harvest Foods perspective
+//     Token codes cross-reference MOCK_TOKENS and GOV_ALL_TOKENS.
+//     Deliveries cross-reference MOCK_DELIVERIES (same tokenRef values).
+// ────────────────────────────────────────────────────────────────────────────────
+
+// Token Inbox + Overview token list
+export interface SupplierTokenItem {
+  id: string
+  code: string
+  institution: string
+  amount: number
+  issuedDate: string
+  expiry: string | null
+  status: 'redeemed' | 'unsubmitted' | 'flagged' | 'active'
+  isNew?: boolean
+}
+
+export const SUPPLIER_TOKENS: SupplierTokenItem[] = [
+  { id: '1', code: 'GOV-SAC-SEM1-001', institution: 'St. Augustine College', amount: 420000, issuedDate: '2026-01-10', expiry: '2026-07-10', status: 'redeemed'                },
+  { id: '2', code: 'GOV-SAC-SEM1-005', institution: 'St. Augustine College', amount: 620000, issuedDate: '2026-03-01', expiry: '2026-09-01', status: 'unsubmitted', isNew: true  },
+  { id: '3', code: 'GOV-SAC-SEM2-005', institution: 'St. Augustine College', amount: 520000, issuedDate: '2025-10-01', expiry: '2026-01-31', status: 'redeemed'                },
+  { id: '4', code: 'GOV-OWS-SEM2-003', institution: 'Opoku Ware SHS',         amount: 380000, issuedDate: '2025-09-15', expiry: '2026-01-15', status: 'redeemed'                },
+  { id: '5', code: 'GOV-SAC-SEM1-007', institution: 'St. Augustine College', amount: 200000, issuedDate: '2025-08-01', expiry: '2025-12-31', status: 'flagged'                 },
+]
+
+// Supplier Overview deliveries table (matches MOCK_DELIVERIES tokenRef values)
+export interface SupplierDeliveryItem {
+  id: string
+  institution: string
+  items: string
+  qty: number
+  tokenRef: string
+  date: string
+  status: 'delivered' | 'pending' | 'in_transit'
+}
+
+export const SUPPLIER_DELIVERIES: SupplierDeliveryItem[] = [
+  { id: 'd1', institution: 'St. Augustine College', items: 'Rice (500 Bags)',           qty: 500, tokenRef: 'GOV-SAC-SEM1-001', date: '2026-03-14', status: 'delivered'  },
+  { id: 'd2', institution: 'St. Augustine College', items: 'Rice — Batch 2 (600 Bags)', qty: 600, tokenRef: 'GOV-SAC-SEM1-005', date: '2026-03-20', status: 'pending'    },
+  { id: 'd3', institution: 'Opoku Ware SHS',         items: 'Rice, Maize (800 units)',   qty: 800, tokenRef: 'GOV-OWS-SEM2-003', date: '2025-11-15', status: 'delivered'  },
+]
+
+// Supplier transaction history — cash payments from Ghana Commercial Bank
+export const SUPPLIER_TRANSACTIONS: BankTransaction[] = [
+  { id: 'BTX-P01', tokenId: '3', tokenCode: 'GOV-SAC-SEM2-005', supplierName: 'Golden Harvest Foods', amount: 520000, processedAt: '2025-10-15', status: 'released' },
+  { id: 'BTX-P02', tokenId: '4', tokenCode: 'GOV-OWS-SEM2-003', supplierName: 'Golden Harvest Foods', amount: 380000, processedAt: '2025-09-25', status: 'released' },
+  { id: 'BTX-001', tokenId: '1', tokenCode: 'GOV-SAC-SEM1-001', supplierName: 'Golden Harvest Foods', amount: 420000, processedAt: '2026-01-25', status: 'released' },
+  { id: 'BTX-P03', tokenId: '5', tokenCode: 'GOV-SAC-SEM1-007', supplierName: 'Golden Harvest Foods', amount: 200000, processedAt: '2025-08-20', status: 'rejected' },
+  { id: 'BTX-004', tokenId: '2', tokenCode: 'GOV-SAC-SEM1-005', supplierName: 'Golden Harvest Foods', amount: 620000, processedAt: '2026-03-14', status: 'pending'  },
+]

@@ -13,8 +13,10 @@ interface TokenResult {
 }
 
 const MOCK_TOKENS: Record<string, TokenResult> = {
-  'TKN-2025-00892': { code: 'TKN-2025-00892', supplier: 'Ghana Foods Co.', institution: 'Mfantsipim SHS', amount: 380000, issuedDate: '2025-02-01', expiryDate: '2025-07-31', issuedBy: 'Ministry of Education' },
-  'TKN-2025-00897': { code: 'TKN-2025-00897', supplier: 'Fresh Mart Ltd',  institution: 'Tamale SHS', amount: 210000, issuedDate: '2025-02-10', expiryDate: '2025-06-30', issuedBy: 'Ministry of Education' },
+  'GOV-SAC-SEM1-005': { code: 'GOV-SAC-SEM1-005', supplier: 'Golden Harvest Foods', institution: 'St. Augustine College', amount: 620000, issuedDate: '2026-03-01', expiryDate: '2026-09-01', issuedBy: 'Ministry of Education' },
+  'GOV-SAC-SEM1-002': { code: 'GOV-SAC-SEM1-002', supplier: 'SunGold Oils',          institution: 'St. Augustine College', amount: 180000, issuedDate: '2026-01-15', expiryDate: '2026-07-15', issuedBy: 'Ministry of Education' },
+  'GOV-SAC-SEM1-004': { code: 'GOV-SAC-SEM1-004', supplier: 'National School Foods', institution: 'St. Augustine College', amount:  95000, issuedDate: '2026-02-05', expiryDate: '2026-08-05', issuedBy: 'Ministry of Education' },
+  'GOV-OWS-SEM1-002': { code: 'GOV-OWS-SEM1-002', supplier: 'Northern Foods Ltd',   institution: 'Opoku Ware SHS',        amount: 215000, issuedDate: '2026-02-12', expiryDate: '2026-08-12', issuedBy: 'Ministry of Education' },
 }
 
 export default function ValidateToken() {
@@ -48,7 +50,7 @@ export default function ValidateToken() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleValidate()}
-              placeholder="e.g. TKN-2025-00892"
+              placeholder="e.g. GOV-SAC-SEM1-005"
               className="min-w-0 flex-1 bg-transparent text-[14px] text-[#111] outline-none placeholder:text-[#bbb] uppercase"
             />
           </div>

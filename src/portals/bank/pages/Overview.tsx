@@ -8,21 +8,12 @@ import { DropdownMenu } from '../../../components/ui/DropdownMenu'
 import { clsx } from 'clsx'
 import type { BankTransaction } from '../../../types'
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+import { BANK_OVERVIEW_TOKENS, BANK_TRANSACTIONS, type BankOverviewToken } from '../../../lib/mockData'
 
-type PendingToken = { id: string; code: string; amount: number; expiry: string | null; status: 'pending' | 'released' | 'rejected'; isNew?: boolean }
+type PendingToken = BankOverviewToken
 
-const pendingTokens: PendingToken[] = [
-  { id: '1', code: 'TKN-2025-00891', amount: 420000, expiry: '2026-06-30', status: 'released', isNew: true },
-  { id: '2', code: 'TKN-2025-00892', amount: 380000, expiry: null,         status: 'pending' },
-  { id: '3', code: 'TKN-2025-00880', amount: 290000, expiry: null,         status: 'rejected' },
-]
-
-const recentTransactions: BankTransaction[] = [
-  { id: 't1', tokenId: '1', tokenCode: 'TKN-2025-00891', supplierName: 'Agric Supplies Ltd', amount: 420000, processedAt: '2025-04-01', status: 'released' },
-  { id: 't2', tokenId: '2', tokenCode: 'TKN-2025-00892', supplierName: 'Ghana Foods Co.',    amount: 380000, processedAt: '2025-04-03', status: 'pending' },
-  { id: 't3', tokenId: '3', tokenCode: 'TKN-2025-00880', supplierName: 'Fresh Mart Ltd',     amount: 290000, processedAt: '2025-04-05', status: 'rejected' },
-]
+const pendingTokens: PendingToken[] = BANK_OVERVIEW_TOKENS
+const recentTransactions: BankTransaction[] = BANK_TRANSACTIONS.slice(0, 3)
 
 type TokenFilter = 'all' | 'released' | 'pending' | 'rejected'
 

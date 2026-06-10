@@ -6,21 +6,10 @@ import { Button } from '../../../components/ui/Button'
 import { DropdownMenu } from '../../../components/ui/DropdownMenu'
 import { clsx } from 'clsx'
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+import { GOV_CLAIMS, GOV_RECENT_TOKENS } from '../../../lib/mockData'
 
-const claims = [
-  { id: '1', institution: 'Opoku Ware SHS',     claimed: 420000, approved: 412000, status: 'approved' as const },
-  { id: '2', institution: 'Achimota SHS',  claimed: 380000, approved: null,   status: 'pending'  as const },
-  { id: '3', institution: 'Mfantsipim SHS',       claimed: 290000, approved: null,   status: 'flagged'  as const },
-  { id: '4', institution: 'Tamale SHS',       claimed: 210000, approved: 205000, status: 'approved' as const },
-  { id: '5', institution: 'Wesley Girls SHS',       claimed: 175000, approved: null,   status: 'pending'  as const },
-]
-
-const recentTokens = [
-  { id: 'TKN-2025-00891', amount: 420000, supplier: 'Agric Supplies Ltd', institution: 'Opoku Ware SHS',    status: 'redeemed' as const },
-  { id: 'TKN-2025-00892', amount: 420000, supplier: 'Ghana Foods Co.',    institution: 'Mfantsipim SHS',      status: 'active'   as const },
-  { id: 'TKN-2025-00893', amount: 420000, supplier: 'Fresh Mart Ltd',     institution: 'Tamale SHS',      status: 'held'     as const },
-]
+const claims = GOV_CLAIMS
+const recentTokens = GOV_RECENT_TOKENS
 
 type ClaimFilter = 'all' | 'approved' | 'pending' | 'flagged'
 

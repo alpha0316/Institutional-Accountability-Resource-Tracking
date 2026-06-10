@@ -7,43 +7,18 @@ import { Button } from '../../../components/ui/Button'
 import { DropdownMenu } from '../../../components/ui/DropdownMenu'
 import { clsx } from 'clsx'
 
+import { SUPPLIER_TOKENS, SUPPLIER_DELIVERIES, type SupplierTokenItem, type SupplierDeliveryItem } from '../../../lib/mockData'
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type TokenStatus = 'redeemed' | 'unsubmitted' | 'flagged' | 'active'
 type DeliveryStatus = 'delivered' | 'pending' | 'in_transit'
 
-interface SupplierToken {
-  id: string
-  code: string
-  amount: number
-  expiry: string | null
-  status: TokenStatus
-  isNew?: boolean
-}
+type SupplierToken = SupplierTokenItem
+type Delivery = SupplierDeliveryItem
 
-interface Delivery {
-  id: string
-  institution: string
-  items: string
-  qty: number
-  tokenRef: string
-  date: string
-  status: DeliveryStatus
-}
-
-// ─── Mock data ────────────────────────────────────────────────────────────────
-
-const tokens: SupplierToken[] = [
-  { id: '1', code: 'TKN-2025-00891', amount: 420000, expiry: '2026-06-30', status: 'redeemed',    isNew: true },
-  { id: '2', code: 'TKN-2025-00892', amount: 380000, expiry: null,         status: 'unsubmitted' },
-  { id: '3', code: 'TKN-2025-00880', amount: 290000, expiry: null,         status: 'flagged' },
-]
-
-const deliveries: Delivery[] = [
-  { id: 'd1', institution: 'Opoku Ware SHS',    items: 'Rice, Cooking Oil, Tomatoes', qty: 1200, tokenRef: 'TKN-2025-00891', date: '2025-04-01', status: 'delivered' },
-  { id: 'd2', institution: 'Mfantsipim SHS',      items: 'Beans, Plantain, Fish',       qty:  840, tokenRef: 'TKN-2025-00892', date: '2025-04-03', status: 'pending' },
-  { id: 'd3', institution: 'Achimota SHS', items: 'Yam, Chicken, Vegetables',    qty:  960, tokenRef: 'TKN-2025-00880', date: '2025-04-05', status: 'in_transit' },
-]
+const tokens: SupplierToken[] = SUPPLIER_TOKENS.slice(0, 3)
+const deliveries: Delivery[] = SUPPLIER_DELIVERIES
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

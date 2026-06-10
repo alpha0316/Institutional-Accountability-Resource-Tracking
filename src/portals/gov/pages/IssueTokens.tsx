@@ -7,16 +7,12 @@ import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { Modal } from '../../../components/ui/Modal'
 import type { GovernmentToken } from '../../../types'
 
-const INSTITUTIONS = ['Opoku Ware SHS', 'Achimota SHS', 'Mfantsipim SHS', 'Tamale SHS', 'Wesley Girls SHS', 'Sunyani SHS', 'Tarkwa SHS', 'Tamale Islamic SHS']
-const SUPPLIERS    = ['Agric Supplies Ltd', 'Ghana Foods Co.', 'Fresh Mart Ltd', 'Northern Foods Ltd']
+import { GOV_ALL_TOKENS, GOV_INSTITUTIONS, GOV_SUPPLIERS } from '../../../lib/mockData'
 
-const mockTokens: GovernmentToken[] = [
-  { id: '1', tokenCode: 'TKN-2025-00891', supplierId: 's1', supplierName: 'Agric Supplies Ltd', institutionName: 'Opoku Ware SHS',    value: 420000, issuedDate: '2025-02-01', expiryDate: '2025-07-31', status: 'redeemed' },
-  { id: '2', tokenCode: 'TKN-2025-00892', supplierId: 's2', supplierName: 'Ghana Foods Co.',    institutionName: 'Mfantsipim SHS',      value: 420000, issuedDate: '2025-02-01', expiryDate: '2025-07-31', status: 'active' },
-  { id: '3', tokenCode: 'TKN-2025-00893', supplierId: 's3', supplierName: 'Fresh Mart Ltd',     institutionName: 'Tamale SHS',      value: 420000, issuedDate: '2025-02-01', expiryDate: '2025-07-31', status: 'pending' },
-  { id: '4', tokenCode: 'TKN-2025-00894', supplierId: 's4', supplierName: 'Northern Foods Ltd', institutionName: 'Achimota SHS', value: 380000, issuedDate: '2025-01-15', expiryDate: '2025-06-30', status: 'expired' },
-  { id: '5', tokenCode: 'TKN-2025-00895', supplierId: 's1', supplierName: 'Agric Supplies Ltd', institutionName: 'Wesley Girls SHS',      value: 175000, issuedDate: '2025-01-20', expiryDate: '2025-06-30', status: 'rejected' },
-]
+const INSTITUTIONS = GOV_INSTITUTIONS
+const SUPPLIERS    = GOV_SUPPLIERS
+
+const mockTokens: GovernmentToken[] = GOV_ALL_TOKENS
 
 const statusBadge: Record<GovernmentToken['status'], React.ReactNode> = {
   active:   <Badge variant="green">Active</Badge>,
@@ -82,7 +78,7 @@ export default function IssueTokens() {
   function handleIssue() {
     const next: GovernmentToken = {
       id: String(Date.now()),
-      tokenCode: `TKN-2025-${String(tokens.length + 900).padStart(5, '0')}`,
+      tokenCode: `GOV-NEW-SEM1-${String(tokens.length + 1).padStart(3, '0')}`,
       supplierId: 'new',
       supplierName: form.supplier,
       institutionName: form.institution,

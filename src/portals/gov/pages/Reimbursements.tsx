@@ -7,16 +7,9 @@ import { DataTable, type Column } from '../../../components/ui/DataTable'
 import type { ReimbursementClaim } from '../../../types'
 import { clsx } from 'clsx'
 
-const allClaims: (ReimbursementClaim & { institution: string; period: string })[] = [
-  { id: 'RC-001', reportId: 'RPT-001', institutionName: 'Opoku Ware SHS',       institution: 'Opoku Ware SHS',       amountClaimed: 420000, amountApproved: 412000, status: 'approved', submittedAt: '2025-04-02', period: 'Sem 2, 2025' },
-  { id: 'RC-002', reportId: 'RPT-002', institutionName: 'Achimota SHS',    institution: 'Achimota SHS',    amountClaimed: 380000, amountApproved: null,   status: 'pending',  submittedAt: '2025-04-03', period: 'Sem 2, 2025' },
-  { id: 'RC-003', reportId: 'RPT-003', institutionName: 'Mfantsipim SHS',         institution: 'Mfantsipim SHS',         amountClaimed: 290000, amountApproved: null,   status: 'rejected', submittedAt: '2025-04-04', period: 'Sem 2, 2025' },
-  { id: 'RC-004', reportId: 'RPT-004', institutionName: 'Tamale SHS',         institution: 'Tamale SHS',         amountClaimed: 210000, amountApproved: 205000, status: 'approved', submittedAt: '2025-04-01', period: 'Sem 2, 2025' },
-  { id: 'RC-005', reportId: 'RPT-005', institutionName: 'Wesley Girls SHS',         institution: 'Wesley Girls SHS',         amountClaimed: 175000, amountApproved: 160000, status: 'partial',  submittedAt: '2025-03-30', period: 'Sem 2, 2025' },
-  { id: 'RC-006', reportId: 'RPT-006', institutionName: 'Sunyani SHS',        institution: 'Sunyani SHS',        amountClaimed: 140000, amountApproved: null,   status: 'pending',  submittedAt: '2025-04-05', period: 'Sem 2, 2025' },
-  { id: 'RC-007', reportId: 'RPT-007', institutionName: 'Tarkwa SHS',        institution: 'Tarkwa SHS',        amountClaimed: 120000, amountApproved: null,   status: 'pending',  submittedAt: '2025-04-06', period: 'Sem 2, 2025' },
-  { id: 'RC-008', reportId: 'RPT-008', institutionName: 'Tamale Islamic SHS', institution: 'Tamale Islamic SHS', amountClaimed:  98000, amountApproved: null,   status: 'pending',  submittedAt: '2025-04-07', period: 'Sem 2, 2025' },
-]
+import { GOV_REIMBURSEMENTS } from '../../../lib/mockData'
+
+const allClaims: (ReimbursementClaim & { institution: string; period: string })[] = GOV_REIMBURSEMENTS
 
 type Filter = 'all' | ReimbursementClaim['status']
 

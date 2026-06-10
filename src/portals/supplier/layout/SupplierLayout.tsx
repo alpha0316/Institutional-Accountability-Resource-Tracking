@@ -36,7 +36,7 @@ const navGroups = [
 export default function SupplierLayout() {
   const { user, logout } = useAuthStore()
   const initial = user?.name ? user.name.trim()[0]?.toUpperCase() : 'K'
-  const supplierName = user?.name || 'Agric Supplies Ltd'
+  const supplierName = user?.name || 'Golden Harvest Foods'
 
   return (
     <div className="flex h-screen overflow-hidden bg-white">
