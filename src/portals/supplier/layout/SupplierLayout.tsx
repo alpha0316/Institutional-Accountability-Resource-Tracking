@@ -1,34 +1,23 @@
 import { Outlet, NavLink } from 'react-router-dom'
 import { clsx } from 'clsx'
-import {
-  LayoutDashboard,
-  Inbox,
-  AlertTriangle,
-  Truck,
-  SendHorizonal,
-  History,
-  Settings,
-  Store,
-  ChevronDown,
-  PanelLeft,
-} from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { useAuthStore } from '../../../store/authStore'
 
 const navGroups = [
   {
     section: 'Operations',
     items: [
-      { label: 'Overview',           to: '/supplier',                 icon: LayoutDashboard, end: true },
-      { label: 'Token Inbox',        to: '/supplier/tokens',          icon: Inbox },
-      { label: 'Reorder Monitor',    to: '/supplier/reorder',         icon: AlertTriangle },
-      { label: 'Delivery Logger',    to: '/supplier/deliveries',      icon: Truck },
+      { label: 'Overview',           to: '/supplier',                 icon: 'layout-dashboard', end: true },
+      { label: 'Token Inbox',        to: '/supplier/tokens',          icon: 'inbox' },
+      { label: 'Reorder Monitor',    to: '/supplier/reorder',         icon: 'alert-triangle' },
+      { label: 'Delivery Logger',    to: '/supplier/deliveries',      icon: 'truck' },
     ],
   },
   {
     section: 'Finance',
     items: [
-      { label: 'Submit to Bank',     to: '/supplier/submit-bank',     icon: SendHorizonal },
-      { label: 'Transaction History',to: '/supplier/transactions',    icon: History },
+      { label: 'Submit to Bank',     to: '/supplier/submit-bank',     icon: 'send' },
+      { label: 'Transaction History',to: '/supplier/transactions',    icon: 'history' },
     ],
   },
 ]
@@ -46,17 +35,17 @@ export default function SupplierLayout() {
         {/* Brand */}
         <div className="flex h-[80px] items-center px-[21px]">
           <div className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[7px] bg-[#f0f0f0]">
-            <Store size={14} strokeWidth={2.2} className="text-[#888]" />
+            <Icon name="building-store" size={14} className="text-[#888]" />
           </div>
           <span className="ml-[10px] text-[15px] font-semibold leading-none text-[#3f3f3f] truncate max-w-[140px]">
             {supplierName}
           </span>
-          <ChevronDown size={14} strokeWidth={2.2} className="ml-[5px] shrink-0 text-[#aaa]" />
+          <Icon name="chevron-down" size={14} className="ml-[5px] shrink-0 text-[#aaa]" />
           <button
             aria-label="Collapse sidebar"
             className="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-[#8d8d8d] transition-colors hover:bg-[#f0f0f0]"
           >
-            <PanelLeft size={16} strokeWidth={2} />
+            <Icon name="layout-sidebar-left-collapse" size={16} />
           </button>
         </div>
 
@@ -66,7 +55,7 @@ export default function SupplierLayout() {
             <div key={section} className="mb-[29px] last:mb-0">
               <p className="mb-[9px] text-[14px] font-semibold leading-5 text-[#8e8e8e]">{section}</p>
               <ul className="space-y-[4px]">
-                {items.map(({ label, to, icon: Icon, end }) => (
+                {items.map(({ label, to, icon, end }) => (
                   <li key={to}>
                     <NavLink
                       to={to}
@@ -82,7 +71,7 @@ export default function SupplierLayout() {
                     >
                       {({ isActive }) => (
                         <>
-                          <Icon size={15} strokeWidth={2.2} className={isActive ? 'text-[#4ea4ff]' : 'text-[#9a9a9a]'} />
+                          <Icon name={icon} size={15} className={isActive ? 'text-[#4ea4ff]' : 'text-[#9a9a9a]'} />
                           {label}
                         </>
                       )}
@@ -97,7 +86,7 @@ export default function SupplierLayout() {
         {/* Footer */}
         <div className="px-[20px] pb-[24px]">
           <button className="mb-[22px] flex h-[29px] w-full items-center gap-[12px] rounded-[8px] px-[9px] text-[15px] text-[#9a9a9a] transition-colors hover:bg-[#f2f2f2]">
-            <Settings size={15} strokeWidth={2.2} className="text-[#9a9a9a]" />
+            <Icon name="settings" size={15} className="text-[#9a9a9a]" />
             Settings
           </button>
           <button

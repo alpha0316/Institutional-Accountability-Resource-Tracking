@@ -1,4 +1,4 @@
-import { Clock } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
@@ -31,7 +31,7 @@ export default function PendingTokens() {
 
         {highPri > 0 && (
           <div className="mb-[22px] flex items-center gap-[12px] rounded-[12px] border border-[#ffd26b] bg-[#fff8ea] px-[16px] py-[12px]">
-            <Clock size={16} strokeWidth={2.2} className="shrink-0 text-[#df6b13]" />
+            <Icon name="clock" size={16} className="shrink-0 text-[#df6b13]" />
             <p className="text-[13px] font-medium text-[#df6b13]">
               {highPri} high-priority token{highPri > 1 ? 's' : ''} awaiting validation.
             </p>

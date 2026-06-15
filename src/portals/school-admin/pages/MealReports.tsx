@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { Plus, Search, FileText, Users, Settings, AlertTriangle, Package, Clock, CheckCircle2, Circle } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { clsx } from 'clsx'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { type DropdownMenuItem } from '../../../components/ui/DropdownMenu'
+import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import {
   MOCK_DAILY_REPORTS,
   REIMBURSEMENT_BREAKDOWN,
@@ -21,8 +22,8 @@ import {
   type SemesterPool,
 } from '../../../lib/mockData'
 
-type PageTab  = 'overview' | 'attendance' | 'supply' | 'financial' | 'workflow' | 'claim'
-type ModalTab = 'overview' | 'operational' | 'risks' | 'finances' | 'logs'
+type PageTab  = 'overview' | 'attendance' | 'financial' | 'workflow'
+type ModalTab = 'overview' | 'operational' | 'risks' | 'finances'
 type BatchKind =
   | { kind: 'week';     data: WeeklyBatch  }
   | { kind: 'month';    data: MonthlyBatch }
@@ -31,29 +32,44 @@ type BatchKind =
 const PAGE_TABS: { label: string; value: PageTab }[] = [
   { label: 'Overview',          value: 'overview'   },
   { label: 'Meal Attendance',   value: 'attendance' },
-  { label: 'Supply Usage',      value: 'supply'     },
   { label: 'Financial Summary', value: 'financial'  },
   { label: 'Approval Workflow', value: 'workflow'   },
-  { label: 'Claim Readiness',   value: 'claim'      },
 ]
 
 const MODAL_TABS: { label: string; value: ModalTab; count?: number }[] = [
   { label: 'Overview',    value: 'overview'    },
   { label: 'Operational', value: 'operational' },
-  { label: 'Risks',       value: 'risks',       count: 4 },
+  { label: 'Risks',       value: 'risks' },
   { label: 'Finances',    value: 'finances'    },
-  { label: 'Logs',        value: 'logs'        },
 ]
 
 const RISK_TRIGGERS = [
-  { label: 'Attendance Spike',        icon: Users,         bg: 'bg-blue-500'   },
-  { label: 'Duplicate Scan Pattern',  icon: Settings,      bg: 'bg-blue-500'   },
-  { label: 'Dining Hall Imbalance',   icon: AlertTriangle, bg: 'bg-red-500'    },
-  { label: 'Inventory Variance',      icon: Package,       bg: 'bg-green-600'  },
-  { label: 'Session Timing Conflict', icon: Clock,         bg: 'bg-violet-500' },
+  { label: 'Attendance Spike',        icon: 'users',           bg: 'bg-blue-500'   },
+  { label: 'Duplicate Scan Pattern',  icon: 'copy',            bg: 'bg-blue-500'   },
+  { label: 'Dining Hall Imbalance',   icon: 'alert-triangle',  bg: 'bg-red-500'    },
+  { label: 'Inventory Variance',      icon: 'package',         bg: 'bg-green-600'  },
+  { label: 'Session Timing Conflict', icon: 'clock',           bg: 'bg-violet-500' },
 ]
 
-const REVIEW_STEPS = ['Operational Review', 'Compliance Review', 'Fraud Analysis', 'Financial Validation']
+const REVIEW_STEPS: { label: string; icon: string; stageThreshold: number }[] = [
+  { label: 'Operational Review',  icon: 'checklist',    stageThreshold: 1 },
+  { label: 'Compliance Review',   icon: 'shield-check', stageThreshold: 2 },
+  { label: 'Fraud Analysis',      icon: 'alert-circle', stageThreshold: 3 },
+  { label: 'Financial Validation',icon: 'calculator',   stageThreshold: 4 },
+]
+
+const STAGE_PROGRESS: Record<string, number> = {
+  generated:          0,
+  operational_review: 1,
+  compliance_review:  2,
+  claim_eligible:     4,
+}
+
+const REVIEW_TEAM = [
+  { name: 'Kwame Asante-Mensah', role: 'Dining Hall Supervisor',  initial: 'K', color: 'bg-blue-600'   },
+  { name: 'Abena Ofori',         role: 'GES Compliance Officer',  initial: 'A', color: 'bg-violet-600' },
+  { name: 'Kofi Darko',          role: 'Finance Officer',         initial: 'K', color: 'bg-green-600'  },
+]
 
 const OVERVIEW_STATS = [
   { label: 'Meals Served',             value: '2,413',       description: 'Verified scans today',              tone: 'bg-[#f7fbff]', trend: '↑ (+25%)' },
@@ -89,29 +105,36 @@ function RiskBadge({ score }: { score: number }) {
 // ── Sub-components ────────────────────────────────────────────────────────────
 function StatRow({ stats }: { stats: typeof OVERVIEW_STATS }) {
   return (
-    <div className="grid grid-cols-4 gap-[30px]">
+    <StatCardGroup>
       {stats.map((stat) => (
-        <div key={stat.label} className="min-w-0">
-          <div className={clsx('flex h-[25px] items-center justify-between rounded-[7px] px-[5px]', stat.tone)}>
-            <span className="truncate text-[15px] font-normal leading-none text-[#6f6f6f]">{stat.label}</span>
-            {'trend' in stat && stat.trend && <span className="shrink-0 text-[13px] font-semibold leading-none text-[#5fc98e]">{stat.trend}</span>}
-          </div>
-          <div className="mt-[29px]">
-            <p className="text-[26px] font-semibold leading-none text-[#414141]">{stat.value}</p>
-            <p className={clsx('mt-[12px] truncate text-[15px] font-normal leading-none', 'alert' in stat && stat.alert ? 'text-[#ff3333]' : 'text-[#969696]')}>
-              {stat.description}
-            </p>
-          </div>
-        </div>
+        <StatCard
+          key={stat.label}
+          label={stat.label}
+          value={stat.value}
+          sub={'alert' in stat && stat.alert
+            ? <span className="font-medium text-[#ff3333]">{stat.description}</span>
+            : stat.description
+          }
+          accent={
+            stat.tone === 'bg-[#f7fbff]' ? 'bg-gradient-to-br from-white to-blue-50/50' :
+            stat.tone === 'bg-[#f7fdf9]' ? 'bg-gradient-to-br from-white to-green-50/50' :
+            stat.tone === 'bg-[#fcf8f5]' ? 'bg-gradient-to-br from-white to-orange-50/50' :
+            'bg-gradient-to-br from-white to-red-50/50'
+          }
+          badge={'trend' in stat && stat.trend
+            ? <span className="flex items-center gap-[3px] rounded-full bg-[#eefbf4] px-[8px] py-[3px] text-[12px] font-semibold text-[#0f9f5d]">{stat.trend}</span>
+            : undefined
+          }
+        />
       ))}
-    </div>
+    </StatCardGroup>
   )
 }
 
 function SectionSearch() {
   return (
     <div className="flex h-[31px] w-[217px] items-center gap-[10px] rounded-[8px] border border-[#e5e5e5] bg-[#fcfcfc] px-[12px]">
-      <Search size={15} strokeWidth={2.4} className="shrink-0 text-[#767676]" />
+      <Icon name="search" size={15} className="shrink-0 text-[#767676]" />
       <input placeholder="Search reports..." className="min-w-0 flex-1 bg-transparent text-[13px] text-[#555] outline-none placeholder:text-[#7e7e7e]" />
     </div>
   )
@@ -135,7 +158,6 @@ const STAGE_BORDER: Record<string, string> = {
   generated:          '3px solid #fb923c',
   operational_review: '3px solid #3b82f6',
   compliance_review:  '3px solid #ef4444',
-  approve_lock:       '3px solid #eab308',
   claim_eligible:     '3px solid #22c55e',
 }
 
@@ -165,7 +187,7 @@ export default function MealReports() {
       { label: 'Export PDF',     onClick: () => {} },
       { label: 'Export Excel',   onClick: () => {} },
       { label: 'Approve Report', onClick: () => {}, disabled: report.workflowStage === 'claim_eligible' },
-      { label: 'Lock Report',    onClick: () => {}, disabled: report.workflowStage !== 'approve_lock' },
+      { label: 'Lock Report',    onClick: () => {}, disabled: report.workflowStage !== 'claim_eligible' },
     ]
   }
 
@@ -194,10 +216,7 @@ export default function MealReports() {
 
   const cta: Partial<Record<PageTab, React.ReactNode>> = {
     overview:  <Button onClick={() => MOCK_DAILY_REPORTS[0] && openReport(MOCK_DAILY_REPORTS[0])}>Generate Report</Button>,
-    supply:    <Button><Plus size={14} />Record Supply</Button>,
-    financial: <Button onClick={() => setPageTab('claim')}>View Claim Readiness</Button>,
     workflow:  <Button>Approve &amp; Lock Report</Button>,
-    claim:     <Button><Plus size={14} />Record Supply</Button>,
   }
 
   // ── Batch claim count for claim_eligible column ──
@@ -296,38 +315,6 @@ export default function MealReports() {
           </section>
         )}
 
-        {/* ── Supply Usage ────────────────────────────────────────────── */}
-        {pageTab === 'supply' && selectedReport && (
-          <section>
-            <h2 className="text-[22px] font-bold leading-[24px] text-black">Supply Usage Summary — {selectedReport.reportId}</h2>
-            <p className="mt-[4px] text-[14px] text-[#888]">Records all food and operational supplies consumed.</p>
-            <table className="mt-[20px] w-full table-fixed border-separate border-spacing-0">
-              <thead>
-                <tr>
-                  <th className="h-[25px] rounded-l-[7px] bg-[#fbfbfb] pl-[5px] text-left text-[15px] font-normal leading-none text-[#666]">Item</th>
-                  <th className="h-[25px] bg-[#fbfbfb] pl-[5px] text-left text-[15px] font-normal leading-none text-[#666]">Expected Use</th>
-                  <th className="h-[25px] bg-[#fbfbfb] pl-[5px] text-left text-[15px] font-normal leading-none text-[#666]">Actual Use</th>
-                  <th className="h-[25px] rounded-r-[7px] bg-[#fbfbfb] pl-[5px] text-left text-[15px] font-normal leading-none text-[#666]">Variance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { item: 'Rice',        expected: '450 Bags',   actual: selectedReport.riceUsed,   variance: '-30 Bags'   },
-                  { item: 'Cooking Oil', expected: '280 Litres', actual: selectedReport.oilUsed,    variance: '+30 Litres' },
-                  { item: 'Beans',       expected: '100 Bags',   actual: selectedReport.beansUsed,  variance: '-25 Bags'   },
-                ].map((row) => (
-                  <tr key={row.item} className="h-[55px] cursor-pointer transition-colors hover:bg-[#fbfbfb]" onClick={() => MOCK_DAILY_REPORTS[0] && openReport(MOCK_DAILY_REPORTS[0])}>
-                    <td className="pl-[5px] text-[15px] font-normal text-[#3f3f3f]">{row.item}</td>
-                    <td className="pl-[5px] text-[15px] font-normal text-[#3f3f3f]">{row.expected}</td>
-                    <td className="pl-[5px] text-[15px] font-normal text-[#3f3f3f]">{row.actual}</td>
-                    <td className={clsx('pl-[5px] text-[15px] font-normal', row.variance.startsWith('+') ? 'text-[#ff6b35]' : 'text-[#3f3f3f]')}>{row.variance}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        )}
-
         {/* ── Financial Summary ────────────────────────────────────────── */}
         {pageTab === 'financial' && (
           <>
@@ -390,224 +377,141 @@ export default function MealReports() {
 
         {/* ── Approval Workflow (kanban) ──────────────────────────────── */}
         {pageTab === 'workflow' && (
-          <div className="flex h-[calc(100vh-200px)] gap-0 overflow-x-auto">
-            {WORKFLOW_COLUMNS.map((col, ci) => {
-              const isClaim = col.id === 'claim_eligible'
-              const count   = isClaim ? claimEligibleCount : (kanbanGroups[col.id]?.length ?? 0)
+          <div className="w-full overflow-x-auto pb-4">
+            <div className="flex min-w-max gap-4">
+              {WORKFLOW_COLUMNS.map((col) => {
+                const isClaim = col.id === 'claim_eligible'
+                const count   = isClaim ? claimEligibleCount : (kanbanGroups[col.id]?.length ?? 0)
 
-              return (
-                <div
-                  key={col.id}
-                  className={clsx(
-                    'flex shrink-0 flex-col overflow-y-auto',
-                    isClaim ? 'w-[290px]' : 'w-[240px]',
-                    ci < WORKFLOW_COLUMNS.length - 1 && 'border-r border-[#f0f0f0]'
-                  )}
-                >
-                  {/* Column header */}
-                  <div className="flex items-center gap-[6px] pb-[12px] pr-[16px]">
-                    <span className={clsx('h-[8px] w-[8px] shrink-0 rounded-full', col.dot)} />
-                    <span className="text-[13px] font-medium text-[#333]">{col.label}</span>
-                    <span className="ml-[2px] flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#f0f0f0] px-[4px] text-[11px] font-medium text-[#555]">
-                      {count}
-                    </span>
-                  </div>
+                return (
+                  <div
+                    key={col.id}
+                    className={clsx('flex flex-col gap-3 rounded-2xl bg-neutral-50 p-3', isClaim ? 'w-72' : 'w-64')}
+                  >
+                    {/* Column header */}
+                    <div className="flex items-center justify-between px-[2px]">
+                      <div className="flex items-center gap-[6px]">
+                        <span className={clsx('h-[7px] w-[7px] shrink-0 rounded-full', col.dot)} />
+                        <p className="text-[13px] font-semibold text-black">{col.label}</p>
+                      </div>
+                      <span className="text-[12px] text-black/50">{count}</span>
+                    </div>
 
-                  {/* Claim Eligible — batch cards */}
-                  {isClaim && (
-                    <div className="space-y-[8px] pr-[16px]">
+                    {/* Card list */}
+                    <div className="flex max-h-[560px] flex-col gap-2 overflow-y-auto">
 
-                      {/* Weekly batch cards */}
-                      {WEEKLY_BATCHES.map((wk) => {
-                        const eligibleDays = wk.days.filter(d => d.status === 'eligible').length
-                        return (
+                      {/* Claim Eligible — batch cards */}
+                      {isClaim && (
+                        <>
+                          {WEEKLY_BATCHES.map((wk) => {
+                            const eligibleDays = wk.days.filter(d => d.status === 'eligible').length
+                            return (
+                              <button
+                                key={wk.id}
+                                onClick={() => openBatch({ kind: 'week', data: wk })}
+                                className="w-full rounded-xl border border-[#efefef] bg-white p-[12px] text-left shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_3px_10px_rgba(0,0,0,0.08)]"
+                              >
+                                <div className="mb-[3px] flex items-center justify-between">
+                                  <span className="text-[13px] font-semibold text-[#111]">{wk.weekLabel}</span>
+                                  <span className={clsx(
+                                    'rounded-full px-[6px] py-[1px] text-[10px] font-medium',
+                                    wk.status === 'complete' ? 'bg-[#eefbf4] text-[#0f9f5d]' : 'bg-[#fff7ed] text-[#df6b13]'
+                                  )}>
+                                    {wk.status === 'complete' ? 'Complete' : `${eligibleDays}/7 days`}
+                                  </span>
+                                </div>
+                                <p className="mb-[8px] text-[11px] text-[#888]">{wk.daysRange}</p>
+                                <div className="mb-[8px] flex gap-[12px]">
+                                  <span className="text-[11px] text-[#aaa]">{wk.totalMeals.toLocaleString()} meals</span>
+                                  {wk.fraudCases > 0 && <span className="text-[11px] text-[#de3d36]">{wk.fraudCases} fraud</span>}
+                                </div>
+                                <div className="flex items-center justify-between border-t border-[#f5f5f5] pt-[8px]">
+                                  <span className="text-[11px] text-[#888]">Net Eligible</span>
+                                  <span className={clsx('text-[12px] font-semibold', wk.status === 'complete' ? 'text-[#111]' : 'text-[#aaa] italic')}>
+                                    {wk.netEligible}
+                                  </span>
+                                </div>
+                              </button>
+                            )
+                          })}
+
+                          {MONTHLY_BATCHES.map((mo) => (
+                            <button
+                              key={mo.id}
+                              onClick={() => openBatch({ kind: 'month', data: mo })}
+                              className="w-full rounded-xl border border-[#efefef] bg-white p-[12px] text-left shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_3px_10px_rgba(0,0,0,0.08)]"
+                            >
+                              <div className="mb-[3px] flex items-center justify-between">
+                                <span className="text-[13px] font-semibold text-[#111]">{mo.monthLabel}</span>
+                                <span className="rounded-full bg-[#eefbf4] px-[6px] py-[1px] text-[10px] font-medium text-[#0f9f5d]">Complete</span>
+                              </div>
+                              <p className="mb-[8px] text-[11px] text-[#888]">{mo.weekLabels.join(' · ')}</p>
+                              <div className="flex items-center justify-between border-t border-[#f5f5f5] pt-[8px]">
+                                <span className="text-[11px] text-[#888]">Net Eligible</span>
+                                <span className="text-[12px] font-semibold text-[#111]">{mo.netEligible}</span>
+                              </div>
+                            </button>
+                          ))}
+
                           <button
-                            key={wk.id}
-                            onClick={() => openBatch({ kind: 'week', data: wk })}
-                            className={clsx(
-                              'w-full rounded-[10px] border border-[#efefef] bg-white p-[12px] text-left shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]',
-                              wk.status === 'complete' ? 'border-l-[3px] border-l-[#7c3aed]' : 'border-l-[3px] border-l-[#f59e0b]'
-                            )}
+                            onClick={() => openBatch({ kind: 'semester', data: SEMESTER_POOL })}
+                            className="w-full rounded-xl border border-[#efefef] bg-gradient-to-br from-white to-[#f0faf5] p-[12px] text-left shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_3px_10px_rgba(0,0,0,0.08)]"
                           >
                             <div className="mb-[3px] flex items-center justify-between">
-                              <span className="text-[13px] font-semibold text-[#111]">{wk.weekLabel}</span>
-                              <span className={clsx(
-                                'rounded-full px-[6px] py-[1px] text-[10px] font-medium',
-                                wk.status === 'complete' ? 'bg-[#eefbf4] text-[#0f9f5d]' : 'bg-[#fff7ed] text-[#df6b13]'
-                              )}>
-                                {wk.status === 'complete' ? 'Complete' : `${eligibleDays}/7 days`}
-                              </span>
+                              <span className="text-[13px] font-bold text-[#111]">{SEMESTER_POOL.semesterLabel}</span>
+                              <span className="rounded-full bg-[#dbeafe] px-[6px] py-[1px] text-[10px] font-medium text-[#1d4ed8]">Active</span>
                             </div>
-                            <p className="mb-[8px] text-[11px] text-[#888]">{wk.daysRange}</p>
-                            <div className="mb-[8px] flex gap-[12px]">
-                              <span className="text-[11px] text-[#aaa]">{wk.totalMeals.toLocaleString()} meals</span>
-                              {wk.fraudCases > 0 && <span className="text-[11px] text-[#de3d36]">{wk.fraudCases} fraud</span>}
-                            </div>
-                            <div className="flex items-center justify-between border-t border-[#f5f5f5] pt-[8px]">
-                              <span className="text-[11px] text-[#888]">Net Eligible</span>
-                              <span className={clsx(
-                                'text-[12px] font-semibold',
-                                wk.status === 'complete' ? 'text-[#111]' : 'text-[#aaa] italic'
-                              )}>{wk.netEligible}</span>
+                            <p className="mb-[8px] text-[11px] text-[#888]">
+                              {SEMESTER_POOL.monthsIncluded.map((m, i) => (
+                                <span key={m}>{i > 0 && ' · '}{m}</span>
+                              ))}
+                            </p>
+                            <div className="flex items-center justify-between border-t border-[#d1fae5] pt-[8px]">
+                              <span className="text-[11px] text-[#555]">Current Eligible</span>
+                              <span className="text-[13px] font-bold text-[#0f9f5d]">{SEMESTER_POOL.currentEligible}</span>
                             </div>
                           </button>
-                        )
-                      })}
+                        </>
+                      )}
 
-                      {/* Monthly batch cards */}
-                      {MONTHLY_BATCHES.map((mo) => (
+                      {/* Other columns — daily report cards */}
+                      {!isClaim && kanbanGroups[col.id]?.map((r) => (
                         <button
-                          key={mo.id}
-                          onClick={() => openBatch({ kind: 'month', data: mo })}
-                          className="w-full rounded-[10px] border border-[#efefef] border-l-[3px] border-l-[#1d4ed8] bg-white p-[12px] text-left shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
+                          key={r.id}
+                          onClick={() => openReport(r)}
+                          className="w-full rounded-xl border border-[#efefef] bg-white p-[12px] text-left shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_3px_10px_rgba(0,0,0,0.08)]"
                         >
-                          <div className="mb-[3px] flex items-center justify-between">
-                            <span className="text-[13px] font-semibold text-[#111]">{mo.monthLabel}</span>
-                            <span className="rounded-full bg-[#eefbf4] px-[6px] py-[1px] text-[10px] font-medium text-[#0f9f5d]">Complete</span>
+                          <div className="mb-[4px] flex items-center gap-[6px]">
+                            <Icon name="file-text" size={13} className="shrink-0 text-[#aaa]" />
+                            <span className="text-[13px] font-semibold text-[#111]">{r.reportId}</span>
+                            <RiskBadge score={r.riskScore} />
                           </div>
-                          <p className="mb-[8px] text-[11px] text-[#888]">{mo.weekLabels.join(' · ')}</p>
-                          <div className="flex items-center justify-between border-t border-[#f5f5f5] pt-[8px]">
-                            <span className="text-[11px] text-[#888]">Net Eligible</span>
-                            <span className="text-[12px] font-semibold text-[#111]">{mo.netEligible}</span>
+                          <p className="text-[11px] leading-[16px] text-[#aaa]">{r.date}</p>
+                          <p className="mt-[6px] text-[12px] font-medium text-[#444]">{r.mealsServed.toLocaleString()} Meals</p>
+                          {r.fraudAlerts > 0 && (
+                            <p className="mt-[2px] text-[11px] font-medium text-[#de3d36]">{r.fraudAlerts} fraud alert{r.fraudAlerts > 1 ? 's' : ''}</p>
+                          )}
+                          <div className="mt-[8px] flex items-center justify-between border-t border-[#f5f5f5] pt-[8px]">
+                            <span className="text-[11px] text-[#aaa]">Net Eligible</span>
+                            <span className="text-[12px] font-semibold text-[#111]">{r.netEligible}</span>
                           </div>
                         </button>
                       ))}
 
-                      {/* Semester pool card */}
-                      <button
-                        onClick={() => openBatch({ kind: 'semester', data: SEMESTER_POOL })}
-                        className="w-full rounded-[10px] border border-[#d1fae5] border-l-[3px] border-l-[#0f9f5d] bg-gradient-to-br from-white to-[#f0faf5] p-[12px] text-left shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
-                      >
-                        <div className="mb-[3px] flex items-center justify-between">
-                          <span className="text-[13px] font-bold text-[#111]">{SEMESTER_POOL.semesterLabel}</span>
-                          <span className="rounded-full bg-[#dbeafe] px-[6px] py-[1px] text-[10px] font-medium text-[#1d4ed8]">Active</span>
+                      {/* Empty state */}
+                      {count === 0 && (
+                        <div className="flex h-[136px] items-center justify-center rounded-xl border border-dashed border-black/10 bg-white text-center">
+                          <p className="text-[12px] text-black/40">No reports</p>
                         </div>
-                        <p className="mb-[8px] text-[11px] text-[#888]">
-                          {SEMESTER_POOL.monthsIncluded.map((m, i) => (
-                            <span key={m}>{i > 0 && ' · '}{m}</span>
-                          ))}
-                        </p>
-                        <div className="flex items-center justify-between border-t border-[#d1fae5] pt-[8px]">
-                          <span className="text-[11px] text-[#555]">Current Eligible</span>
-                          <span className="text-[13px] font-bold text-[#0f9f5d]">{SEMESTER_POOL.currentEligible}</span>
-                        </div>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Other columns — daily report cards */}
-                  {!isClaim && kanbanGroups[col.id]?.map((r) => (
-                    <button
-                      key={r.id}
-                      onClick={() => openReport(r)}
-                      className="mb-[8px] mr-[16px] rounded-[10px] border border-[#efefef] bg-white p-[12px] text-left shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
-                      style={{ borderLeft: STAGE_BORDER[r.workflowStage] }}
-                    >
-                      <div className="mb-[4px] flex items-center gap-[6px]">
-                        <FileText size={13} className="shrink-0 text-[#aaa]" />
-                        <span className="text-[13px] font-semibold text-[#111]">{r.reportId}</span>
-                        <RiskBadge score={r.riskScore} />
-                      </div>
-                      <p className="text-[11px] leading-[16px] text-[#aaa]">{r.date}</p>
-                      <p className="mt-[6px] text-[12px] font-medium text-[#444]">{r.mealsServed.toLocaleString()} Meals</p>
-                      {r.fraudAlerts > 0 && (
-                        <p className="mt-[2px] text-[11px] font-medium text-[#de3d36]">{r.fraudAlerts} fraud alert{r.fraudAlerts > 1 ? 's' : ''}</p>
                       )}
-                      <div className="mt-[8px] flex items-center justify-between border-t border-[#f5f5f5] pt-[8px]">
-                        <span className="text-[11px] text-[#aaa]">Net Eligible</span>
-                        <span className="text-[12px] font-semibold text-[#111]">{r.netEligible}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )
-            })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
-        {/* ── Claim Readiness ──────────────────────────────────────────── */}
-        {pageTab === 'claim' && (
-          <section>
-            <h2 className="text-[22px] font-bold leading-[24px] text-black">Claim Readiness</h2>
-            <p className="mt-[4px] text-[14px] text-[#888]">Reports pending review before semester claim submission</p>
-            <div className="mt-[6px] flex h-[31px] items-center justify-end"><SectionSearch /></div>
-            <div className="mt-[12px]">
-              <DataTable
-                columns={reportColumns}
-                data={MOCK_DAILY_REPORTS.filter(r =>
-                  r.workflowStage === 'approve_lock' ||
-                  r.workflowStage === 'compliance_review' ||
-                  r.workflowStage === 'operational_review'
-                )}
-                rowKey={(r) => r.id}
-                onRowClick={openReport}
-                rowActions={reportActions}
-                emptyMessage="All reports are claim eligible."
-              />
-            </div>
-
-            {/* Batch hierarchy summary */}
-            <div className="mt-[32px] space-y-[12px]">
-              <h3 className="text-[16px] font-bold text-[#111]">Settlement Pool</h3>
-
-              {/* Semester card */}
-              <div
-                onClick={() => { setPageTab('workflow'); openBatch({ kind: 'semester', data: SEMESTER_POOL }) }}
-                className="cursor-pointer rounded-[14px] border border-[#d1fae5] bg-gradient-to-r from-[#f0faf5] to-white p-[18px] transition-shadow hover:shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-[14px] font-bold text-[#111]">{SEMESTER_POOL.semesterLabel}</p>
-                    <p className="mt-[2px] text-[12px] text-[#888]">{SEMESTER_POOL.monthsIncluded.join(' · ')}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[20px] font-bold text-[#0f9f5d]">{SEMESTER_POOL.currentEligible}</p>
-                    <p className="text-[11px] text-[#888]">current eligible</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Monthly and weekly cards */}
-              <div className="grid grid-cols-2 gap-[12px]">
-                {MONTHLY_BATCHES.map((mo) => (
-                  <div
-                    key={mo.id}
-                    onClick={() => { setPageTab('workflow'); openBatch({ kind: 'month', data: mo }) }}
-                    className="cursor-pointer rounded-[14px] border border-[#efefef] bg-white p-[16px] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.07)]"
-                  >
-                    <p className="text-[13px] font-semibold text-[#111]">{mo.monthLabel}</p>
-                    <p className="mt-[1px] text-[11px] text-[#888]">{mo.weekLabels.join(' · ')}</p>
-                    <p className="mt-[10px] text-[17px] font-bold text-[#111]">{mo.netEligible}</p>
-                    <p className="text-[11px] text-[#aaa]">{mo.totalMeals.toLocaleString()} meals</p>
-                  </div>
-                ))}
-                {WEEKLY_BATCHES.map((wk) => (
-                  <div
-                    key={wk.id}
-                    onClick={() => { setPageTab('workflow'); openBatch({ kind: 'week', data: wk }) }}
-                    className={clsx(
-                      'cursor-pointer rounded-[14px] border bg-white p-[16px] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.07)]',
-                      wk.status === 'complete' ? 'border-[#ede9fe]' : 'border-[#fef3c7]'
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-[13px] font-semibold text-[#111]">{wk.weekLabel}</p>
-                      <span className={clsx(
-                        'rounded-full px-[6px] py-[1px] text-[10px] font-medium',
-                        wk.status === 'complete' ? 'bg-[#eefbf4] text-[#0f9f5d]' : 'bg-[#fff7ed] text-[#df6b13]'
-                      )}>
-                        {wk.status === 'complete' ? 'Complete' : `${wk.days.filter(d => d.status === 'eligible').length}/7`}
-                      </span>
-                    </div>
-                    <p className="mt-[1px] text-[11px] text-[#888]">{wk.daysRange}</p>
-                    <p className="mt-[10px] text-[17px] font-bold text-[#111]">{wk.netEligible}</p>
-                    <p className="text-[11px] text-[#aaa]">{wk.totalMeals.toLocaleString()} meals</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
       </div>
 
       {/* ── Daily Report Sidebar ──────────────────────────────────────── */}
@@ -635,21 +539,24 @@ export default function MealReports() {
 
             {/* Modal tabs */}
             <div className="mx-[20px] flex h-[26px] w-fit items-center rounded-[6px] bg-[#f1f1f2] p-[1px]">
-              {MODAL_TABS.map((tab) => (
-                <button
-                  key={tab.value}
-                  onClick={() => setModalTab(tab.value)}
-                  className={clsx(
-                    'flex h-[24px] items-center rounded-[5px] px-[9px] text-[13px] font-medium transition-colors',
-                    modalTab === tab.value ? 'bg-white text-[#242424] shadow-[0_1px_3px_rgba(0,0,0,0.12)]' : 'text-black/50 hover:text-[#555]'
-                  )}
-                >
-                  {tab.label}
-                  {tab.count !== undefined && tab.count > 0 && (
-                    <span className="ml-[4px] inline-flex h-[14px] min-w-[14px] items-center justify-center rounded-full bg-[#ff3b30] px-[2px] text-[9px] font-bold text-white">{tab.count}</span>
-                  )}
-                </button>
-              ))}
+              {MODAL_TABS.map((tab) => {
+                const badgeCount = tab.value === 'risks' ? selectedReport.fraudAlerts : 0
+                return (
+                  <button
+                    key={tab.value}
+                    onClick={() => setModalTab(tab.value)}
+                    className={clsx(
+                      'flex h-[24px] items-center rounded-[5px] px-[9px] text-[13px] font-medium transition-colors',
+                      modalTab === tab.value ? 'bg-white text-[#242424] shadow-[0_1px_3px_rgba(0,0,0,0.12)]' : 'text-black/50 hover:text-[#555]'
+                    )}
+                  >
+                    {tab.label}
+                    {badgeCount > 0 && (
+                      <span className="ml-[4px] inline-flex h-[14px] min-w-[14px] items-center justify-center rounded-full bg-[#ff3b30] px-[2px] text-[9px] font-bold text-white">{badgeCount}</span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
 
             <div className="px-[20px] pb-[24px] pt-[16px]">
@@ -663,14 +570,33 @@ export default function MealReports() {
                   <SidebarDetailRow label="Status"       value={REPORT_STATUS_MAP[selectedReport.status]?.label ?? selectedReport.status} />
                   <h4 className="mt-[20px] mb-[12px] text-[14px] font-semibold text-black">Review Completion</h4>
                   <div className="space-y-[8px] rounded-[10px] border border-[#efefef] bg-[#fafafa] p-[12px]">
-                    {REVIEW_STEPS.map((step) => (
-                      <div key={step} className="flex items-center gap-[10px]">
-                        <div className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-full bg-blue-500">
-                          <Settings size={13} className="text-white" />
-                        </div>
-                        <span className="text-[13px] text-[#333]">{step}</span>
-                      </div>
-                    ))}
+                    {(() => {
+                      const progress = STAGE_PROGRESS[selectedReport.workflowStage] ?? 0
+                      return REVIEW_STEPS.map((step) => {
+                        const done       = progress >= step.stageThreshold
+                        const inProgress = progress === step.stageThreshold - 1
+                        return (
+                          <div key={step.label} className="flex items-center gap-[10px]">
+                            <div className={clsx(
+                              'flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-full',
+                              done        ? 'bg-[#0f9f5d]' :
+                              inProgress  ? 'bg-[#3b82f6]' : 'bg-[#e5e5e5]'
+                            )}>
+                              <Icon
+                                name={done ? 'circle-check' : step.icon}
+                                size={13}
+                                className={done || inProgress ? 'text-white' : 'text-[#aaa]'}
+                              />
+                            </div>
+                            <span className={clsx('text-[13px]', done ? 'text-[#0f9f5d] font-medium' : inProgress ? 'text-[#3b82f6] font-medium' : 'text-[#aaa]')}>
+                              {step.label}
+                            </span>
+                            {inProgress && <span className="ml-auto text-[11px] text-[#3b82f6]">In progress</span>}
+                            {done        && <span className="ml-auto text-[11px] text-[#0f9f5d]">Done</span>}
+                          </div>
+                        )
+                      })
+                    })()}
                   </div>
                 </>
               )}
@@ -706,24 +632,60 @@ export default function MealReports() {
                 <>
                   <SidebarDetailRow label="Report ID"    value={selectedReport.reportId} />
                   <SidebarDetailRow label="Fraud Alerts" value={String(selectedReport.fraudAlerts)} />
+
+                  {selectedReport.riskAlerts && selectedReport.riskAlerts.length > 0 && (
+                    <>
+                      <h4 className="mt-[20px] mb-[10px] text-[14px] font-semibold text-black">Alert Breakdown</h4>
+                      <div className="space-y-[8px]">
+                        {selectedReport.riskAlerts.map((alert, i) => (
+                          <div key={i} className="rounded-[10px] border border-[#f0f0f0] bg-[#fafafa] px-[14px] py-[11px]">
+                            <p className="text-[13px] font-semibold text-[#111]">{alert.label}</p>
+                            <p className="mt-[3px] text-[12px] leading-[17px] text-[#666]">{alert.detail}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {selectedReport.reviewFlag && (
+                    <>
+                      <h4 className="mt-[20px] mb-[10px] text-[14px] font-semibold text-black">Flagged Issue</h4>
+                      <div className={clsx(
+                        'rounded-[10px] border p-[14px]',
+                        selectedReport.workflowStage === 'compliance_review'
+                          ? 'border-[#fecdca] bg-[#fff1f0]'
+                          : 'border-[#fed7aa] bg-[#fff7ed]'
+                      )}>
+                        <div className="flex items-start justify-between gap-[8px]">
+                          <p className={clsx('text-[13px] font-semibold leading-none',
+                            selectedReport.workflowStage === 'compliance_review' ? 'text-[#de3d36]' : 'text-[#df6b13]'
+                          )}>{selectedReport.reviewFlag.type}</p>
+                          {selectedReport.reviewFlag.session && (
+                            <span className="shrink-0 rounded-full bg-white/70 px-[7px] py-[2px] text-[10px] font-medium text-[#555]">
+                              {selectedReport.reviewFlag.session}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-[8px] text-[12px] leading-[18px] text-[#444]">{selectedReport.reviewFlag.detail}</p>
+                      </div>
+                    </>
+                  )}
+
                   <h4 className="mt-[20px] mb-[12px] text-[14px] font-semibold text-black">What Triggers Review?</h4>
                   <div className="space-y-[8px] rounded-[10px] border border-[#efefef] bg-[#fafafa] p-[12px]">
-                    {RISK_TRIGGERS.map(({ label, icon: Icon, bg }) => (
+                    {RISK_TRIGGERS.map(({ label, icon, bg }) => (
                       <div key={label} className="flex items-center gap-[10px]">
-                        <div className={clsx('flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-full', bg)}><Icon size={13} className="text-white" /></div>
+                        <div className={clsx('flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-full', bg)}><Icon name={icon} size={13} className="text-white" /></div>
                         <span className="text-[13px] text-[#333]">{label}</span>
                       </div>
                     ))}
                   </div>
                   <h4 className="mt-[20px] mb-[12px] text-[14px] font-semibold text-black">Review Team</h4>
                   <div className="space-y-[8px] rounded-[10px] border border-[#efefef] bg-[#fafafa] p-[12px]">
-                    {[
-                      { name: 'Essandoh Prince', role: 'Dining Supervisor' },
-                      { name: 'Essandoh Prince', role: 'Compliance Officer' },
-                    ].map(({ name, role }) => (
+                    {REVIEW_TEAM.map(({ name, role, initial, color }) => (
                       <div key={role} className="flex items-center gap-[10px]">
-                        <div className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-full bg-blue-500">
-                          <span className="text-[11px] font-semibold text-white">E</span>
+                        <div className={clsx('flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-full', color)}>
+                          <span className="text-[11px] font-semibold text-white">{initial}</span>
                         </div>
                         <div>
                           <p className="text-[13px] font-medium text-[#111]">{name}</p>
@@ -775,16 +737,6 @@ export default function MealReports() {
                 </>
               )}
 
-              {modalTab === 'logs' && (
-                <div className="space-y-[14px]">
-                  {selectedReport.logs.map((log, i) => (
-                    <div key={i} className="flex items-start gap-[12px]">
-                      <span className="shrink-0 w-[52px] text-[13px] font-medium text-[#888]">{log.time}</span>
-                      <span className="text-[13px] text-[#333]">~ {log.event}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -847,8 +799,8 @@ export default function MealReports() {
                         <div key={d.dayNum} className="flex items-center justify-between border-b border-[#f2f2f2] py-[11px] last:border-0">
                           <div className="flex items-center gap-[10px]">
                             {d.status === 'eligible'
-                              ? <CheckCircle2 size={15} className="shrink-0 text-[#0f9f5d]" />
-                              : <Circle size={15} className="shrink-0 text-[#ddd]" />
+                              ? <Icon name="circle-check" size={15} className="shrink-0 text-[#0f9f5d]" />
+                              : <Icon name="circle" size={15} className="shrink-0 text-[#ddd]" />
                             }
                             <span className="text-[13px] text-[#333]">{d.reportId}</span>
                             <span className="text-[12px] text-[#aaa]">{d.date}</span>
@@ -912,7 +864,7 @@ export default function MealReports() {
                     <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
                       {mo.weekLabels.map((wl) => (
                         <div key={wl} className="flex items-center gap-[10px] border-b border-[#f2f2f2] py-[11px] last:border-0">
-                          <CheckCircle2 size={15} className="shrink-0 text-[#0f9f5d]" />
+                          <Icon name="circle-check" size={15} className="shrink-0 text-[#0f9f5d]" />
                           <span className="text-[13px] text-[#333]">{wl}</span>
                         </div>
                       ))}
@@ -955,8 +907,8 @@ export default function MealReports() {
                       {sp.monthsIncluded.map((m, i) => (
                         <div key={m} className="flex items-center gap-[10px] border-b border-[#f2f2f2] py-[11px] last:border-0">
                           {i < sp.monthsIncluded.length - 1
-                            ? <CheckCircle2 size={15} className="shrink-0 text-[#0f9f5d]" />
-                            : <Circle size={15} className="shrink-0 text-[#f59e0b]" />
+                            ? <Icon name="circle-check" size={15} className="shrink-0 text-[#0f9f5d]" />
+                            : <Icon name="circle" size={15} className="shrink-0 text-[#f59e0b]" />
                           }
                           <span className="text-[13px] text-[#333]">{m}</span>
                           {i === sp.monthsIncluded.length - 1 && (

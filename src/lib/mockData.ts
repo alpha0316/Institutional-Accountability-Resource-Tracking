@@ -436,7 +436,7 @@ export const MOCK_VALIDATIONS: MockValidation[] = [
 // ────────────────────────────────────────────────────────────────────────────────
 // 4. DAILY REPORTS
 // ────────────────────────────────────────────────────────────────────────────────
-export type ReportWorkflowStage = 'generated' | 'operational_review' | 'compliance_review' | 'approve_lock' | 'claim_eligible'
+export type ReportWorkflowStage = 'generated' | 'operational_review' | 'compliance_review' | 'claim_eligible'
 export type ReportStatus = 'analyzing' | 'approved' | 'locked' | 'eligible'
 
 export interface MockDailyReport {
@@ -469,6 +469,12 @@ export interface MockDailyReport {
   // Logs
   logs: { time: string; event: string }[]
   riskScore: number
+  reviewFlag?: {
+    type: string
+    session?: string
+    detail: string
+  }
+  riskAlerts?: { label: string; detail: string }[]
 }
 
 export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
@@ -510,6 +516,11 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
       { time: '8:07 PM', event: 'Financial estimate generated' },
       { time: '8:10 PM', event: 'Daily report created' },
     ],
+    riskAlerts: [
+      { label: 'Scan Timing Anomaly',  detail: 'Scanner at Block C recorded 847 scans in 12 minutes during breakfast — physically impossible rate.' },
+      { label: 'Duplicate Scan',       detail: 'Student SAC-1821 scanned at Dining Hall A and Hall B within 4 minutes — two halls, one student.' },
+      { label: 'Supply Variance',      detail: 'Cooking oil usage 2.3× above daily average for the meals served today.' },
+    ],
   },
   {
     id: '2',
@@ -518,8 +529,8 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     mealsServed: 2387,
     eligibleStudents: 2850,
     fraudAlerts: 0,
-    netEligible: 'GHS 37,910',
-    grossEstimate: 'GHS 37,910',
+    netEligible: 'GHS 40,810',
+    grossEstimate: 'GHS 40,810',
     semesterAccrued: 'GHS 774,080',
     policyAdjustments: 'GHS 0',
     workflowStage: 'claim_eligible',
@@ -534,7 +545,7 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     riceUsed: '31 Bags',
     oilUsed: '4 Litres',
     beansUsed: '5 Bags',
-    mealRevenue: 'GHS 36,280',
+    mealRevenue: 'GHS 39,180',
     supplyCost: 'GHS 1,630',
     logs: [
       { time: '6:00 AM', event: 'Breakfast session opened' },
@@ -555,15 +566,15 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     mealsServed: 2401,
     eligibleStudents: 2845,
     fraudAlerts: 1,
-    netEligible: 'GHS 38,150',
-    grossEstimate: 'GHS 38,650',
+    netEligible: 'GHS 40,431',
+    grossEstimate: 'GHS 40,931',
     semesterAccrued: 'GHS 736,170',
     policyAdjustments: '-GHS 500',
-    workflowStage: 'approve_lock',
+    workflowStage: 'claim_eligible',
     status: 'locked',
     generatedBy: 'Auto',
     updatedAt: '13 Mar, 9:05 PM',
-    riskScore: 28,
+    riskScore: 8,
     sessions: 3,
     breakfastServed: 2330,
     lunchServed: 2420,
@@ -571,7 +582,7 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     riceUsed: '32 Bags',
     oilUsed: '5 Litres',
     beansUsed: '5 Bags',
-    mealRevenue: 'GHS 37,120',
+    mealRevenue: 'GHS 39,401',
     supplyCost: 'GHS 1,530',
     logs: [
       { time: '6:00 AM', event: 'Breakfast session opened' },
@@ -585,6 +596,9 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
       { time: '9:00 PM', event: 'Compliance review completed' },
       { time: '9:05 PM', event: 'Report locked — awaiting claim' },
     ],
+    riskAlerts: [
+      { label: 'Late-Entry Scan', detail: 'Student SAC-0847 scanned 90 seconds after supper session close — logged as late entry, flagged for review.' },
+    ],
   },
   {
     id: '4',
@@ -593,8 +607,8 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     mealsServed: 2395,
     eligibleStudents: 2845,
     fraudAlerts: 2,
-    netEligible: 'GHS 37,800',
-    grossEstimate: 'GHS 38,100',
+    netEligible: 'GHS 40,413',
+    grossEstimate: 'GHS 40,713',
     semesterAccrued: 'GHS 698,020',
     policyAdjustments: '-GHS 300',
     workflowStage: 'compliance_review',
@@ -609,12 +623,22 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     riceUsed: '30 Bags',
     oilUsed: '4 Litres',
     beansUsed: '4 Bags',
-    mealRevenue: 'GHS 36,680',
+    mealRevenue: 'GHS 39,293',
     supplyCost: 'GHS 1,420',
+    reviewFlag: {
+      type: 'Suspended Student Received Meal',
+      session: 'Lunch Session',
+      detail: 'Student SAC-2032 (status: Suspended) successfully validated at Dining Hall B during lunch.',
+    },
     logs: [
       { time: '8:05 PM', event: 'Daily report created' },
-      { time: '8:15 PM', event: 'Operational review completed' },
-      { time: '8:30 PM', event: 'Sent to compliance review' },
+      { time: '8:12 PM', event: 'Compliance engine flagged suspended student validation — SAC-2032' },
+      { time: '8:15 PM', event: 'Operational review cleared' },
+      { time: '8:30 PM', event: 'Sent to compliance review — suspended student incident' },
+    ],
+    riskAlerts: [
+      { label: 'Suspended Student Validated', detail: 'Student SAC-2032 (Kwame Owusu, Form 2 Science A) validated at Dining Hall B during lunch — account is suspended.' },
+      { label: 'Unknown Card Scanned',        detail: 'Card SHC-5501 not in student registry — scanned 3 times during lunch without rejection.' },
     ],
   },
   {
@@ -624,8 +648,8 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     mealsServed: 2420,
     eligibleStudents: 2840,
     fraudAlerts: 0,
-    netEligible: 'GHS 37,950',
-    grossEstimate: 'GHS 37,950',
+    netEligible: 'GHS 41,301',
+    grossEstimate: 'GHS 41,301',
     semesterAccrued: 'GHS 660,220',
     policyAdjustments: 'GHS 0',
     workflowStage: 'claim_eligible',
@@ -640,7 +664,7 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     riceUsed: '34 Bags',
     oilUsed: '5 Litres',
     beansUsed: '6 Bags',
-    mealRevenue: 'GHS 36,370',
+    mealRevenue: 'GHS 39,721',
     supplyCost: 'GHS 1,580',
     logs: [
       { time: '8:05 PM', event: 'Daily report created' },
@@ -654,8 +678,8 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     mealsServed: 2105,
     eligibleStudents: 2840,
     fraudAlerts: 7,
-    netEligible: 'GHS 33,200',
-    grossEstimate: 'GHS 36,800',
+    netEligible: 'GHS 30,961',
+    grossEstimate: 'GHS 34,561',
     semesterAccrued: 'GHS 622,270',
     policyAdjustments: '-GHS 3,600',
     workflowStage: 'operational_review',
@@ -667,15 +691,30 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     breakfastServed: 2000,
     lunchServed: 2150,
     dinnerServed: 2165,
-    riceUsed: '28 Bags',
+    riceUsed: '41 Bags',
     oilUsed: '4 Litres',
     beansUsed: '4 Bags',
-    mealRevenue: 'GHS 35,460',
-    supplyCost: 'GHS 1,340',
+    mealRevenue: 'GHS 34,561',
+    supplyCost: 'GHS 0',
+    reviewFlag: {
+      type: 'Dining Session Never Closed',
+      session: 'Supper Session',
+      detail: 'Supper session still active at 11:58 PM. Financial engine cannot reconcile totals until session is closed.',
+    },
     logs: [
       { time: '8:05 PM', event: 'Daily report created' },
-      { time: '8:10 PM', event: 'High fraud alert count detected — flagged for review' },
-      { time: '8:45 PM', event: 'Sent to operational review' },
+      { time: '8:08 PM', event: 'Fraud engine flagged 7 suspicious scans' },
+      { time: '8:10 PM', event: 'Supper session detected still active — reconciliation blocked' },
+      { time: '8:45 PM', event: 'Sent to operational review — session close required' },
+    ],
+    riskAlerts: [
+      { label: 'Session Not Closed',     detail: 'Supper session still active past midnight — financial engine blocked from reconciling totals.' },
+      { label: 'Duplicate Card Use',     detail: 'Card SHC-4421 scanned at 3 different scan points within 7 minutes — physically impossible.' },
+      { label: 'Unknown Card Scans',     detail: '2 scans from unregistered card credentials — not found in student registry.' },
+      { label: 'Rice Over-Consumption',  detail: 'Rice usage 40% above expected threshold for the number of meals served — supply anomaly flagged.' },
+      { label: 'Simultaneous Dual Scan', detail: 'Card SHC-3302 recorded at breakfast and lunch simultaneously at separate dining halls.' },
+      { label: 'Mass Scan Spike',        detail: '312 scans recorded in a 4-minute window at Dining Hall B — rate exceeds physical scanning capacity.' },
+      { label: 'Post-Session Records',   detail: 'Dining supervisor manually added 47 student entries after session close — justification required.' },
     ],
   },
   // Edge case: report with no fraud, no adjustments
@@ -686,8 +725,8 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     mealsServed: 2390,
     eligibleStudents: 2840,
     fraudAlerts: 0,
-    netEligible: 'GHS 37,850',
-    grossEstimate: 'GHS 37,850',
+    netEligible: 'GHS 40,799',
+    grossEstimate: 'GHS 40,799',
     semesterAccrued: 'GHS 589,070',
     policyAdjustments: 'GHS 0',
     workflowStage: 'claim_eligible',
@@ -702,11 +741,91 @@ export const MOCK_DAILY_REPORTS: MockDailyReport[] = [
     riceUsed: '31 Bags',
     oilUsed: '5 Litres',
     beansUsed: '5 Bags',
-    mealRevenue: 'GHS 36,290',
+    mealRevenue: 'GHS 39,239',
     supplyCost: 'GHS 1,560',
     logs: [
       { time: '8:04 PM', event: 'Daily report created' },
       { time: '8:08 PM', event: 'Clean report — auto-approved and locked' },
+    ],
+  },
+  {
+    id: '8',
+    reportId: 'DR-2026-0228',
+    date: '28 Feb 2026',
+    mealsServed: 2360,
+    eligibleStudents: 2845,
+    fraudAlerts: 0,
+    netEligible: 'GHS 38,901',
+    grossEstimate: 'GHS 38,901',
+    semesterAccrued: 'GHS 551,220',
+    policyAdjustments: 'GHS 0',
+    workflowStage: 'operational_review',
+    status: 'analyzing',
+    generatedBy: 'Auto',
+    updatedAt: '28 Feb, 9:10 PM',
+    riskScore: 42,
+    sessions: 3,
+    breakfastServed: 2305,
+    lunchServed: 2380,
+    dinnerServed: 2330,
+    riceUsed: '31 Bags',
+    oilUsed: '4 Litres',
+    beansUsed: '5 Bags',
+    mealRevenue: 'GHS 38,411',
+    supplyCost: 'GHS 490',
+    reviewFlag: {
+      type: 'Missing Supply Logs',
+      session: 'Lunch & Supper',
+      detail: 'Students were served all 3 meals, but the storekeeper submitted only breakfast supply records. Lunch and supper consumption logs are absent — supply contribution is unverified.',
+    },
+    logs: [
+      { time: '8:05 PM', event: 'Daily report created' },
+      { time: '8:12 PM', event: 'Missing supply records detected — Lunch and Supper logs absent' },
+      { time: '9:10 PM', event: 'Sent to operational review — storekeeper action required' },
+    ],
+  },
+  {
+    id: '9',
+    reportId: 'DR-2026-0226',
+    date: '26 Feb 2026',
+    mealsServed: 2380,
+    eligibleStudents: 2845,
+    fraudAlerts: 5,
+    netEligible: 'GHS 39,767',
+    grossEstimate: 'GHS 40,467',
+    semesterAccrued: 'GHS 513,600',
+    policyAdjustments: '-GHS 700',
+    workflowStage: 'compliance_review',
+    status: 'analyzing',
+    generatedBy: 'Auto',
+    updatedAt: '26 Feb, 9:30 PM',
+    riskScore: 55,
+    sessions: 3,
+    breakfastServed: 2325,
+    lunchServed: 2400,
+    dinnerServed: 2415,
+    riceUsed: '32 Bags',
+    oilUsed: '5 Litres',
+    beansUsed: '5 Bags',
+    mealRevenue: 'GHS 39,077',
+    supplyCost: 'GHS 1,390',
+    reviewFlag: {
+      type: 'Duplicate Meal Claims',
+      session: 'Breakfast Session',
+      detail: '128 duplicate validation attempts at Block A scanner — exceeds the acceptable threshold of 20.',
+    },
+    logs: [
+      { time: '8:05 PM', event: 'Daily report created' },
+      { time: '8:15 PM', event: 'Operational review cleared' },
+      { time: '8:40 PM', event: '128 duplicate scan attempts detected by fraud engine at Block A' },
+      { time: '9:30 PM', event: 'Sent to compliance review — duplicate threshold exceeded' },
+    ],
+    riskAlerts: [
+      { label: 'Duplicate Scan Burst',      detail: '128 duplicate validation attempts from the Block A breakfast scanner in under 8 minutes.' },
+      { label: 'Repeated Card Use',         detail: 'Card SHC-2210 scanned 6 consecutive times at the same scanner — suspected card sharing.' },
+      { label: 'Unknown Card Entries',      detail: '2 unregistered card scans recorded during breakfast — credentials not found in registry.' },
+      { label: 'Replacement Card Spike',    detail: '37 card replacements processed today. Weekly average is 3 — far exceeds policy threshold.' },
+      { label: 'Manual Enrollment Surge',   detail: '48 manual student enrollments added overnight. Reimbursement risk — enrollment count directly affects claim amount.' },
     ],
   },
 ]
@@ -716,7 +835,6 @@ export const WORKFLOW_COLUMNS = [
   { id: 'generated',          label: 'Generated',          dot: 'bg-orange-400' },
   { id: 'operational_review', label: 'Operational Review', dot: 'bg-blue-500'   },
   { id: 'compliance_review',  label: 'Compliance Review',  dot: 'bg-red-500'    },
-  { id: 'approve_lock',       label: 'Approve & Lock',     dot: 'bg-yellow-500' },
   { id: 'claim_eligible',     label: 'Claim Eligible',     dot: 'bg-green-500'  },
 ]
 
@@ -1433,6 +1551,353 @@ export const GOV_REIMBURSEMENTS: (ReimbursementClaim & { institution: string; pe
   { id: 'CLM-2026-S1-013', reportId: 'WGS-DR-0311..0309',         institutionName: 'Wesley Girls SHS',       institution: 'Wesley Girls SHS',       amountClaimed:  215000, amountApproved:  null,    status: 'rejected', submittedAt: '2026-03-11', period: 'Sem 1, 2026' },
   { id: 'CLM-2026-S1-014', reportId: 'ACH-DR-0310..0308',         institutionName: 'Achimota SHS',           institution: 'Achimota SHS',           amountClaimed:  178000, amountApproved:  175500,  status: 'approved', submittedAt: '2026-03-08', period: 'Sem 1, 2026' },
   { id: 'CLM-2025-S2-008', reportId: 'MFS-2025-0080..0060',       institutionName: 'Mfantsipim SHS',          institution: 'Mfantsipim SHS',          amountClaimed: 1450000, amountApproved:  null,    status: 'rejected', submittedAt: '2025-12-20', period: 'Sem 2, 2025' },
+]
+
+// ── School profiles for the gov school-detail page ───────────────────────────
+export interface GovSchoolSupplier {
+  name: string
+  category: string
+  items: string[]
+  tokenCode: string
+  tokenValue: number
+  tokenStatus: 'active' | 'pending' | 'redeemed' | 'none'
+}
+
+export interface GovSupplyRequest {
+  item: string
+  qty: string
+  requestedBy: string
+  requestedAt: string
+  requiredBy: string
+  status: 'pending' | 'approved' | 'delivered'
+}
+
+export interface GovSchoolValidation {
+  date: string
+  mealsServed: number
+  fraudAlerts: number
+  riskScore: number
+  stage: 'generated' | 'operational_review' | 'compliance_review' | 'claim_eligible'
+}
+
+export interface GovSchoolProfile {
+  id: string
+  name: string
+  region: string
+  enrolled: number
+  mealsValidated: number
+  attendancePct: number
+  claimStatus: 'pending' | 'approved' | 'flagged'
+  claimedAmount: number
+  approvedAmount: number | null
+  suppliers: GovSchoolSupplier[]
+  supplyRequests: GovSupplyRequest[]
+  tokenRecommendation: {
+    validatedMeals: number
+    avgSupplyCostPerMeal: number
+    grossSupplyCost: number
+    fraudDeductions: number
+    netRecommended: number
+    alreadyIssued: number
+    remainingAllowance: number
+  }
+  recentValidations: GovSchoolValidation[]
+}
+
+export const GOV_SCHOOL_PROFILES: GovSchoolProfile[] = [
+  {
+    id: 'sac',
+    name: 'St. Augustine College',
+    region: 'Ashanti',
+    enrolled: 2845,
+    mealsValidated: 144820,
+    attendancePct: 89,
+    claimStatus: 'pending',
+    claimedAmount: 113710,
+    approvedAmount: null,
+    suppliers: [
+      { name: 'Golden Harvest Foods',  category: 'Staples',   items: ['Rice', 'Maize', 'Beans'],     tokenCode: 'GOV-SAC-SEM1-005', tokenValue: 620000, tokenStatus: 'pending'  },
+      { name: 'SunGold Oils',          category: 'Oils',      items: ['Cooking Oil', 'Palm Oil'],    tokenCode: 'GOV-SAC-SEM1-002', tokenValue: 180000, tokenStatus: 'active'   },
+      { name: 'National School Foods', category: 'Proteins',  items: ['Fish (Frozen)', 'Tomato Paste'], tokenCode: 'GOV-SAC-SEM1-004', tokenValue: 95000,  tokenStatus: 'active'   },
+    ],
+    supplyRequests: [
+      { item: 'Rice',         qty: '200 Bags', requestedBy: 'Mr. Kojo Asante (Storekeeper)', requestedAt: '12 Mar 2026', requiredBy: '20 Mar 2026', status: 'approved'  },
+      { item: 'Cooking Oil',  qty: '80 Litres', requestedBy: 'Mr. Kojo Asante (Storekeeper)', requestedAt: '12 Mar 2026', requiredBy: '20 Mar 2026', status: 'delivered' },
+      { item: 'Fish (Frozen)',qty: '60 Cartons', requestedBy: 'Mr. Kojo Asante (Storekeeper)', requestedAt: '14 Mar 2026', requiredBy: '22 Mar 2026', status: 'pending'   },
+    ],
+    tokenRecommendation: {
+      validatedMeals:      144820,
+      avgSupplyCostPerMeal: 0.64,
+      grossSupplyCost:     92685,
+      fraudDeductions:      2800,
+      netRecommended:      89885,
+      alreadyIssued:       895000,
+      remainingAllowance:  630000,
+    },
+    recentValidations: [
+      { date: '15 Mar 2026', mealsServed: 2413, fraudAlerts: 3, riskScore: 58, stage: 'generated'          },
+      { date: '14 Mar 2026', mealsServed: 2350, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+      { date: '13 Mar 2026', mealsServed: 2355, fraudAlerts: 1, riskScore:  8, stage: 'claim_eligible'     },
+      { date: '12 Mar 2026', mealsServed: 2360, fraudAlerts: 2, riskScore: 62, stage: 'compliance_review'  },
+      { date: '11 Mar 2026', mealsServed: 2380, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+      { date: '10 Mar 2026', mealsServed: 2105, fraudAlerts: 7, riskScore: 85, stage: 'operational_review' },
+      { date: '09 Mar 2026', mealsServed: 2345, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+    ],
+  },
+  {
+    id: 'ows',
+    name: 'Opoku Ware SHS',
+    region: 'Ashanti',
+    enrolled: 4200,
+    mealsValidated: 217800,
+    attendancePct: 95,
+    claimStatus: 'approved',
+    claimedAmount: 396000,
+    approvedAmount: 388000,
+    suppliers: [
+      { name: 'Ghana Foods Co.',    category: 'Staples',  items: ['Rice', 'Beans', 'Maize'], tokenCode: 'GOV-OWS-SEM1-001', tokenValue: 396000, tokenStatus: 'redeemed' },
+      { name: 'Northern Foods Ltd', category: 'Proteins', items: ['Fish', 'Tomato Paste'],   tokenCode: 'GOV-OWS-SEM1-002', tokenValue: 215000, tokenStatus: 'active'   },
+    ],
+    supplyRequests: [
+      { item: 'Rice',    qty: '300 Bags',  requestedBy: 'Maame Ama Osei (Storekeeper)', requestedAt: '10 Mar 2026', requiredBy: '18 Mar 2026', status: 'delivered' },
+      { item: 'Beans',   qty: '80 Bags',   requestedBy: 'Maame Ama Osei (Storekeeper)', requestedAt: '10 Mar 2026', requiredBy: '18 Mar 2026', status: 'delivered' },
+      { item: 'Fish',    qty: '100 Cartons',requestedBy: 'Maame Ama Osei (Storekeeper)', requestedAt: '13 Mar 2026', requiredBy: '22 Mar 2026', status: 'approved'  },
+    ],
+    tokenRecommendation: {
+      validatedMeals:      217800,
+      avgSupplyCostPerMeal: 0.70,
+      grossSupplyCost:     152460,
+      fraudDeductions:          0,
+      netRecommended:      152460,
+      alreadyIssued:       611000,
+      remainingAllowance:  100000,
+    },
+    recentValidations: [
+      { date: '15 Mar 2026', mealsServed: 3980, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'    },
+      { date: '14 Mar 2026', mealsServed: 4010, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'    },
+      { date: '13 Mar 2026', mealsServed: 3940, fraudAlerts: 1, riskScore: 18, stage: 'claim_eligible'    },
+      { date: '12 Mar 2026', mealsServed: 4050, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'    },
+      { date: '11 Mar 2026', mealsServed: 3920, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'    },
+      { date: '10 Mar 2026', mealsServed: 3900, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'    },
+      { date: '09 Mar 2026', mealsServed: 3960, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'    },
+    ],
+  },
+  {
+    id: 'mfs',
+    name: 'Mfantsipim SHS',
+    region: 'Central',
+    enrolled: 2800,
+    mealsValidated: 103040,
+    attendancePct: 78,
+    claimStatus: 'flagged',
+    claimedAmount: 287500,
+    approvedAmount: null,
+    suppliers: [
+      { name: 'Fresh Mart Ltd', category: 'Staples', items: ['Rice', 'Cooking Oil', 'Beans'], tokenCode: 'GOV-MFS-SEM1-001', tokenValue: 287500, tokenStatus: 'pending' },
+    ],
+    supplyRequests: [
+      { item: 'Rice',        qty: '180 Bags',  requestedBy: 'Kwesi Asante (Storekeeper)', requestedAt: '08 Mar 2026', requiredBy: '16 Mar 2026', status: 'pending'  },
+      { item: 'Cooking Oil', qty: '60 Litres', requestedBy: 'Kwesi Asante (Storekeeper)', requestedAt: '08 Mar 2026', requiredBy: '16 Mar 2026', status: 'approved' },
+    ],
+    tokenRecommendation: {
+      validatedMeals:      103040,
+      avgSupplyCostPerMeal: 0.62,
+      grossSupplyCost:      63885,
+      fraudDeductions:       8400,
+      netRecommended:       55485,
+      alreadyIssued:        287500,
+      remainingAllowance:       0,
+    },
+    recentValidations: [
+      { date: '15 Mar 2026', mealsServed: 1820, fraudAlerts: 4, riskScore: 74, stage: 'compliance_review'  },
+      { date: '14 Mar 2026', mealsServed: 1760, fraudAlerts: 2, riskScore: 52, stage: 'compliance_review'  },
+      { date: '13 Mar 2026', mealsServed: 1800, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+      { date: '12 Mar 2026', mealsServed: 1780, fraudAlerts: 1, riskScore: 29, stage: 'operational_review' },
+      { date: '11 Mar 2026', mealsServed: 1750, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+      { date: '10 Mar 2026', mealsServed: 1690, fraudAlerts: 6, riskScore: 88, stage: 'operational_review' },
+      { date: '09 Mar 2026', mealsServed: 1770, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+    ],
+  },
+  {
+    id: 'wgs',
+    name: 'Wesley Girls SHS',
+    region: 'Eastern',
+    enrolled: 2200,
+    mealsValidated: 120120,
+    attendancePct: 91,
+    claimStatus: 'approved',
+    claimedAmount: 215000,
+    approvedAmount: 210000,
+    suppliers: [
+      { name: 'Ghana Foods Co.', category: 'Staples', items: ['Rice', 'Beans', 'Maize', 'Cooking Oil'], tokenCode: 'GOV-WGS-SEM1-001', tokenValue: 215000, tokenStatus: 'active' },
+    ],
+    supplyRequests: [
+      { item: 'Rice',    qty: '150 Bags', requestedBy: 'Ama Mensah (Storekeeper)', requestedAt: '11 Mar 2026', requiredBy: '19 Mar 2026', status: 'delivered' },
+      { item: 'Maize',   qty: '50 Bags',  requestedBy: 'Ama Mensah (Storekeeper)', requestedAt: '14 Mar 2026', requiredBy: '22 Mar 2026', status: 'approved'  },
+    ],
+    tokenRecommendation: {
+      validatedMeals:      120120,
+      avgSupplyCostPerMeal: 0.67,
+      grossSupplyCost:      80480,
+      fraudDeductions:          0,
+      netRecommended:       80480,
+      alreadyIssued:        215000,
+      remainingAllowance:    40000,
+    },
+    recentValidations: [
+      { date: '15 Mar 2026', mealsServed: 2030, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'  },
+      { date: '14 Mar 2026', mealsServed: 2010, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'  },
+      { date: '13 Mar 2026', mealsServed: 2050, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'  },
+      { date: '12 Mar 2026', mealsServed: 1990, fraudAlerts: 1, riskScore: 15, stage: 'claim_eligible'  },
+      { date: '11 Mar 2026', mealsServed: 2020, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'  },
+      { date: '10 Mar 2026', mealsServed: 2000, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'  },
+      { date: '09 Mar 2026', mealsServed: 2040, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'  },
+    ],
+  },
+  {
+    id: 'ach',
+    name: 'Achimota SHS',
+    region: 'Greater Accra',
+    enrolled: 3850,
+    mealsValidated: 177100,
+    attendancePct: 92,
+    claimStatus: 'pending',
+    claimedAmount: 178000,
+    approvedAmount: null,
+    suppliers: [
+      { name: 'Northern Foods Ltd', category: 'Staples', items: ['Rice', 'Beans', 'Maize'], tokenCode: 'GOV-ACH-SEM2-001', tokenValue: 178000, tokenStatus: 'active' },
+    ],
+    supplyRequests: [
+      { item: 'Rice',  qty: '250 Bags', requestedBy: 'Kofi Darko (Storekeeper)', requestedAt: '13 Mar 2026', requiredBy: '21 Mar 2026', status: 'pending'  },
+      { item: 'Beans', qty: '70 Bags',  requestedBy: 'Kofi Darko (Storekeeper)', requestedAt: '13 Mar 2026', requiredBy: '21 Mar 2026', status: 'approved' },
+    ],
+    tokenRecommendation: {
+      validatedMeals:      177100,
+      avgSupplyCostPerMeal: 0.68,
+      grossSupplyCost:     120428,
+      fraudDeductions:       1200,
+      netRecommended:      119228,
+      alreadyIssued:        178000,
+      remainingAllowance:   80000,
+    },
+    recentValidations: [
+      { date: '15 Mar 2026', mealsServed: 3540, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+      { date: '14 Mar 2026', mealsServed: 3480, fraudAlerts: 1, riskScore: 22, stage: 'operational_review' },
+      { date: '13 Mar 2026', mealsServed: 3520, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+      { date: '12 Mar 2026', mealsServed: 3500, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+      { date: '11 Mar 2026', mealsServed: 3460, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+      { date: '10 Mar 2026', mealsServed: 3510, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+      { date: '09 Mar 2026', mealsServed: 3490, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+    ],
+  },
+  {
+    id: 'tsh',
+    name: 'Tamale SHS',
+    region: 'Northern',
+    enrolled: 1850,
+    mealsValidated: 58480,
+    attendancePct: 56,
+    claimStatus: 'flagged',
+    claimedAmount: 98000,
+    approvedAmount: null,
+    suppliers: [
+      { name: 'Northern Foods Ltd', category: 'Staples', items: ['Maize', 'Beans', 'Rice'], tokenCode: '', tokenValue: 0, tokenStatus: 'none' },
+    ],
+    supplyRequests: [
+      { item: 'Maize', qty: '100 Bags', requestedBy: 'Ibrahim Seidu (Storekeeper)', requestedAt: '10 Mar 2026', requiredBy: '20 Mar 2026', status: 'pending' },
+      { item: 'Beans', qty: '40 Bags',  requestedBy: 'Ibrahim Seidu (Storekeeper)', requestedAt: '10 Mar 2026', requiredBy: '20 Mar 2026', status: 'pending' },
+    ],
+    tokenRecommendation: {
+      validatedMeals:       58480,
+      avgSupplyCostPerMeal:  0.58,
+      grossSupplyCost:      33918,
+      fraudDeductions:      12000,
+      netRecommended:       21918,
+      alreadyIssued:            0,
+      remainingAllowance:   21918,
+    },
+    recentValidations: [
+      { date: '15 Mar 2026', mealsServed: 980,  fraudAlerts: 5, riskScore: 82, stage: 'compliance_review'  },
+      { date: '14 Mar 2026', mealsServed: 1010, fraudAlerts: 3, riskScore: 66, stage: 'compliance_review'  },
+      { date: '13 Mar 2026', mealsServed: 920,  fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+      { date: '12 Mar 2026', mealsServed: 960,  fraudAlerts: 4, riskScore: 79, stage: 'operational_review' },
+      { date: '11 Mar 2026', mealsServed: 1050, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+      { date: '10 Mar 2026', mealsServed: 880,  fraudAlerts: 8, riskScore: 91, stage: 'operational_review' },
+      { date: '09 Mar 2026', mealsServed: 990,  fraudAlerts: 1, riskScore: 24, stage: 'claim_eligible'     },
+    ],
+  },
+  {
+    id: 'sush',
+    name: 'Sunyani SHS',
+    region: 'Brong-Ahafo',
+    enrolled: 1450,
+    mealsValidated: 79170,
+    attendancePct: 91,
+    claimStatus: 'approved',
+    claimedAmount: 124000,
+    approvedAmount: 121500,
+    suppliers: [
+      { name: 'Ghana Foods Co.', category: 'Staples', items: ['Rice', 'Beans', 'Cooking Oil'], tokenCode: 'GOV-SUS-SEM1-001', tokenValue: 124000, tokenStatus: 'redeemed' },
+    ],
+    supplyRequests: [
+      { item: 'Rice',  qty: '110 Bags', requestedBy: 'Yaa Boateng (Storekeeper)', requestedAt: '12 Mar 2026', requiredBy: '20 Mar 2026', status: 'delivered' },
+      { item: 'Beans', qty: '40 Bags',  requestedBy: 'Yaa Boateng (Storekeeper)', requestedAt: '14 Mar 2026', requiredBy: '22 Mar 2026', status: 'approved'  },
+    ],
+    tokenRecommendation: {
+      validatedMeals:       79170,
+      avgSupplyCostPerMeal:  0.63,
+      grossSupplyCost:      49877,
+      fraudDeductions:          0,
+      netRecommended:       49877,
+      alreadyIssued:        124000,
+      remainingAllowance:   20000,
+    },
+    recentValidations: [
+      { date: '15 Mar 2026', mealsServed: 1320, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible' },
+      { date: '14 Mar 2026', mealsServed: 1310, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible' },
+      { date: '13 Mar 2026', mealsServed: 1325, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible' },
+      { date: '12 Mar 2026', mealsServed: 1300, fraudAlerts: 1, riskScore: 12, stage: 'claim_eligible' },
+      { date: '11 Mar 2026', mealsServed: 1315, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible' },
+      { date: '10 Mar 2026', mealsServed: 1340, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible' },
+      { date: '09 Mar 2026', mealsServed: 1330, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible' },
+    ],
+  },
+  {
+    id: 'tark',
+    name: 'Tarkwa SHS',
+    region: 'Western',
+    enrolled: 1120,
+    mealsValidated: 52416,
+    attendancePct: 78,
+    claimStatus: 'pending',
+    claimedAmount: 87200,
+    approvedAmount: null,
+    suppliers: [
+      { name: 'Fresh Mart Ltd', category: 'Staples', items: ['Rice', 'Cooking Oil', 'Fish'], tokenCode: 'GOV-TAR-SEM1-001', tokenValue: 87200, tokenStatus: 'pending' },
+    ],
+    supplyRequests: [
+      { item: 'Rice',   qty: '80 Bags',  requestedBy: 'Ebo Mensah (Storekeeper)', requestedAt: '11 Mar 2026', requiredBy: '19 Mar 2026', status: 'approved' },
+      { item: 'Fish',   qty: '30 Cartons',requestedBy: 'Ebo Mensah (Storekeeper)', requestedAt: '14 Mar 2026', requiredBy: '23 Mar 2026', status: 'pending'  },
+    ],
+    tokenRecommendation: {
+      validatedMeals:       52416,
+      avgSupplyCostPerMeal:  0.61,
+      grossSupplyCost:      31974,
+      fraudDeductions:       1800,
+      netRecommended:       30174,
+      alreadyIssued:         87200,
+      remainingAllowance:    15000,
+    },
+    recentValidations: [
+      { date: '15 Mar 2026', mealsServed: 880, fraudAlerts: 1, riskScore: 28, stage: 'operational_review' },
+      { date: '14 Mar 2026', mealsServed: 870, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+      { date: '13 Mar 2026', mealsServed: 890, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+      { date: '12 Mar 2026', mealsServed: 860, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+      { date: '11 Mar 2026', mealsServed: 875, fraudAlerts: 2, riskScore: 41, stage: 'claim_eligible'     },
+      { date: '10 Mar 2026', mealsServed: 865, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+      { date: '09 Mar 2026', mealsServed: 855, fraudAlerts: 0, riskScore:  0, stage: 'claim_eligible'     },
+    ],
+  },
 ]
 
 // Institution + Supplier picklists for the "Issue Token" form

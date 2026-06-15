@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ShieldCheck, ShieldX, Search } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Button } from '../../../components/ui/Button'
 import { Badge } from '../../../components/ui/Badge'
@@ -45,7 +45,7 @@ export default function ValidateToken() {
         {/* Search */}
         <div className="mb-[32px] flex gap-[10px]">
           <div className="flex h-[42px] flex-1 max-w-[460px] items-center gap-[10px] rounded-[12px] border border-[#e3e3e3] bg-white px-[14px] focus-within:border-[#4ea4ff] transition-colors">
-            <Search size={16} strokeWidth={2.2} className="shrink-0 text-[#aaa]" />
+            <Icon name="search" size={16} className="shrink-0 text-[#aaa]" />
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
@@ -55,7 +55,7 @@ export default function ValidateToken() {
             />
           </div>
           <Button onClick={handleValidate} disabled={state === 'loading' || !query.trim()}>
-            <ShieldCheck size={14} strokeWidth={2.5} />
+            <Icon name="shield-check" size={14} />
             {state === 'loading' ? 'Checking…' : 'Validate'}
           </Button>
         </div>
@@ -64,7 +64,7 @@ export default function ValidateToken() {
         {state === 'valid' && result && (
           <div className="max-w-[560px] overflow-hidden rounded-[16px] border border-[#98e9bd] bg-[#eefbf4]">
             <div className="flex items-center gap-[12px] border-b border-[#98e9bd]/60 px-[20px] py-[16px]">
-              <ShieldCheck size={20} strokeWidth={2.2} className="text-[#0f9f5d]" />
+              <Icon name="shield-check" size={20} className="text-[#0f9f5d]" />
               <p className="text-[15px] font-bold text-[#0f9f5d]">Token Valid</p>
               <Badge variant="green">Eligible for release</Badge>
             </div>
@@ -94,7 +94,7 @@ export default function ValidateToken() {
         {state === 'invalid' && (
           <div className="max-w-[460px] overflow-hidden rounded-[16px] border border-[#ffb9b4] bg-[#fff1f0] px-[20px] py-[20px]">
             <div className="flex items-center gap-[12px] mb-[8px]">
-              <ShieldX size={20} strokeWidth={2.2} className="text-[#de3d36]" />
+              <Icon name="shield-x" size={20} className="text-[#de3d36]" />
               <p className="text-[15px] font-bold text-[#de3d36]">Token Not Found</p>
             </div>
             <p className="text-[13px] text-[#de3d36]/80">
@@ -106,7 +106,7 @@ export default function ValidateToken() {
 
         {state === 'idle' && (
           <div className={clsx('flex flex-col items-center justify-center rounded-[16px] border border-dashed border-[#e5e5e5] bg-[#fafafa] py-[48px] max-w-[560px]')}>
-            <ShieldCheck size={32} strokeWidth={1.5} className="text-[#ccc]" />
+            <Icon name="shield-check" size={32} className="text-[#ccc]" />
             <p className="mt-[12px] text-[14px] font-medium text-[#bbb]">Enter a token ID to validate</p>
           </div>
         )}

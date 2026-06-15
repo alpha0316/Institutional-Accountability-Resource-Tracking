@@ -1,10 +1,14 @@
 import { useState } from 'react'
-import { Download, ChevronDown } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { clsx } from 'clsx'
+import { GOV_SCHOOL_PROFILES } from '../../../lib/mockData'
+
+const SCHOOL_ID_MAP = Object.fromEntries(GOV_SCHOOL_PROFILES.map(s => [s.name, s.id]))
 
 interface AttendanceRecord {
   id: string
@@ -86,6 +90,7 @@ const columns: Column<AttendanceRecord>[] = [
 ]
 
 export default function AttendanceReview() {
+  const navigate = useNavigate()
   const [period] = useState('Sem 2, 2025')
 
   const onTrack    = data.filter(d => d.status === 'on_track').length
@@ -98,7 +103,7 @@ export default function AttendanceReview() {
         title="Attendance Review"
         actions={
           <Button variant="secondary">
-            <Download size={14} strokeWidth={2.2} />
+            <Icon name="download" size={14} />
             Export
           </Button>
         }
@@ -125,7 +130,7 @@ export default function AttendanceReview() {
           <h2 className="text-[17px] font-bold text-[#111]">All Institutions</h2>
           <button className="flex h-[32px] items-center gap-[6px] rounded-[8px] border border-[#e5e5e5] bg-white px-[12px] text-[13px] text-[#555] transition-colors hover:bg-[#fafafa]">
             {period}
-            <ChevronDown size={13} strokeWidth={2} className="text-[#aaa]" />
+            <Icon name="chevron-down" size={13} className="text-[#aaa]" />
           </button>
         </div>
 
@@ -133,8 +138,12 @@ export default function AttendanceReview() {
           columns={columns}
           data={data}
           rowKey={r => r.id}
-          rowActions={() => [
-            { label: 'View Full Report', onClick: () => {} },
+          onRowClick={r => {
+            const id = SCHOOL_ID_MAP[r.institution]
+            if (id) navigate(`/gov/schools/${id}`)
+          }}
+          rowActions={r => [
+            { label: 'View School',      onClick: () => { const id = SCHOOL_ID_MAP[r.institution]; if (id) navigate(`/gov/schools/${id}`) } },
             { label: 'Flag Institution', onClick: () => {}, destructive: true },
           ]}
         />

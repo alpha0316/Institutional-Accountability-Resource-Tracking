@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { SendHorizonal, CheckCircle2 } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
@@ -34,7 +34,7 @@ export default function SubmitToBank() {
         <PageHeader title="Submit to Bank" />
         <div className="px-[36px] pt-[60px] flex flex-col items-center text-center">
           <div className="flex h-[64px] w-[64px] items-center justify-center rounded-full bg-[#eefbf4]">
-            <CheckCircle2 size={32} strokeWidth={2} className="text-[#0f9f5d]" />
+            <Icon name="circle-check" size={32} className="text-[#0f9f5d]" />
           </div>
           <h2 className="mt-[16px] text-[20px] font-bold text-[#111]">Tokens Submitted</h2>
           <p className="mt-[6px] text-[14px] text-[#888]">
@@ -92,7 +92,7 @@ export default function SubmitToBank() {
             <p className="text-[20px] font-bold text-[#111]">GH₵{totalSelected.toLocaleString()}</p>
           </div>
           <Button disabled={selected.size === 0} onClick={handleSubmit}>
-            <SendHorizonal size={14} strokeWidth={2.5} />
+            <Icon name="send" size={14} />
             Submit to Bank
           </Button>
         </div>

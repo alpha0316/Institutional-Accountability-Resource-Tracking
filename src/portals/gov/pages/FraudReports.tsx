@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertTriangle, Download } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
@@ -76,7 +76,7 @@ export default function FraudReports() {
         title="Fraud Reports"
         actions={
           <Button variant="secondary">
-            <Download size={14} strokeWidth={2.2} />
+            <Icon name="download" size={14} />
             Export
           </Button>
         }
@@ -86,7 +86,7 @@ export default function FraudReports() {
         {/* Alert banner */}
         {openCount > 0 && (
           <div className="mb-[22px] flex items-center gap-[12px] rounded-[12px] border border-[#ffb9b4] bg-[#fff1f0] px-[16px] py-[12px]">
-            <AlertTriangle size={16} strokeWidth={2.2} className="shrink-0 text-[#de3d36]" />
+            <Icon name="alert-triangle" size={16} className="shrink-0 text-[#de3d36]" />
             <p className="text-[13px] font-medium text-[#de3d36]">
               {openCount} open fraud report{openCount > 1 ? 's' : ''} require your attention.
             </p>

@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { Monitor } from 'lucide-react'
+import { Icon } from '../components/ui/Icon'
 import { useAuthStore, roleHomeRoute } from '../store/authStore'
 import { DashboardLayout } from '../components/layout/DashboardLayout'
 
@@ -33,7 +33,7 @@ import RejectedTokens  from '../portals/bank/pages/RejectedTokens'
 import GovLayout       from '../portals/gov/layout/GovLayout'
 import GovOverview     from '../portals/gov/pages/Overview'
 import AttendanceReview from '../portals/gov/pages/AttendanceReview'
-import BudgetCalculator from '../portals/gov/pages/BudgetCalculator'
+import SchoolDetail from '../portals/gov/pages/SchoolDetail'
 import IssueTokens     from '../portals/gov/pages/IssueTokens'
 import TokenLedger     from '../portals/gov/pages/TokenLedger'
 import Reimbursements  from '../portals/gov/pages/Reimbursements'
@@ -77,7 +77,7 @@ function MobileGate({ children }: { children: React.ReactNode }) {
           alignItems: 'center', justifyContent: 'center',
           marginBottom: 24,
         }}>
-          <Monitor size={36} color="#4ea4ff" strokeWidth={1.6} />
+          <Icon name="device-desktop" size={36} color="#4ea4ff" />
         </div>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111', marginBottom: 10, lineHeight: 1.3 }}>
           Desktop Only
@@ -146,7 +146,7 @@ export default function AppRouter() {
         <Route path="/gov" element={<PrivateRoute><GovLayout /></PrivateRoute>}>
           <Route index                    element={<GovOverview />} />
           <Route path="attendance"        element={<AttendanceReview />} />
-          <Route path="budget"            element={<BudgetCalculator />} />
+          <Route path="schools/:schoolId" element={<SchoolDetail />} />
           <Route path="tokens/issue"      element={<IssueTokens />} />
           <Route path="tokens/ledger"     element={<TokenLedger />} />
           <Route path="reimbursements"    element={<Reimbursements />} />

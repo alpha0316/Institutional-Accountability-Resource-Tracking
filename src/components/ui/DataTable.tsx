@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { clsx } from 'clsx'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { Icon } from './Icon'
 import { DropdownMenu, type DropdownMenuItem } from './DropdownMenu'
 
 const PAGE_SIZE = 10
@@ -128,7 +128,7 @@ export function DataTable<T>({
                 page === 0 ? 'cursor-not-allowed text-[#ccc]' : 'hover:bg-[#f5f5f5] text-[#555]'
               )}
             >
-              <ChevronLeft size={15} strokeWidth={2} />
+              <Icon name="chevron-left" size={15} />
             </button>
             {Array.from({ length: totalPages }, (_, i) => (
               <button
@@ -152,7 +152,7 @@ export function DataTable<T>({
                 page >= totalPages - 1 ? 'cursor-not-allowed text-[#ccc]' : 'hover:bg-[#f5f5f5] text-[#555]'
               )}
             >
-              <ChevronRight size={15} strokeWidth={2} />
+              <Icon name="chevron-right" size={15} />
             </button>
           </div>
         </div>

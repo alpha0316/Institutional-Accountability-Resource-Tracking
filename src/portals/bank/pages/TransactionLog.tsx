@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Download } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
@@ -43,7 +43,7 @@ export default function TransactionLog() {
 
   return (
     <>
-      <PageHeader title="Transaction Log" actions={<Button variant="secondary"><Download size={14} strokeWidth={2.2} />Export</Button>} />
+      <PageHeader title="Transaction Log" actions={<Button variant="secondary"><Icon name="download" size={14} />Export</Button>} />
       <div className="px-[36px] pb-[40px]">
         <div className="mb-[28px] grid grid-cols-4 gap-[1px] overflow-hidden rounded-[14px] border border-[#f0f0f0] bg-[#f0f0f0]">
           {[

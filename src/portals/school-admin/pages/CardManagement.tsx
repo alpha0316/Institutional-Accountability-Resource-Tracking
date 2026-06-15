@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { Plus, Search, ArrowLeft, ArrowRight, Check, CreditCard, History, QrCode, AlertTriangle, Ban, RefreshCw, Download, X } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { clsx } from 'clsx'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { type DropdownMenuItem } from '../../../components/ui/DropdownMenu'
+import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import {
   MOCK_CARDS,
   MOCK_STUDENTS,
@@ -14,8 +15,6 @@ import {
 } from '../../../lib/mockData'
 
 type CardFilter = 'all' | 'issued' | 'pending' | 'suspended' | 'deactivated'
-type StudentStatusFilter = 'all' | 'active' | 'inactive'
-type FormFilter = 'all' | 'Form 1' | 'Form 2' | 'Form 3'
 type SidebarView = 'detail' | 'issue' | null
 type IssueStep = 1 | 2 | 3 | 4 | 5
 
@@ -35,18 +34,6 @@ const CARD_FILTERS: { key: CardFilter; label: string }[] = [
   { key: 'deactivated', label: 'Deactivated' },
 ]
 
-const STUDENT_FILTERS: { key: StudentStatusFilter; label: string }[] = [
-  { key: 'all', label: 'All Students' },
-  { key: 'active', label: 'Active' },
-  { key: 'inactive', label: 'Inactive' },
-]
-
-const FORM_FILTERS: { key: FormFilter; label: string }[] = [
-  { key: 'all', label: 'All Forms' },
-  { key: 'Form 1', label: 'Form 1' },
-  { key: 'Form 2', label: 'Form 2' },
-  { key: 'Form 3', label: 'Form 3' },
-]
 
 const STATS = [
   { label: 'Total Active Cards', value: '4,791', description: 'Currently allowed for meal validation',     tone: 'bg-[#f7fbff]', trend: '↑ (+25%)' },
@@ -68,8 +55,6 @@ const STUDENTS_FOR_ISSUE = MOCK_STUDENTS.filter(s => s.cardStatus === 'pending')
 
 export default function CardManagement() {
   const [cardFilter, setCardFilter] = useState<CardFilter>('all')
-  const [studentFilter, setStudentFilter] = useState<StudentStatusFilter>('all')
-  const [formFilter, setFormFilter] = useState<FormFilter>('all')
   const [search, setSearch] = useState('')
   const [sidebarView, setSidebarView] = useState<SidebarView>(null)
   const [selectedCard, setSelectedCard] = useState<MockCard | null>(null)
@@ -80,8 +65,6 @@ export default function CardManagement() {
   const filtered = useMemo(() => {
     let rows = MOCK_CARDS
     if (cardFilter !== 'all') rows = rows.filter(c => c.status === cardFilter)
-    if (studentFilter !== 'all') rows = rows.filter(c => c.studentStatus === studentFilter)
-    if (formFilter !== 'all') rows = rows.filter(c => c.form === formFilter)
     if (search.trim()) {
       const q = search.toLowerCase()
       rows = rows.filter(c =>
@@ -91,7 +74,7 @@ export default function CardManagement() {
       )
     }
     return rows
-  }, [cardFilter, studentFilter, formFilter, search])
+  }, [cardFilter, search])
 
   function openDetail(card: MockCard) {
     setSelectedCard(card)
@@ -203,27 +186,34 @@ export default function CardManagement() {
     <div>
       <PageHeader
         title="Card Management"
-        actions={<Button onClick={openIssue}><Plus size={14} />Issue Card</Button>}
+        actions={<Button onClick={openIssue}><Icon name="plus" size={14} />Issue Card</Button>}
       />
 
       <div className="pl-[36px] pr-[20px] pt-[2px]">
         {/* stat cards */}
-        <div className="grid grid-cols-4 gap-[30px]">
+        <StatCardGroup>
           {STATS.map((stat) => (
-            <div key={stat.label} className="min-w-0">
-              <div className={clsx('flex h-[25px] items-center justify-between rounded-[7px] px-[5px]', stat.tone)}>
-                <span className="truncate text-[15px] font-normal leading-none text-[#6f6f6f]">{stat.label}</span>
-                {stat.trend && <span className="shrink-0 text-[13px] font-semibold leading-none text-[#5fc98e]">{stat.trend}</span>}
-              </div>
-              <div className="mt-[29px]">
-                <p className="text-[26px] font-semibold leading-none text-[#414141]">{stat.value}</p>
-                <p className={clsx('mt-[12px] truncate text-[15px] font-normal leading-none', stat.alert ? 'text-[#ff3333]' : 'text-[#969696]')}>
-                  {stat.description}
-                </p>
-              </div>
-            </div>
+            <StatCard
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              sub={stat.alert
+                ? <span className="font-medium text-[#ff3333]">{stat.description}</span>
+                : stat.description
+              }
+              accent={
+                stat.tone === 'bg-[#f7fbff]' ? 'bg-gradient-to-br from-white to-blue-50/50' :
+                stat.tone === 'bg-[#f7fdf9]' ? 'bg-gradient-to-br from-white to-green-50/50' :
+                stat.tone === 'bg-[#fcf8f5]' ? 'bg-gradient-to-br from-white to-orange-50/50' :
+                'bg-gradient-to-br from-white to-red-50/50'
+              }
+              badge={stat.trend
+                ? <span className="flex items-center gap-[3px] rounded-full bg-[#eefbf4] px-[8px] py-[3px] text-[12px] font-semibold text-[#0f9f5d]">{stat.trend}</span>
+                : undefined
+              }
+            />
           ))}
-        </div>
+        </StatCardGroup>
 
         {/* card registry */}
         <section className="mt-[52px]">
@@ -247,39 +237,9 @@ export default function CardManagement() {
                   </button>
                 ))}
               </div>
-              {/* Student Status filter */}
-              <div className="flex h-[25px] items-center rounded-[5px] border border-[#f0f0f0] bg-[#fbfbfb] p-[1px]">
-                {STUDENT_FILTERS.map((f) => (
-                  <button
-                    key={f.key}
-                    onClick={() => setStudentFilter(f.key)}
-                    className={clsx(
-                      'flex h-[22px] items-center rounded-[4px] px-[9px] text-[12px] font-medium leading-none transition-colors',
-                      studentFilter === f.key ? 'border border-[#e7edf5] bg-white text-[#4ea4ff] shadow-[0_1px_2px_rgba(0,0,0,0.04)]' : 'text-[#7e7e7e] hover:text-[#555]'
-                    )}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-              {/* Form filter */}
-              <div className="flex h-[25px] items-center rounded-[5px] border border-[#f0f0f0] bg-[#fbfbfb] p-[1px]">
-                {FORM_FILTERS.map((f) => (
-                  <button
-                    key={f.key}
-                    onClick={() => setFormFilter(f.key)}
-                    className={clsx(
-                      'flex h-[22px] items-center rounded-[4px] px-[9px] text-[12px] font-medium leading-none transition-colors',
-                      formFilter === f.key ? 'border border-[#e7edf5] bg-white text-[#4ea4ff] shadow-[0_1px_2px_rgba(0,0,0,0.04)]' : 'text-[#7e7e7e] hover:text-[#555]'
-                    )}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
             </div>
             <div className="flex h-[31px] w-[240px] items-center gap-[10px] rounded-[8px] border border-[#e5e5e5] bg-[#fcfcfc] px-[12px]">
-              <Search size={15} strokeWidth={2.4} className="shrink-0 text-[#767676]" />
+              <Icon name="search" size={15} className="shrink-0 text-[#767676]" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -312,7 +272,7 @@ export default function CardManagement() {
                 {sidebarView === 'issue' ? 'Issue Card' : 'Card Details'}
               </h2>
               <button onClick={closeSidebar} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
-                <X size={18} strokeWidth={2.2} />
+                <Icon name="x" size={18} />
               </button>
             </div>
 
@@ -327,7 +287,7 @@ export default function CardManagement() {
                         'flex h-[22px] w-[22px] items-center justify-center rounded-full text-[11px] font-semibold',
                         issueStep >= step.step ? 'bg-[#4ea4ff] text-white' : 'bg-[#efefef] text-[#999]'
                       )}>
-                        {issueStep > step.step ? <Check size={12} /> : step.step}
+                        {issueStep > step.step ? <Icon name="check" size={12} /> : step.step}
                       </div>
                       {step.step < 5 && <div className={clsx('h-[1px] w-[16px]', issueStep > step.step ? 'bg-[#4ea4ff]' : 'bg-[#e5e5e5]')} />}
                     </div>
@@ -388,7 +348,7 @@ export default function CardManagement() {
                     <div className="rounded-[14px] border border-[#e5e5e5] bg-white p-[20px]">
                       <div className="flex items-center gap-[16px] mb-[16px]">
                         <div className="flex h-[80px] w-[80px] shrink-0 items-center justify-center rounded-[10px] border-2 border-dashed border-[#ddd] bg-[#fafafa]">
-                          <QrCode size={44} className="text-[#333]" />
+                          <Icon name="qrcode" size={44} className="text-[#333]" />
                         </div>
                         <div>
                           <p className="text-[15px] font-semibold text-[#111]">CARD-88421</p>
@@ -398,7 +358,7 @@ export default function CardManagement() {
                       </div>
                       <p className="text-[12px] text-[#888]">Unique QR generated for student meal validation.</p>
                       <Button className="w-full mt-[14px]" variant="secondary" onClick={handleDownloadPDF}>
-                        <Download size={14} /> Export Physical Card
+                        <Icon name="download" size={14} /> Export Physical Card
                       </Button>
                     </div>
                   </div>
@@ -437,7 +397,7 @@ export default function CardManagement() {
                 {/* Issue nav buttons */}
                 <div className="mt-auto flex items-center justify-between pt-[20px]">
                   <button onClick={() => setIssueStep(Math.max(1, issueStep - 1) as IssueStep)} className={clsx('flex items-center gap-[6px] text-[13px]', issueStep === 1 ? 'invisible' : 'text-[#888] hover:text-[#555]')}>
-                    <ArrowLeft size={14} /> Back
+                    <Icon name="arrow-left" size={14} /> Back
                   </button>
                   <button
                     onClick={() => setIssueStep(Math.min(5, issueStep + 1) as IssueStep)}
@@ -449,7 +409,7 @@ export default function CardManagement() {
                         'bg-[#4ea4ff] text-white hover:bg-[#3d93e8]'
                     )}
                   >
-                    Continue <ArrowRight size={14} />
+                    Continue <Icon name="arrow-right" size={14} />
                   </button>
                 </div>
               </div>
@@ -461,9 +421,9 @@ export default function CardManagement() {
                 {/* Detail tabs */}
                 <div className="mx-[20px] flex h-[26px] w-fit items-center rounded-[6px] bg-[#f1f1f2] p-[1px]">
                   {[
-                    { label: 'Info',     value: 'info'    as const, icon: <CreditCard size={13} /> },
-                    { label: 'History',  value: 'history' as const, icon: <History size={13} /> },
-                    { label: 'Logs',     value: 'logs'    as const, icon: <RefreshCw size={13} /> },
+                    { label: 'Info',     value: 'info'    as const, icon: <Icon name="credit-card" size={13} /> },
+                    { label: 'History',  value: 'history' as const, icon: <Icon name="history" size={13} /> },
+                    { label: 'Logs',     value: 'logs'    as const, icon: <Icon name="refresh" size={13} /> },
                   ].map((tab) => (
                     <button
                       key={tab.value}
@@ -486,7 +446,7 @@ export default function CardManagement() {
                       {selectedCard.status === 'pending' && (
                         <div className="mb-[16px] rounded-[12px] border border-[#fef3c7] bg-[#fffbeb] p-[16px]">
                           <div className="flex items-start gap-[10px]">
-                            <AlertTriangle size={18} className="shrink-0 text-[#df6b13] mt-[2px]" />
+                            <Icon name="alert-triangle" size={18} className="shrink-0 text-[#df6b13] mt-[2px]" />
                             <div>
                               <p className="text-[13px] font-semibold text-[#92400e] mb-[6px]">No validation card has been assigned.</p>
                               <p className="text-[12px] text-[#a16207] leading-[18px]">The student cannot validate meals until a card is issued.</p>
@@ -507,7 +467,7 @@ export default function CardManagement() {
                       {selectedCard.status === 'issued' && (
                         <div className="mb-[16px] rounded-[12px] border border-[#d1fae5] bg-[#ecfdf5] p-[16px]">
                           <div className="flex items-start gap-[10px]">
-                            <Check size={18} className="shrink-0 text-[#10b981] mt-[2px]" />
+                            <Icon name="check" size={18} className="shrink-0 text-[#10b981] mt-[2px]" />
                             <div>
                               <p className="text-[13px] font-semibold text-[#065f46] mb-[6px]">Card Active</p>
                               <p className="text-[12px] text-[#059669] leading-[18px]">This card is active and can be used for dining hall validation. Meal records generated by this card contribute to operational reports.</p>
@@ -515,10 +475,10 @@ export default function CardManagement() {
                           </div>
                           <div className="mt-[14px] space-y-[8px]">
                             <Button variant="secondary" className="w-full justify-start">
-                              <Ban size={14} /> Suspend Card
+                              <Icon name="ban" size={14} /> Suspend Card
                             </Button>
                             <Button variant="secondary" className="w-full justify-start">
-                              <RefreshCw size={14} /> Replace Card
+                              <Icon name="refresh" size={14} /> Replace Card
                             </Button>
                           </div>
                         </div>
@@ -528,7 +488,7 @@ export default function CardManagement() {
                       {selectedCard.status === 'suspended' && (
                         <div className="mb-[16px] rounded-[12px] border border-[#fef3c7] bg-[#fffbeb] p-[16px]">
                           <div className="flex items-start gap-[10px]">
-                            <AlertTriangle size={18} className="shrink-0 text-[#df6b13] mt-[2px]" />
+                            <Icon name="alert-triangle" size={18} className="shrink-0 text-[#df6b13] mt-[2px]" />
                             <div>
                               <p className="text-[13px] font-semibold text-[#92400e] mb-[6px]">This card has been temporarily disabled.</p>
                               <p className="text-[12px] text-[#a16207] leading-[18px]">Meal validations will not be accepted until access is restored.</p>
@@ -536,10 +496,10 @@ export default function CardManagement() {
                           </div>
                           <div className="mt-[14px] space-y-[8px]">
                             <Button className="w-full justify-start">
-                              <RefreshCw size={14} /> Reactivate Card
+                              <Icon name="refresh" size={14} /> Reactivate Card
                             </Button>
                             <Button variant="secondary" className="w-full justify-start">
-                              <CreditCard size={14} /> Replace Card
+                              <Icon name="credit-card" size={14} /> Replace Card
                             </Button>
                           </div>
                         </div>
@@ -549,7 +509,7 @@ export default function CardManagement() {
                       {selectedCard.status === 'deactivated' && (
                         <div className="mb-[16px] rounded-[12px] border border-[#fee2e2] bg-[#fef2f2] p-[16px]">
                           <div className="flex items-start gap-[10px]">
-                            <Ban size={18} className="shrink-0 text-[#de3d36] mt-[2px]" />
+                            <Icon name="ban" size={18} className="shrink-0 text-[#de3d36] mt-[2px]" />
                             <div>
                               <p className="text-[13px] font-semibold text-[#991b1b] mb-[6px]">This card is permanently invalid.</p>
                               <p className="text-[12px] text-[#b91c1c] leading-[18px]">Future scans will automatically trigger a security event.</p>
@@ -557,7 +517,7 @@ export default function CardManagement() {
                           </div>
                           <div className="mt-[14px]">
                             <Button className="w-full justify-start">
-                              <Plus size={14} /> Issue New Card
+                              <Icon name="plus" size={14} /> Issue New Card
                             </Button>
                           </div>
                         </div>
@@ -582,7 +542,7 @@ export default function CardManagement() {
                     <div>
                       {selectedCard.scanHistory.length === 0 ? (
                         <div className="py-[30px] text-center">
-                          <History size={28} className="mx-auto text-[#ccc] mb-[10px]" />
+                          <Icon name="history" size={28} className="mx-auto text-[#ccc] mb-[10px]" />
                           <p className="text-[13px] text-[#aaa]">No scan history available</p>
                         </div>
                       ) : (
@@ -618,7 +578,7 @@ export default function CardManagement() {
                     <div className="space-y-[12px]">
                       {selectedCard.cardLogs.length === 0 ? (
                         <div className="py-[30px] text-center">
-                          <RefreshCw size={28} className="mx-auto text-[#ccc] mb-[10px]" />
+                          <Icon name="refresh" size={28} className="mx-auto text-[#ccc] mb-[10px]" />
                           <p className="text-[13px] text-[#aaa]">No audit logs yet</p>
                         </div>
                       ) : (

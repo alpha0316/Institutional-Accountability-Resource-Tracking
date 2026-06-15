@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Download } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
@@ -54,7 +54,7 @@ export default function Reimbursements() {
         title="Reimbursements"
         actions={
           <Button variant="secondary">
-            <Download size={14} strokeWidth={2.2} />
+            <Icon name="download" size={14} />
             Export
           </Button>
         }

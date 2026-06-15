@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Shield, ArrowRight, Monitor } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { useAuthStore } from '../../../store/authStore'
 import type { User } from '../../../types'
 
@@ -74,7 +74,7 @@ export default function LoginPage() {
         {/* brand */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-600 mb-3">
-            <Shield size={24} className="text-white" />
+            <Icon name="shield" size={24} className="text-white" />
           </div>
           <h1 className="text-[22px] font-semibold text-gray-900">IARTS</h1>
           <p className="text-[13px] text-gray-400 mt-0.5">Institutional Accountability & Resource Tracking</p>
@@ -111,7 +111,7 @@ export default function LoginPage() {
                   onClick={() => setShowPw(v => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                  {showPw ? <Icon name="eye-off" size={15} /> : <Icon name="eye" size={15} />}
                 </button>
               </div>
             </div>
@@ -121,7 +121,7 @@ export default function LoginPage() {
               className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-medium py-2.5 rounded-lg transition-colors mt-1"
             >
               Sign In
-              <ArrowRight size={15} />
+              <Icon name="arrow-right" size={15} />
             </button>
           </form>
         </div>
@@ -158,7 +158,7 @@ export default function LoginPage() {
             className="mt-2.5 w-full flex items-center gap-3 p-3 rounded-xl border bg-orange-50 border-orange-200 hover:border-orange-400 text-left transition-all"
           >
             <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-gray-200 flex items-center justify-center shrink-0">
-              <Monitor size={15} className="text-gray-700" />
+              <Icon name="device-desktop" size={15} className="text-gray-700" />
             </div>
             <div>
               <p className="text-[12px] font-semibold text-gray-900">Scanner Kiosk</p>

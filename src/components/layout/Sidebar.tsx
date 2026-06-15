@@ -1,17 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { clsx } from 'clsx'
-import {
-  Home,
-  FileCheck2,
-  BriefcaseBusiness,
-  ClipboardCheck,
-  PackageCheck,
-  ShieldAlert,
-  FileText,
-  Settings,
-  ChevronDown,
-  PanelLeft,
-} from 'lucide-react'
+import { Icon } from '../ui/Icon'
 import { useAuthStore } from '../../store/authStore'
 import crestUrl from '../../assets/school/st-augustine-crest.png'
 
@@ -19,18 +8,18 @@ const navGroups = [
   {
     section: 'General',
     items: [
-      { label: 'Overview',        to: '/admin',          icon: Home,              end: true },
-      { label: 'Students',        to: '/admin/students', icon: FileCheck2 },
-      { label: 'Card Management', to: '/admin/cards',    icon: BriefcaseBusiness },
+      { label: 'Overview',        to: '/admin',          icon: 'home',              end: true },
+      { label: 'Students',        to: '/admin/students', icon: 'file-check' },
+      { label: 'Card Management', to: '/admin/cards',    icon: 'briefcase' },
     ],
   },
   {
     section: 'Operations',
     items: [
-      { label: 'Dining Hall Feed', to: '/admin/feed',    icon: ClipboardCheck },
-      { label: 'Supply Logger',    to: '/admin/supply',  icon: PackageCheck },
-      { label: 'Fraud Alerts',     to: '/admin/fraud',   icon: ShieldAlert },
-      { label: 'Daily Report',     to: '/admin/reports', icon: FileText },
+      { label: 'Dining Hall Feed', to: '/admin/feed',    icon: 'clipboard-check' },
+      { label: 'Supply Logger',    to: '/admin/supply',  icon: 'archive' },
+      { label: 'Fraud Alerts',     to: '/admin/fraud',   icon: 'shield-check' },
+      { label: 'Daily Report',     to: '/admin/reports', icon: 'file-text' },
     ],
   },
 ]
@@ -53,17 +42,17 @@ export function Sidebar() {
           alt=""
           className="h-[24px] w-[24px] shrink-0 rounded-full object-cover"
         />
-        <span className="ml-[10px] text-[17px] font-semibold leading-none text-[#3f3f3f]">
+        <span className="ml-[10px] text-[16px] font-semibold leading-none text-[#3f3f3f]">
           St. Augustine SHS
         </span>
-        <ChevronDown size={16} strokeWidth={2.2} className="ml-[7px] shrink-0 text-[#909090]" />
-        <button
+        <Icon name="chevron-down" size={16} className="ml-[7px] shrink-0 text-[#909090]" />
+        {/* <button
           type="button"
           aria-label="Collapse sidebar"
           className="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-[#8d8d8d] transition-colors hover:bg-[#f0f0f0]"
         >
-          <PanelLeft size={17} strokeWidth={2} />
-        </button>
+          <Icon name="layout-sidebar-left-collapse" size={17} />
+        </button> */}
       </div>
 
       {/* navigation */}
@@ -74,26 +63,27 @@ export function Sidebar() {
               {section}
             </p>
             <ul className="space-y-[4px]">
-              {items.map(({ label, to, icon: Icon, end }) => (
+              {items.map(({ label, to, icon, end }) => (
                 <li key={to}>
                   <NavLink
                     to={to}
                     end={end}
                     className={({ isActive }) =>
                       clsx(
-                        'flex h-[29px] items-center gap-[12px] rounded-[8px] px-[9px] text-[15px] font-normal transition-colors',
+                        'flex h-[29px] items-center gap-[12px] rounded-[8px] px-[9px] text-[16px] font-normal transition-colors',
                         isActive
-                          ? 'bg-[#f4f4f4] text-[#4ea4ff]'
-                          : 'text-[#9a9a9a] hover:bg-[#f2f2f2] hover:text-[#686868]'
+                          ? 'bg-[#f4f4f4] text-[#000000]'
+                          : 'text-[#00000080] hover:bg-[#f2f2f2] hover:text-[#686868]'
                       )
                     }
                   >
                     {({ isActive }) => (
                       <>
                         <Icon
-                          size={15}
-                          strokeWidth={2.2}
-                          className={isActive ? 'text-[#4ea4ff]' : 'text-[#9a9a9a]'}
+                          name={icon}
+                          size={18}
+                          filled={isActive}
+                          className={isActive ? 'text-[#000000]' : 'text-[#9a9a9a]'}
                         />
                         {label}
                       </>
@@ -109,7 +99,7 @@ export function Sidebar() {
       {/* footer */}
       <div className="px-[20px] pb-[24px]">
         <button className="mb-[22px] flex h-[29px] w-full items-center gap-[12px] rounded-[8px] px-[9px] text-[15px] text-[#9a9a9a] transition-colors hover:bg-[#f2f2f2]">
-          <Settings size={15} strokeWidth={2.2} className="text-[#9a9a9a]" />
+          <Icon name="settings" size={15} className="text-[#9a9a9a]" />
           Settings
         </button>
         <button

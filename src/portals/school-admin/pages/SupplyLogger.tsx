@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react'
-import { Plus, Search, Package, Truck, TrendingUp, AlertTriangle, Building2, Coins, History, X } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { Icon } from '../../../components/ui/Icon'
 import { clsx } from 'clsx'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { type DropdownMenuItem } from '../../../components/ui/DropdownMenu'
+import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import {
   MOCK_SUPPLIES,
   MOCK_DELIVERIES,
@@ -31,13 +32,13 @@ const PAGE_TABS: { label: string; value: PageTab }[] = [
   { label: 'Token Status',       value: 'tokens'       },
 ]
 
-const SIDEBAR_TABS: { label: string; value: SidebarTab; icon: React.ReactNode }[] = [
-  { label: 'Overview',         value: 'overview',          icon: <Package size={13} /> },
-  { label: 'Inventory',        value: 'inventory',         icon: <TrendingUp size={13} /> },
-  { label: 'Consumption',      value: 'consumption',       icon: <Truck size={13} /> },
-  { label: 'Supplier History', value: 'supplier_history',  icon: <Building2 size={13} /> },
-  { label: 'Govt Impact',      value: 'government',        icon: <Coins size={13} /> },
-  { label: 'Audit Logs',       value: 'logs',              icon: <History size={13} /> },
+const SIDEBAR_TABS: { label: string; value: SidebarTab; icon: string }[] = [
+  { label: 'Overview',         value: 'overview',          icon: 'package' },
+  { label: 'Inventory',        value: 'inventory',         icon: 'trending-up' },
+  { label: 'Consumption',      value: 'consumption',       icon: 'truck' },
+  { label: 'Supplier History', value: 'supplier_history',  icon: 'building' },
+  { label: 'Govt Impact',      value: 'government',        icon: 'coin' },
+  { label: 'Audit Logs',       value: 'logs',              icon: 'history' },
 ]
 
 const STATS = [
@@ -57,14 +58,32 @@ function SidebarDetailRow({ label, value, valueClass = '' }: { label: string; va
 }
 
 export default function SupplyLogger() {
+  type DetailItem = MockSupply | MockDelivery | MockConsumption | MockSupplier | MockToken
   const [pageTab, setPageTab] = useState<PageTab>('inventory')
   const [search, setSearch] = useState('')
-  const [selectedSupply, setSelectedSupply] = useState<MockSupply | null>(null)
+  const [selectedItem, setSelectedItem] = useState<DetailItem | null>(null)
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('overview')
-  const [formType, setFormType] = useState<'supply' | 'delivery' | 'consumption' | null>(null)
+  const [formType, setFormType] = useState<'request' | 'supply' | 'delivery' | 'consumption' | null>(null)
+  const [reqOpen, setReqOpen] = useState(false)
+  const reqRef = useRef<HTMLDivElement>(null)
 
-  function openSidebar(s: MockSupply) { setSelectedSupply(s); setSidebarTab('overview') }
-  function closeSidebar() { setSelectedSupply(null) }
+  useEffect(() => {
+    function close(e: MouseEvent) {
+      if (reqRef.current && !reqRef.current.contains(e.target as Node)) setReqOpen(false)
+    }
+    if (reqOpen) {
+      document.addEventListener('mousedown', close)
+      return () => document.removeEventListener('mousedown', close)
+    }
+  }, [reqOpen])
+
+  function isSupply(item: DetailItem): item is MockSupply { return 'currentStock' in item }
+  function openSupplyDetail(s: MockSupply) { setSelectedItem(s); setSidebarTab('overview') }
+  function openDeliveryDetail(d: MockDelivery) { setSelectedItem(d) }
+  function openConsumptionDetail(c: MockConsumption) { setSelectedItem(c) }
+  function openSupplierDetail(s: MockSupplier) { setSelectedItem(s) }
+  function openTokenDetail(t: MockToken) { setSelectedItem(t) }
+  function closeItem() { setSelectedItem(null) }
   function closeForm() { setFormType(null) }
 
   const filteredSupplies = useMemo(() => {
@@ -75,7 +94,7 @@ export default function SupplyLogger() {
 
   function supplyActions(s: MockSupply): DropdownMenuItem[] {
     return [
-      { label: 'View Details',         onClick: () => openSidebar(s) },
+      { label: 'View Details',         onClick: () => openSupplyDetail(s) },
       { label: 'Record Consumption',   onClick: () => {} },
       { label: 'Record Delivery',      onClick: () => {} },
       { label: 'Reorder Item',         onClick: () => {}, disabled: s.status !== 'low_stock' && s.status !== 'critical' },
@@ -101,15 +120,6 @@ export default function SupplyLogger() {
     { key: 'currentStock', label: 'On Hand',       width: '10%', render: (s) => <span className={s.currentStock <= s.reorderLevel ? 'text-[#df6b13] font-semibold' : ''}>{s.currentStock}</span> },
     { key: 'reorderLevel', label: 'Reorder At',    width: '11%', render: (s) => String(s.reorderLevel) },
     { key: 'supplier',     label: 'Supplier',      width: '18%', render: (s) => s.supplier },
-    { key: 'lastRestocked',label: 'Last Restocked',width: '14%', render: (s) => s.lastRestocked },
-    {
-      key: 'expectedWeekly',label: 'Weekly Use',   width: '12%', render: (s) => (
-        <div>
-          <span className="text-[13px]">{s.actualWeekly}/{s.expectedWeekly} {s.unit}</span>
-          {s.actualWeekly > s.expectedWeekly && <span className="ml-[4px] text-[11px] text-[#df6b13]">&#9650;</span>}
-        </div>
-      ),
-    },
     {
       key: 'status',       label: 'Status',        width: '10%',
       render: (s) => { const m = SUPPLY_STATUS_MAP[s.status]; return <Badge variant={m.variant}>{m.label}</Badge> },
@@ -185,10 +195,31 @@ export default function SupplyLogger() {
       <PageHeader
         title="Supply Logger"
         actions={
-          pageTab === 'inventory' ? <Button onClick={() => setFormType('supply')}><Plus size={14} />Record Supply</Button>
-          : pageTab === 'deliveries' ? <Button onClick={() => setFormType('delivery')}><Plus size={14} />Record Delivery</Button>
-          : pageTab === 'consumption' ? <Button onClick={() => setFormType('consumption')}><Plus size={14} />Log Consumption</Button>
-          : null
+          <div ref={reqRef} className="relative">
+            <Button onClick={() => setReqOpen(!reqOpen)}>
+              <Icon name="plus" size={14} />
+              Request Supply
+              <Icon name="chevron-down" size={12} className={clsx('ml-[2px] transition-transform', reqOpen && 'rotate-180')} />
+            </Button>
+            {reqOpen && (
+              <div className="absolute right-0 top-full z-50 mt-[4px] min-w-[210px] overflow-hidden rounded-[10px] border border-[#efefef] bg-white py-[4px] shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+                {[
+                  { label: 'Request Supply Point', type: 'request'     as const },
+                  { label: 'Record Consumption',   type: 'consumption' as const },
+                  { label: 'Record Supply',        type: 'supply'      as const },
+                  { label: 'Record Deliveries',    type: 'delivery'    as const },
+                ].map(item => (
+                  <button
+                    key={item.label}
+                    className="flex w-full items-center px-[14px] py-[9px] text-left text-[13px] leading-none text-[#3f3f3f] hover:bg-[#f5f5f5]"
+                    onClick={() => { setFormType(item.type); setReqOpen(false) }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         }
       />
 
@@ -210,33 +241,42 @@ export default function SupplyLogger() {
 
       <div className="pl-[36px] pr-[20px] pt-[20px]">
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-[30px]">
+        <StatCardGroup>
           {STATS.map((stat) => (
-            <div key={stat.label} className="min-w-0">
-              <div className={clsx('flex h-[25px] items-center justify-between rounded-[7px] px-[5px]', stat.tone)}>
-                <span className="truncate text-[15px] font-normal leading-none text-[#6f6f6f]">{stat.label}</span>
-                {stat.trend && <span className="shrink-0 text-[13px] font-semibold leading-none text-[#5fc98e]">{stat.trend}</span>}
-              </div>
-              <div className="mt-[29px]">
-                <p className="text-[26px] font-semibold leading-none text-[#414141]">{stat.value}</p>
-                <p className={clsx('mt-[12px] truncate text-[15px] font-normal leading-none', stat.alert ? 'text-[#ff3333]' : 'text-[#969696]')}>
-                  {stat.description}
-                </p>
-              </div>
-            </div>
+            <StatCard
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              sub={stat.alert
+                ? <span className="font-medium text-[#ff3333]">{stat.description}</span>
+                : stat.description
+              }
+              accent={
+                stat.tone === 'bg-[#f7fbff]' ? 'bg-gradient-to-br from-white to-blue-50/50' :
+                stat.tone === 'bg-[#f7fdf9]' ? 'bg-gradient-to-br from-white to-green-50/50' :
+                stat.tone === 'bg-[#fcf8f5]' ? 'bg-gradient-to-br from-white to-orange-50/50' :
+                'bg-gradient-to-br from-white to-red-50/50'
+              }
+              badge={stat.trend
+                ? <span className="flex items-center gap-[3px] rounded-full bg-[#eefbf4] px-[8px] py-[3px] text-[12px] font-semibold text-[#0f9f5d]">{stat.trend}</span>
+                : undefined
+              }
+            />
           ))}
-        </div>
+        </StatCardGroup>
 
         {/* Section content per tab */}
         <section className="mt-[32px]">
           {/* ── Inventory ──────────────────────────────── */}
           {pageTab === 'inventory' && (
             <>
-              <h2 className="text-[22px] font-bold leading-[24px] text-black">Current Inventory</h2>
-              <p className="mt-[4px] text-[14px] text-[#888]">What was received, consumed, and remains.</p>
-              <div className="mt-[6px] flex h-[31px] items-center justify-end">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-[22px] font-bold leading-[24px] text-black">Current Inventory</h2>
+                  <p className="mt-[2px] text-[14px] text-[#888]">What was received, consumed, and remains.</p>
+                </div>
                 <div className="flex h-[31px] w-[217px] items-center gap-[10px] rounded-[8px] border border-[#e5e5e5] bg-[#fcfcfc] px-[12px]">
-                  <Search size={15} strokeWidth={2.4} className="shrink-0 text-[#767676]" />
+                  <Icon name="search" size={15} className="shrink-0 text-[#767676]" />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -246,7 +286,7 @@ export default function SupplyLogger() {
                 </div>
               </div>
               <div className="mt-[12px]">
-                <DataTable columns={inventoryColumns} data={filteredSupplies} rowKey={(s) => s.id} onRowClick={openSidebar} rowActions={supplyActions} />
+                <DataTable columns={inventoryColumns} data={filteredSupplies} rowKey={(s) => s.id} onRowClick={openSupplyDetail} rowActions={supplyActions} />
               </div>
             </>
           )}
@@ -257,7 +297,7 @@ export default function SupplyLogger() {
               <h2 className="text-[22px] font-bold leading-[24px] text-black">Recent Deliveries</h2>
               <p className="mt-[4px] text-[14px] text-[#888]">Supplier deliveries confirmed by the storekeeper.</p>
               <div className="mt-[12px]">
-                <DataTable columns={deliveryColumns} data={MOCK_DELIVERIES} rowKey={(d) => d.id} rowActions={deliveryActions} />
+                <DataTable columns={deliveryColumns} data={MOCK_DELIVERIES} rowKey={(d) => d.id} onRowClick={openDeliveryDetail} rowActions={deliveryActions} />
               </div>
             </>
           )}
@@ -268,7 +308,7 @@ export default function SupplyLogger() {
               <h2 className="text-[22px] font-bold leading-[24px] text-black">Consumption Logs</h2>
               <p className="mt-[4px] text-[14px] text-[#888]">Kitchen consumption per meal session with reasonability checks.</p>
               <div className="mt-[12px]">
-                <DataTable columns={consumptionColumns} data={MOCK_CONSUMPTIONS} rowKey={(c) => c.id} rowActions={consumptionActions} />
+                <DataTable columns={consumptionColumns} data={MOCK_CONSUMPTIONS} rowKey={(c) => c.id} onRowClick={openConsumptionDetail} rowActions={consumptionActions} />
               </div>
               <div className="mt-[16px] rounded-[10px] border border-[#fef3c7] bg-[#fffbeb] p-[14px]">
                 <p className="text-[12px] font-medium text-[#92400e] mb-[6px]">Consumption Reasonability Rule</p>
@@ -285,7 +325,7 @@ export default function SupplyLogger() {
               <h2 className="text-[22px] font-bold leading-[24px] text-black">Government Approved Suppliers</h2>
               <p className="mt-[4px] text-[14px] text-[#888]">Schools select from the approved registry. Unlimited supplier creation is restricted.</p>
               <div className="mt-[12px]">
-                <DataTable columns={supplierColumns} data={MOCK_SUPPLIERS} rowKey={(s) => s.name} />
+                <DataTable columns={supplierColumns} data={MOCK_SUPPLIERS} rowKey={(s) => s.name} onRowClick={openSupplierDetail} />
               </div>
             </>
           )}
@@ -296,7 +336,7 @@ export default function SupplyLogger() {
               <h2 className="text-[22px] font-bold leading-[24px] text-black">Government Token Status</h2>
               <p className="mt-[4px] text-[14px] text-[#888]">Tokens issued by government, verified for supplier payment, redeemed at banks.</p>
               <div className="mt-[12px]">
-                <DataTable columns={tokenColumns} data={MOCK_TOKENS} rowKey={(t) => t.code} />
+                <DataTable columns={tokenColumns} data={MOCK_TOKENS} rowKey={(t) => t.code} onRowClick={openTokenDetail} />
               </div>
               <div className="mt-[16px] rounded-[10px] border border-[#dbeafe] bg-[#eff6ff] p-[14px]">
                 <p className="text-[12px] font-medium text-[#1e40af] mb-[6px]">Token Lifecycle</p>
@@ -309,6 +349,69 @@ export default function SupplyLogger() {
         </section>
       </div>
 
+      {/* ── Form: Request Supply Point ───────────────────────────────── */}
+      {formType === 'request' && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" onClick={closeForm} />
+          <div className="absolute right-[12px] top-[12px] flex h-[calc(100vh-24px)] w-[460px] flex-col overflow-y-auto rounded-[22px] bg-white shadow-[0_20px_70px_rgba(0,0,0,0.2)]">
+            <div className="px-[20px] pb-[10px] pt-[22px]">
+              <h2 className="pr-12 text-[17px] font-bold leading-none text-black">Request Supply Point</h2>
+              <p className="mt-[6px] text-[13px] leading-[18px] text-[#888]">Submit a supply request to the district office before the next delivery cycle.</p>
+              <button onClick={closeForm} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
+                <Icon name="x" size={18} />
+              </button>
+            </div>
+            <div className="flex flex-1 flex-col px-[20px] pb-[24px]">
+              <div className="space-y-[14px]">
+                <div>
+                  <label className="text-[13px] font-medium text-[#555]">Item Requested</label>
+                  <select className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white">
+                    <option>Select item...</option>
+                    <option>Rice</option><option>Cooking Oil</option><option>Beans</option>
+                    <option>Tomato Paste</option><option>Maize</option><option>Salt</option>
+                    <option>Fish (Frozen)</option><option>Gas Cylinders</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[13px] font-medium text-[#555]">Quantity Requested</label>
+                  <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="e.g. 200 Bags" />
+                </div>
+                <div>
+                  <label className="text-[13px] font-medium text-[#555]">Required By</label>
+                  <input type="date" className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" />
+                </div>
+                <div>
+                  <label className="text-[13px] font-medium text-[#555]">Preferred Supplier</label>
+                  <select className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white">
+                    <option>Select supplier...</option>
+                    <option>Golden Harvest Foods</option><option>Ashanti Agro Supplies</option>
+                    <option>National School Foods</option><option>SunGold Oils</option>
+                    <option>FreshFoods Co.</option><option>GasPro Ghana</option>
+                    <option>ColdChain Fisheries</option><option>Essentials Ltd</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[13px] font-medium text-[#555]">Requesting Officer</label>
+                  <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="Name and role" />
+                </div>
+                <div>
+                  <label className="text-[13px] font-medium text-[#555]">Reason / Notes</label>
+                  <textarea rows={3} className="mt-[4px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] py-[8px] text-[14px] outline-none focus:border-[#4ea4ff] resize-none" placeholder="e.g. Current stock covers only 4 more days at current consumption rate" />
+                </div>
+              </div>
+              <div className="mt-[16px] rounded-[10px] border border-[#dbeafe] bg-[#eff6ff] p-[12px]">
+                <p className="text-[11px] font-medium text-[#1e40af] mb-[4px]">How this works</p>
+                <p className="text-[11px] text-[#3b82f6] leading-[16px]">Your request is forwarded to the district education office. Once approved, a government token is issued and a supplier is notified to schedule delivery.</p>
+              </div>
+              <div className="mt-auto pt-[20px] space-y-[8px]">
+                <Button className="w-full">Submit Request</Button>
+                <Button variant="secondary" className="w-full" onClick={closeForm}>Cancel</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Form: Record Supply ────────────────────────────────────── */}
       {formType === 'supply' && (
         <div className="fixed inset-0 z-50">
@@ -317,7 +420,7 @@ export default function SupplyLogger() {
             <div className="px-[20px] pb-[10px] pt-[22px]">
               <h2 className="pr-12 text-[17px] font-bold leading-none text-black">Record Supply Receipt</h2>
               <button onClick={closeForm} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
-                <X size={18} strokeWidth={2.2} />
+                <Icon name="x" size={18} />
               </button>
             </div>
             <div className="flex flex-1 flex-col px-[20px] pb-[24px]">
@@ -371,7 +474,7 @@ export default function SupplyLogger() {
             <div className="px-[20px] pb-[10px] pt-[22px]">
               <h2 className="pr-12 text-[17px] font-bold leading-none text-black">Record Delivery</h2>
               <button onClick={closeForm} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
-                <X size={18} strokeWidth={2.2} />
+                <Icon name="x" size={18} />
               </button>
             </div>
             <div className="flex flex-1 flex-col px-[20px] pb-[24px]">
@@ -423,7 +526,7 @@ export default function SupplyLogger() {
             <div className="px-[20px] pb-[10px] pt-[22px]">
               <h2 className="pr-12 text-[17px] font-bold leading-none text-black">Log Kitchen Consumption</h2>
               <button onClick={closeForm} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
-                <X size={18} strokeWidth={2.2} />
+                <Icon name="x" size={18} />
               </button>
             </div>
             <div className="flex flex-1 flex-col px-[20px] pb-[24px]">
@@ -470,160 +573,234 @@ export default function SupplyLogger() {
         </div>
       )}
 
-      {/* ── Supply Detail Sidebar ─────────────────────────────────────── */}
-      {selectedSupply && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" onClick={closeSidebar} />
-          <div className="absolute right-[12px] top-[12px] flex h-[calc(100vh-24px)] w-[460px] flex-col overflow-y-auto rounded-[22px] bg-white shadow-[0_20px_70px_rgba(0,0,0,0.2)]">
-            <div className="px-[20px] pb-[10px] pt-[22px]">
-              <h2 className="pr-12 text-[17px] font-bold leading-none text-black">{selectedSupply.item}</h2>
-              <button onClick={closeSidebar} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
-                <X size={18} strokeWidth={2.2} />
-              </button>
-            </div>
-
-            {/* Sidebar tabs */}
-            <div className="mx-[20px] flex h-[26px] w-fit items-center rounded-[6px] bg-[#f1f1f2] p-[1px]">
-              {SIDEBAR_TABS.map((tab) => (
-                <button
-                  key={tab.value}
-                  onClick={() => setSidebarTab(tab.value)}
-                  className={clsx(
-                    'flex h-[24px] items-center gap-[5px] rounded-[5px] px-[9px] text-[12px] font-medium transition-colors',
-                    sidebarTab === tab.value ? 'bg-white text-[#242424] shadow-[0_1px_3px_rgba(0,0,0,0.12)]' : 'text-black/50 hover:text-[#555]'
-                  )}
-                >
-                  {tab.icon}{tab.label}
+      {/* ── Detail Sidebar ─────────────────────────────────────── */}
+      {selectedItem && (isSupply(selectedItem) ? (
+        <>
+          {/* ── Supply Detail ── */}
+          <div className="fixed inset-0 z-50">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" onClick={closeItem} />
+            <div className="absolute right-[12px] top-[12px] flex h-[calc(100vh-24px)] w-[460px] flex-col overflow-y-auto rounded-[22px] bg-white shadow-[0_20px_70px_rgba(0,0,0,0.2)]">
+              <div className="px-[20px] pb-[10px] pt-[22px]">
+                <h2 className="pr-12 text-[17px] font-bold leading-none text-black">{selectedItem.item}</h2>
+                <button onClick={closeItem} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
+                  <Icon name="x" size={18} />
                 </button>
-              ))}
-            </div>
+              </div>
 
-            <div className="px-[20px] pb-[24px] pt-[16px]">
-              {/* Overview */}
-              {sidebarTab === 'overview' && (
-                <>
-                  {/* Reorder alert banner */}
-                  {(selectedSupply.status === 'low_stock' || selectedSupply.status === 'critical') && (
-                    <div className={clsx(
-                      'mb-[16px] rounded-[10px] p-[14px] flex items-start gap-[10px]',
-                      selectedSupply.status === 'critical' ? 'border border-[#fee2e2] bg-[#fef2f2]' : 'border border-[#fef3c7] bg-[#fffbeb]'
-                    )}>
-                      <AlertTriangle size={18} className={clsx('shrink-0 mt-[2px]', selectedSupply.status === 'critical' ? 'text-[#de3d36]' : 'text-[#df6b13]')} />
-                      <div>
-                        <p className={clsx('text-[13px] font-semibold', selectedSupply.status === 'critical' ? 'text-[#991b1b]' : 'text-[#92400e]')}>
-                          {selectedSupply.status === 'critical' ? 'Critical stock level' : 'Below reorder level'}
-                        </p>
-                        <p className="text-[12px] mt-[4px] text-[#888]">
-                          {selectedSupply.currentStock} {selectedSupply.unit} remaining (reorder at {selectedSupply.reorderLevel})
-                        </p>
+              {/* Sidebar tabs */}
+              <div className="mx-[20px] flex h-[26px] w-fit items-center rounded-[6px] bg-[#f1f1f2] p-[1px]">
+                {SIDEBAR_TABS.map((tab) => (
+                  <button
+                    key={tab.value}
+                    onClick={() => setSidebarTab(tab.value)}
+                    className={clsx(
+                      'flex h-[24px] items-center gap-[5px] rounded-[5px] px-[9px] text-[12px] font-medium transition-colors',
+                      sidebarTab === tab.value ? 'bg-white text-[#242424] shadow-[0_1px_3px_rgba(0,0,0,0.12)]' : 'text-black/50 hover:text-[#555]'
+                    )}
+                  >
+                    <Icon name={tab.icon} size={13} />{tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="px-[20px] pb-[24px] pt-[16px]">
+                {/* Overview */}
+                {sidebarTab === 'overview' && (
+                  <>
+                    {/* Reorder alert banner */}
+                    {(selectedItem.status === 'low_stock' || selectedItem.status === 'critical') && (
+                      <div className={clsx(
+                        'mb-[16px] rounded-[10px] p-[14px] flex items-start gap-[10px]',
+                        selectedItem.status === 'critical' ? 'border border-[#fee2e2] bg-[#fef2f2]' : 'border border-[#fef3c7] bg-[#fffbeb]'
+                      )}>
+                        <Icon name="alert-triangle" size={18} className={clsx('shrink-0 mt-[2px]', selectedItem.status === 'critical' ? 'text-[#de3d36]' : 'text-[#df6b13]')} />
+                        <div>
+                          <p className={clsx('text-[13px] font-semibold', selectedItem.status === 'critical' ? 'text-[#991b1b]' : 'text-[#92400e]')}>
+                            {selectedItem.status === 'critical' ? 'Critical stock level' : 'Below reorder level'}
+                          </p>
+                          <p className="text-[12px] mt-[4px] text-[#888]">
+                            {selectedItem.currentStock} {selectedItem.unit} remaining (reorder at {selectedItem.reorderLevel})
+                          </p>
+                        </div>
                       </div>
+                    )}
+                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                      <SidebarDetailRow label="Item"                value={selectedItem.item} />
+                      <SidebarDetailRow label="Unit"                value={selectedItem.unit} />
+                      <SidebarDetailRow label="Supplier"            value={selectedItem.supplier} />
+                      <SidebarDetailRow label="Current Stock"       value={String(selectedItem.currentStock)} />
+                      <SidebarDetailRow label="Reorder Level"       value={String(selectedItem.reorderLevel)} />
+                      <SidebarDetailRow label="Expected Weekly Use" value={`${selectedItem.expectedWeekly} ${selectedItem.unit}`} />
+                      <SidebarDetailRow label="Actual Weekly Use"   value={`${selectedItem.actualWeekly} ${selectedItem.unit}`} />
+                      <SidebarDetailRow label="Last Restocked"      value={selectedItem.lastRestocked} />
+                      <SidebarDetailRow label="Status"              value={SUPPLY_STATUS_MAP[selectedItem.status]?.label ?? selectedItem.status} />
                     </div>
-                  )}
+                  </>
+                )}
+
+                {/* Inventory detail */}
+                {sidebarTab === 'inventory' && (
                   <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
-                    <SidebarDetailRow label="Item"           value={selectedSupply.item} />
-                    <SidebarDetailRow label="Unit"           value={selectedSupply.unit} />
-                    <SidebarDetailRow label="Supplier"       value={selectedSupply.supplier} />
-                    <SidebarDetailRow label="Current Stock"  value={String(selectedSupply.currentStock)} />
-                    <SidebarDetailRow label="Reorder Level"  value={String(selectedSupply.reorderLevel)} />
-                    <SidebarDetailRow label="Last Restocked" value={selectedSupply.lastRestocked} />
-                    <SidebarDetailRow label="Status"         value={SUPPLY_STATUS_MAP[selectedSupply.status]?.label ?? selectedSupply.status} />
+                    <SidebarDetailRow label="On Hand"               value={`${selectedItem.currentStock} ${selectedItem.unit}`} />
+                    <SidebarDetailRow label="Expected Weekly Use"   value={`${selectedItem.expectedWeekly} ${selectedItem.unit}`} />
+                    <SidebarDetailRow label="Actual Weekly Use"     value={`${selectedItem.actualWeekly} ${selectedItem.unit}`} />
+                    <SidebarDetailRow label="Variance"              value={selectedItem.actualWeekly > selectedItem.expectedWeekly ? `+${selectedItem.actualWeekly - selectedItem.expectedWeekly} ${selectedItem.unit}` : `${selectedItem.actualWeekly - selectedItem.expectedWeekly} ${selectedItem.unit}`} valueClass={selectedItem.actualWeekly > selectedItem.expectedWeekly ? 'text-[#df6b13]' : 'text-[#10b981]'} />
                   </div>
-                </>
-              )}
+                )}
 
-              {/* Inventory detail */}
-              {sidebarTab === 'inventory' && (
-                <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
-                  <SidebarDetailRow label="On Hand"               value={`${selectedSupply.currentStock} ${selectedSupply.unit}`} />
-                  <SidebarDetailRow label="Expected Weekly Use"   value={`${selectedSupply.expectedWeekly} ${selectedSupply.unit}`} />
-                  <SidebarDetailRow label="Actual Weekly Use"     value={`${selectedSupply.actualWeekly} ${selectedSupply.unit}`} />
-                  <SidebarDetailRow label="Variance"              value={selectedSupply.actualWeekly > selectedSupply.expectedWeekly ? `+${selectedSupply.actualWeekly - selectedSupply.expectedWeekly} ${selectedSupply.unit}` : `${selectedSupply.actualWeekly - selectedSupply.expectedWeekly} ${selectedSupply.unit}`} valueClass={selectedSupply.actualWeekly > selectedSupply.expectedWeekly ? 'text-[#df6b13]' : 'text-[#10b981]'} />
-                </div>
-              )}
-
-              {/* Consumption */}
-              {sidebarTab === 'consumption' && (
-                <div>
-                  {selectedSupply.consumptions.length === 0 ? (
-                    <p className="text-[13px] text-[#aaa] text-center py-[30px]">No consumption recorded today.</p>
-                  ) : (
-                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
-                      <div className="flex items-center border-b border-[#f0f0f0] px-[14px] py-[10px] text-[12px] font-medium text-[#888]">
-                        <span className="w-[70px]">Session</span>
-                        <span className="flex-1">Qty</span>
-                        <span className="w-[90px] text-right">Students</span>
+                {/* Consumption */}
+                {sidebarTab === 'consumption' && (
+                  <div>
+                    {selectedItem.consumptions.length === 0 ? (
+                      <p className="text-[13px] text-[#aaa] text-center py-[30px]">No consumption recorded today.</p>
+                    ) : (
+                      <div className="rounded-[13px] border border-[#f5f5f5] bg-white shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                        <div className="flex items-center border-b border-[#f0f0f0] px-[14px] py-[10px] text-[12px] font-medium text-[#888]">
+                          <span className="w-[70px]">Session</span>
+                          <span className="flex-1">Qty</span>
+                          <span className="w-[90px] text-right">Students</span>
+                        </div>
+                        {selectedItem.consumptions.map((c) => (
+                          <div key={c.id} className="flex items-center border-b border-[#f8f8f8] px-[14px] py-[12px] last:border-0">
+                            <span className="w-[70px] text-[13px] text-[#888]">{c.mealSession}</span>
+                            <span className="flex-1 text-[13px] text-[#3f3f3f]">{c.quantity}</span>
+                            <span className="w-[90px] text-right text-[13px] font-medium text-[#3f3f3f]">{c.studentsServed.toLocaleString()}</span>
+                          </div>
+                        ))}
                       </div>
-                      {selectedSupply.consumptions.map((c) => (
-                        <div key={c.id} className="flex items-center border-b border-[#f8f8f8] px-[14px] py-[12px] last:border-0">
-                          <span className="w-[70px] text-[13px] text-[#888]">{c.mealSession}</span>
-                          <span className="flex-1 text-[13px] text-[#3f3f3f]">{c.quantity}</span>
-                          <span className="w-[90px] text-right text-[13px] font-medium text-[#3f3f3f]">{c.studentsServed.toLocaleString()}</span>
-                        </div>
-                      ))}
+                    )}
+                    <div className="mt-[16px] rounded-[10px] border border-[#fef3c7] bg-[#fffbeb] p-[12px]">
+                      <p className="text-[11px] font-medium text-[#92400e] mb-[4px]">Reasonability Check</p>
+                      <p className="text-[11px] text-[#a16207] leading-[16px]">
+                        {selectedItem.item === 'Rice' && '1,200 students validated → expected 10 Bags rice. Actual: 11 Bags → normal variance.'}
+                        {selectedItem.item === 'Cooking Oil' && 'Consumption within expected range. No anomalies detected.'}
+                        {selectedItem.item === 'Beans' && 'Consumption below expected. Student attendance slightly down this week.'}
+                        {!['Rice', 'Cooking Oil', 'Beans'].includes(selectedItem.item) && 'Consumption pattern within operational norms.'}
+                      </p>
                     </div>
-                  )}
-                  <div className="mt-[16px] rounded-[10px] border border-[#fef3c7] bg-[#fffbeb] p-[12px]">
-                    <p className="text-[11px] font-medium text-[#92400e] mb-[4px]">Reasonability Check</p>
-                    <p className="text-[11px] text-[#a16207] leading-[16px]">
-                      {selectedSupply.item === 'Rice' && '1,200 students validated → expected 10 Bags rice. Actual: 11 Bags → normal variance.'}
-                      {selectedSupply.item === 'Cooking Oil' && 'Consumption within expected range. No anomalies detected.'}
-                      {selectedSupply.item === 'Beans' && 'Consumption below expected. Student attendance slightly down this week.'}
-                      {!['Rice', 'Cooking Oil', 'Beans'].includes(selectedSupply.item) && 'Consumption pattern within operational norms.'}
-                    </p>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Supplier History */}
-              {sidebarTab === 'supplier_history' && (
-                <div>
-                  {selectedSupply.deliveries.length === 0 ? (
-                    <p className="text-[13px] text-[#aaa] text-center py-[30px]">No delivery history.</p>
-                  ) : (
-                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
-                      {selectedSupply.deliveries.map((d) => (
-                        <div key={d.id} className="border-b border-[#f2f2f2] px-[14px] py-[14px] last:border-0">
-                          <div className="flex justify-between">
-                            <span className="text-[13px] font-semibold text-[#111]">{d.supplier}</span>
-                            <span className="text-[13px] text-[#888]">{d.deliveredAt}</span>
+                {/* Supplier History */}
+                {sidebarTab === 'supplier_history' && (
+                  <div>
+                    {selectedItem.deliveries.length === 0 ? (
+                      <p className="text-[13px] text-[#aaa] text-center py-[30px]">No delivery history.</p>
+                    ) : (
+                      <div className="rounded-[13px] border border-[#f5f5f5] bg-white shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                        {selectedItem.deliveries.map((d) => (
+                          <div key={d.id} className="border-b border-[#f2f2f2] px-[14px] py-[14px] last:border-0">
+                            <div className="flex justify-between">
+                              <span className="text-[13px] font-semibold text-[#111]">{d.supplier}</span>
+                              <span className="text-[13px] text-[#888]">{d.deliveredAt}</span>
+                            </div>
+                            <div className="mt-[4px] flex justify-between text-[12px] text-[#888]">
+                              <span>{d.quantity}</span>
+                              <span>Received: {d.receivedBy}</span>
+                            </div>
+                            {d.tokenRef && <p className="mt-[6px] text-[11px] text-[#4ea4ff]">Token: {d.tokenRef}</p>}
                           </div>
-                          <div className="mt-[4px] flex justify-between text-[12px] text-[#888]">
-                            <span>{d.quantity}</span>
-                            <span>Received: {d.receivedBy}</span>
-                          </div>
-                          {d.tokenRef && <p className="mt-[6px] text-[11px] text-[#4ea4ff]">Token: {d.tokenRef}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
-              {/* Government Impact */}
-              {sidebarTab === 'government' && (
-                <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
-                  <SidebarDetailRow label="Semester Consumption" value={`${selectedSupply.semesterConsumption} ${selectedSupply.unit}`} />
-                  <SidebarDetailRow label="Verified Through"      value={`${selectedSupply.semesterValidations.toLocaleString()} student validations`} />
-                  <SidebarDetailRow label="Est. Govt Exposure"   value={selectedSupply.estimatedGovtExposure} valueClass="text-[#4ea4ff]" />
-                  <SidebarDetailRow label="Current Token Status" value={selectedSupply.supplier === 'Golden Harvest Foods' ? 'Partially Redeemed' : selectedSupply.supplier === 'SunGold Oils' ? 'Verified' : 'Pending'} />
-                </div>
-              )}
+                {/* Government Impact */}
+                {sidebarTab === 'government' && (
+                  <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                    <SidebarDetailRow label="Semester Consumption" value={`${selectedItem.semesterConsumption} ${selectedItem.unit}`} />
+                    <SidebarDetailRow label="Verified Through"      value={`${selectedItem.semesterValidations.toLocaleString()} student validations`} />
+                    <SidebarDetailRow label="Est. Govt Exposure"   value={selectedItem.estimatedGovtExposure} valueClass="text-[#4ea4ff]" />
+                    <SidebarDetailRow label="Current Token Status" value={selectedItem.supplier === 'Golden Harvest Foods' ? 'Partially Redeemed' : selectedItem.supplier === 'SunGold Oils' ? 'Verified' : 'Pending'} />
+                  </div>
+                )}
 
-              {/* Audit Logs */}
-              {sidebarTab === 'logs' && (
-                <div className="space-y-[12px]">
-                  {selectedSupply.supplyLogs.map((log, i) => (
-                    <div key={i} className="flex items-start gap-[12px]">
-                      <span className="shrink-0 w-[48px] text-[12px] font-medium text-[#888]">{log.time}</span>
-                      <span className="text-[13px] text-[#333]">{log.event}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+                {/* Audit Logs */}
+                {sidebarTab === 'logs' && (
+                  <div className="space-y-[12px]">
+                    {selectedItem.supplyLogs.map((log, i) => (
+                      <div key={i} className="flex items-start gap-[12px]">
+                        <span className="shrink-0 w-[48px] text-[12px] font-medium text-[#888]">{log.time}</span>
+                        <span className="text-[13px] text-[#333]">{log.event}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        </>
+      ) : (
+        <>
+          {/* ── Non-Supply Detail ── */}
+          <div className="fixed inset-0 z-50">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" onClick={closeItem} />
+            <div className="absolute right-[12px] top-[12px] flex h-[calc(100vh-24px)] w-[460px] flex-col overflow-y-auto rounded-[22px] bg-white shadow-[0_20px_70px_rgba(0,0,0,0.2)]">
+              <div className="px-[20px] pb-[10px] pt-[22px]">
+                <h2 className="pr-12 text-[17px] font-bold leading-none text-black">
+                  {'mealSession' in selectedItem ? selectedItem.item :
+                   'code' in selectedItem ? selectedItem.code :
+                   'name' in selectedItem ? selectedItem.name :
+                   'supplier' in selectedItem ? `${selectedItem.supplier} — ${(selectedItem as MockDelivery).item}` :
+                   'Detail'}
+                </h2>
+                <button onClick={closeItem} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
+                  <Icon name="x" size={18} />
+                </button>
+              </div>
+              <div className="px-[20px] pb-[24px] pt-[16px]">
+                {(() => {
+                  const item = selectedItem as MockDelivery | MockConsumption | MockSupplier | MockToken
+                  return (
+                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                      {'mealSession' in item && (
+                        <>
+                          <SidebarDetailRow label="Meal Session"  value={item.mealSession} />
+                          <SidebarDetailRow label="Item"          value={item.item} />
+                          <SidebarDetailRow label="Quantity"      value={item.quantity} />
+                          <SidebarDetailRow label="Time"          value={item.consumedAt} />
+                          <SidebarDetailRow label="Prepared By"   value={item.preparedBy} />
+                          <SidebarDetailRow label="Students"      value={item.studentsServed.toLocaleString()} />
+                        </>
+                      )}
+                      {'code' in item && 'value' in item && (
+                        <>
+                          <SidebarDetailRow label="Token Code" value={item.code} />
+                          <SidebarDetailRow label="Supplier"    value={item.supplier} />
+                          <SidebarDetailRow label="Value"       value={item.value} />
+                          <SidebarDetailRow label="Issued"      value={item.issuedAt} />
+                          <SidebarDetailRow label="Status"      value={item.status} />
+                        </>
+                      )}
+                      {'name' in item && 'category' in item && (
+                        <>
+                          <SidebarDetailRow label="Name"            value={item.name} />
+                          <SidebarDetailRow label="Category"        value={item.category} />
+                          <SidebarDetailRow label="Contact"         value={item.contact} />
+                          <SidebarDetailRow label="Total Delivered" value={item.totalDelivered} />
+                          <SidebarDetailRow label="Tokens Redeemed" value={String(item.tokensRedeemed)} />
+                          <SidebarDetailRow label="Status"          value={item.status} />
+                        </>
+                      )}
+                      {'deliveredAt' in item && !('mealSession' in item) && (
+                        <>
+                          <SidebarDetailRow label="Supplier"    value={item.supplier} />
+                          <SidebarDetailRow label="Item"        value={item.item} />
+                          <SidebarDetailRow label="Quantity"    value={item.quantity} />
+                          <SidebarDetailRow label="Delivered"   value={item.deliveredAt} />
+                          <SidebarDetailRow label="Received By" value={item.receivedBy} />
+                          {item.tokenRef && <SidebarDetailRow label="Token" value={item.tokenRef} />}
+                        </>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          </div>
+        </>
+      ))}
     </div>
   )
 }

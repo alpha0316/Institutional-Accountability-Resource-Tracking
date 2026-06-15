@@ -1,7 +1,7 @@
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { useState } from 'react'
-import { Banknote, CheckCircle2 } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 
 import { BANK_CASH_READY, type BankReadyToken } from '../../../lib/mockData'
@@ -70,14 +70,14 @@ export default function CashRelease() {
             <p className="text-[20px] font-bold text-[#111]">GH₵{totalSelected.toLocaleString()}</p>
           </div>
           <Button disabled={selected.size === 0} onClick={handleRelease}>
-            <Banknote size={14} strokeWidth={2.5} />
+            <Icon name="cash-banknote" size={14} />
             Release Cash
           </Button>
         </div>
 
         {released.size > 0 && (
           <div className="mt-[24px] flex items-center gap-[10px] rounded-[12px] border border-[#98e9bd] bg-[#eefbf4] px-[16px] py-[12px]">
-            <CheckCircle2 size={16} strokeWidth={2.2} className="text-[#0f9f5d]" />
+            <Icon name="circle-check" size={16} className="text-[#0f9f5d]" />
             <p className="text-[13px] font-medium text-[#0f9f5d]">
               {released.size} token{released.size > 1 ? 's' : ''} — cash successfully released to suppliers.
             </p>

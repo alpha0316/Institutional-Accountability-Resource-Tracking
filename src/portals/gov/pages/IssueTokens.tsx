@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Coins } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
@@ -98,7 +98,7 @@ export default function IssueTokens() {
         title="Issue Tokens"
         actions={
           <Button onClick={() => setOpen(true)}>
-            <Plus size={14} strokeWidth={2.5} />
+            <Icon name="plus" size={14} />
             Issue Token
           </Button>
         }
@@ -173,7 +173,7 @@ export default function IssueTokens() {
           <div className="flex justify-end gap-[8px] pt-[4px]">
             <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
             <Button onClick={handleIssue} disabled={!form.institution || !form.supplier}>
-              <Coins size={14} strokeWidth={2.2} />
+              <Icon name="coin" size={14} />
               Issue Token
             </Button>
           </div>

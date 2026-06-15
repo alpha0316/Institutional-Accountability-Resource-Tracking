@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+import { Icon } from './Icon'
 import { clsx } from 'clsx'
 
 interface ModalTab {
@@ -47,7 +47,7 @@ export function Modal({
             onClick={onClose}
             className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] transition-colors hover:bg-[#f8f8f8]"
           >
-            <X size={18} strokeWidth={2.2} />
+            <Icon name="x" size={18} />
           </button>
         </div>
 

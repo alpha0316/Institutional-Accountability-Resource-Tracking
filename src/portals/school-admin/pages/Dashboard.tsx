@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { Plus, Search } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Icon } from '../../../components/ui/Icon'
 import { clsx } from 'clsx'
 import { Badge } from '../../../components/ui/Badge'
-import { Button } from '../../../components/ui/Button'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { type DropdownMenuItem } from '../../../components/ui/DropdownMenu'
+import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import {
   MOCK_VALIDATIONS,
   VALIDATION_STATUS_MAP,
@@ -19,15 +20,23 @@ const filterLabels: Record<FeedFilter, string> = {
   invalid_card: 'Invalid Card', inactive_student: 'Inactive Student',
 }
 
-const STATS = [
-  { label: 'Meals Served Today',  value: '1,247', description: 'Verified scans across all halls',   tone: 'bg-[#f7fbff]', trend: '↑ (+25%)' },
-  { label: 'Breakfast',           value: '852',   description: 'Breakfast session validations',     tone: 'bg-[#f7fdf9]' },
-  { label: 'Lunch',               value: '910',   description: 'Lunch session validations',         tone: 'bg-[#fcf8f5]' },
-  { label: 'Fraud Flags',         value: '3',     description: 'Suspicious activity detected',      tone: 'bg-[#fff7f8]', alert: true },
-]
+const SESSION_DATA = {
+  Breakfast: { label: 'Breakfast', value: '852',  description: 'Breakfast session validations', tone: 'bg-[#f7fdf9]' },
+  Lunch:     { label: 'Lunch',     value: '910',  description: 'Lunch session validations',     tone: 'bg-[#fcf8f5]' },
+  Dinner:    { label: 'Dinner',    value: '673',  description: 'Dinner session validations',    tone: 'bg-[#f7fdf9]' },
+}
 
 export default function Dashboard() {
+  const navigate = useNavigate()
   const [filter, setFilter] = useState<FeedFilter>('all')
+
+  const isAfternoon = new Date().getHours() >= 12
+  const STATS = [
+    { label: 'Meals Served Today', value: '1,247', description: 'Verified scans across all halls', tone: 'bg-[#f7fbff]', trend: '↑ (+25%)' },
+    isAfternoon ? SESSION_DATA.Lunch     : SESSION_DATA.Breakfast,
+    isAfternoon ? SESSION_DATA.Dinner    : SESSION_DATA.Lunch,
+    { label: 'Fraud Flags',        value: '3',     description: 'Suspicious activity detected',   tone: 'bg-[#fff7f8]', alert: true },
+  ]
 
   const filtered = useMemo(() => {
     if (filter === 'all') return MOCK_VALIDATIONS
@@ -79,26 +88,33 @@ export default function Dashboard() {
     <div>
       <PageHeader
         title="Overview"
-        actions={<Button><Plus size={14} />Enroll Student</Button>}
       />
 
       <div className="pl-[36px] pr-[20px] pt-[2px]">
-        <div className="grid grid-cols-4 gap-[30px]">
-          {STATS.map((stat) => (
-            <div key={stat.label} className="min-w-0">
-              <div className={clsx('flex h-[25px] items-center justify-between rounded-[7px] px-[5px]', stat.tone)}>
-                <span className="truncate text-[15px] font-normal leading-none text-[#6f6f6f]">{stat.label}</span>
-                {stat.trend && <span className="shrink-0 text-[13px] font-semibold leading-none text-[#5fc98e]">{stat.trend}</span>}
-              </div>
-              <div className="mt-[29px]">
-                <p className="text-[26px] font-semibold leading-none text-[#414141]">{stat.value}</p>
-                <p className={clsx('mt-[12px] truncate text-[15px] font-normal leading-none', stat.alert ? 'text-[#ff3333]' : 'text-[#969696]')}>
-                  {stat.description}
-                </p>
-              </div>
-            </div>
+        <StatCardGroup>
+          {STATS.map((stat: any) => (
+            <StatCard
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              sub={stat.alert
+                ? <span className="font-medium text-[#ff3333]">{stat.description}</span>
+                : stat.description
+              }
+              accent={
+                stat.tone === 'bg-[#f7fbff]' ? 'bg-gradient-to-br from-white to-blue-50/50' :
+                stat.tone === 'bg-[#f7fdf9]' ? 'bg-gradient-to-br from-white to-green-50/50' :
+                stat.tone === 'bg-[#fcf8f5]' ? 'bg-gradient-to-br from-white to-orange-50/50' :
+                'bg-gradient-to-br from-white to-red-50/50'
+              }
+              badge={stat.trend
+                ? <span className="flex items-center gap-[3px] rounded-full bg-[#eefbf4] px-[8px] py-[3px] text-[12px] font-semibold text-[#0f9f5d]">{stat.trend}</span>
+                : undefined
+              }
+              onClick={stat.alert ? () => navigate('/admin/fraud') : undefined}
+            />
           ))}
-        </div>
+        </StatCardGroup>
 
         <section className="mt-[52px]">
           <h2 className="text-[22px] font-bold leading-[24px] text-black">Live Dining Hall Feed Today</h2>
@@ -118,7 +134,7 @@ export default function Dashboard() {
               ))}
             </div>
             <div className="flex h-[31px] w-[217px] items-center gap-[10px] rounded-[8px] border border-[#e5e5e5] bg-[#fcfcfc] px-[12px]">
-              <Search size={15} strokeWidth={2.4} className="shrink-0 text-[#767676]" />
+              <Icon name="search" size={15} className="shrink-0 text-[#767676]" />
               <input placeholder="Search..." className="min-w-0 flex-1 bg-transparent text-[13px] text-[#555] outline-none placeholder:text-[#7e7e7e]" />
             </div>
           </div>
@@ -128,6 +144,7 @@ export default function Dashboard() {
               data={filtered}
               rowKey={(v) => v.id}
               rowActions={rowActions}
+              onRowClick={() => navigate('/admin/students')}
             />
           </div>
         </section>

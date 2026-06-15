@@ -1,39 +1,28 @@
 import { Outlet, NavLink } from 'react-router-dom'
 import { clsx } from 'clsx'
-import {
-  LayoutDashboard,
-  CalendarCheck,
-  Calculator,
-  Coins,
-  BookOpen,
-  ArrowLeftRight,
-  ShieldAlert,
-  Settings,
-  Building2,
-} from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { useAuthStore } from '../../../store/authStore'
 
 const navGroups = [
   {
     section: 'Intelligence',
     items: [
-      { label: 'Overview',           to: '/gov',                  icon: LayoutDashboard, end: true },
-      { label: 'Attendance Review',  to: '/gov/attendance',       icon: CalendarCheck },
-      { label: 'Budget Calculator',  to: '/gov/budget',           icon: Calculator },
+      { label: 'Overview',           to: '/gov',                  icon: 'layout-dashboard', end: true },
+      { label: 'Attendance Review',  to: '/gov/attendance',       icon: 'calendar-check' },
     ],
   },
   {
     section: 'Token Management',
     items: [
-      { label: 'Issue Tokens',       to: '/gov/tokens/issue',     icon: Coins },
-      { label: 'Token Ledger',       to: '/gov/tokens/ledger',    icon: BookOpen },
-      { label: 'Reimbursements',     to: '/gov/reimbursements',   icon: ArrowLeftRight },
+      { label: 'Issue Tokens',       to: '/gov/tokens/issue',     icon: 'coin' },
+      { label: 'Token Ledger',       to: '/gov/tokens/ledger',    icon: 'book' },
+      { label: 'Reimbursements',     to: '/gov/reimbursements',   icon: 'arrows-left-right' },
     ],
   },
   {
     section: 'Oversight',
     items: [
-      { label: 'Fraud Reports',      to: '/gov/fraud',            icon: ShieldAlert },
+      { label: 'Fraud Reports',      to: '/gov/fraud',            icon: 'shield-check' },
     ],
   },
 ]
@@ -50,7 +39,7 @@ export default function GovLayout() {
         {/* Brand */}
         <div className="flex items-start gap-[10px] px-[18px] py-[22px]">
           <div className="mt-[2px] flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[7px] bg-[#3b82f6]">
-            <Building2 size={15} strokeWidth={2.2} className="text-white" />
+            <Icon name="building" size={15} className="text-white" />
           </div>
           <div className="min-w-0">
             <p className="text-[13px] font-semibold leading-[17px] text-white">Ministry of Education</p>
@@ -66,7 +55,7 @@ export default function GovLayout() {
                 {section}
               </p>
               <ul className="space-y-[2px]">
-                {items.map(({ label, to, icon: Icon, end }) => (
+                {items.map(({ label, to, icon, end }) => (
                   <li key={to}>
                     <NavLink
                       to={to}
@@ -83,8 +72,8 @@ export default function GovLayout() {
                       {({ isActive }) => (
                         <>
                           <Icon
+                            name={icon}
                             size={14}
-                            strokeWidth={2.2}
                             className={isActive ? 'text-white' : 'text-[#555]'}
                           />
                           {label}
@@ -101,7 +90,7 @@ export default function GovLayout() {
         {/* Footer */}
         <div className="px-[12px] pb-[20px]">
           <button className="mb-[14px] flex h-[32px] w-full items-center gap-[9px] rounded-[8px] px-[9px] text-[13px] font-medium text-[#666] transition-colors hover:bg-[#1c1c1c] hover:text-[#aaa]">
-            <Settings size={14} strokeWidth={2.2} className="text-[#555]" />
+            <Icon name="settings" size={14} className="text-[#555]" />
             Settings
           </button>
           <button

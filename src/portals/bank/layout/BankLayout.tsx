@@ -1,35 +1,24 @@
 import { Outlet, NavLink } from 'react-router-dom'
 import { clsx } from 'clsx'
-import {
-  LayoutDashboard,
-  Clock,
-  ShieldCheck,
-  Banknote,
-  ScrollText,
-  FileSearch,
-  XCircle,
-  Settings,
-  Landmark,
-  PanelLeft,
-} from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { useAuthStore } from '../../../store/authStore'
 
 const navGroups = [
   {
     section: 'Operations',
     items: [
-      { label: 'Overview',        to: '/bank',                   icon: LayoutDashboard, end: true },
-      { label: 'Pending Tokens',  to: '/bank/pending',           icon: Clock },
-      { label: 'Validate Token',  to: '/bank/validate',          icon: ShieldCheck },
-      { label: 'Cash Release',    to: '/bank/cash-release',      icon: Banknote },
+      { label: 'Overview',        to: '/bank',                   icon: 'layout-dashboard', end: true },
+      { label: 'Pending Tokens',  to: '/bank/pending',           icon: 'clock' },
+      { label: 'Validate Token',  to: '/bank/validate',          icon: 'shield-check' },
+      { label: 'Cash Release',    to: '/bank/cash-release',      icon: 'cash-banknote' },
     ],
   },
   {
     section: 'Records',
     items: [
-      { label: 'Transaction Log', to: '/bank/transactions',      icon: ScrollText },
-      { label: 'Audit Report',    to: '/bank/audit',             icon: FileSearch },
-      { label: 'Rejected Tokens', to: '/bank/rejected',          icon: XCircle },
+      { label: 'Transaction Log', to: '/bank/transactions',      icon: 'file-description' },
+      { label: 'Audit Report',    to: '/bank/audit',             icon: 'file-search' },
+      { label: 'Rejected Tokens', to: '/bank/rejected',          icon: 'circle-x' },
     ],
   },
 ]
@@ -46,7 +35,7 @@ export default function BankLayout() {
         {/* Brand */}
         <div className="flex h-[80px] items-center gap-[10px] px-[21px]">
           <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px] bg-[#fbbf24]">
-            <Landmark size={16} strokeWidth={2.2} className="text-white" />
+            <Icon name="building-bank" size={16} className="text-white" />
           </div>
           <div className="min-w-0">
             <p className="text-[13px] font-bold leading-[16px] text-[#3f3f3f] truncate">Ghana Commercial Bank</p>
@@ -56,7 +45,7 @@ export default function BankLayout() {
             aria-label="Collapse sidebar"
             className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#8d8d8d] transition-colors hover:bg-[#f0f0f0]"
           >
-            <PanelLeft size={16} strokeWidth={2} />
+            <Icon name="layout-sidebar-left-collapse" size={16} />
           </button>
         </div>
 
@@ -66,7 +55,7 @@ export default function BankLayout() {
             <div key={section} className="mb-[29px] last:mb-0">
               <p className="mb-[9px] text-[14px] font-semibold leading-5 text-[#8e8e8e]">{section}</p>
               <ul className="space-y-[4px]">
-                {items.map(({ label, to, icon: Icon, end }) => (
+                {items.map(({ label, to, icon, end }) => (
                   <li key={to}>
                     <NavLink
                       to={to}
@@ -82,7 +71,7 @@ export default function BankLayout() {
                     >
                       {({ isActive }) => (
                         <>
-                          <Icon size={15} strokeWidth={2.2} className={isActive ? 'text-[#4ea4ff]' : 'text-[#9a9a9a]'} />
+                          <Icon name={icon} size={15} className={isActive ? 'text-[#4ea4ff]' : 'text-[#9a9a9a]'} />
                           {label}
                         </>
                       )}
@@ -97,7 +86,7 @@ export default function BankLayout() {
         {/* Footer */}
         <div className="px-[20px] pb-[24px]">
           <button className="mb-[22px] flex h-[29px] w-full items-center gap-[12px] rounded-[8px] px-[9px] text-[15px] text-[#9a9a9a] transition-colors hover:bg-[#f2f2f2]">
-            <Settings size={15} strokeWidth={2.2} className="text-[#9a9a9a]" />
+            <Icon name="settings" size={15} className="text-[#9a9a9a]" />
             Settings
           </button>
           <button

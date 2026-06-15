@@ -1,12 +1,15 @@
 import { useState } from 'react'
-import { ArrowUpRight, Plus, Search } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { DropdownMenu } from '../../../components/ui/DropdownMenu'
 import { clsx } from 'clsx'
 
-import { GOV_CLAIMS, GOV_RECENT_TOKENS } from '../../../lib/mockData'
+import { GOV_CLAIMS, GOV_RECENT_TOKENS, GOV_SCHOOL_PROFILES } from '../../../lib/mockData'
+
+const SCHOOL_ID_MAP = Object.fromEntries(GOV_SCHOOL_PROFILES.map(s => [s.name, s.id]))
 
 const claims = GOV_CLAIMS
 const recentTokens = GOV_RECENT_TOKENS
@@ -52,6 +55,7 @@ function StatCard({
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function GovOverview() {
+  const navigate = useNavigate()
   const [filter, setFilter] = useState<ClaimFilter>('all')
   const [claimSearch, setClaimSearch] = useState('')
 
@@ -67,7 +71,7 @@ export default function GovOverview() {
         title="Overview"
         actions={
           <Button>
-            <Plus size={14} strokeWidth={2.5} />
+            <Icon name="plus" size={14} />
             Enroll Student
           </Button>
         }
@@ -84,7 +88,7 @@ export default function GovOverview() {
             accent="bg-white"
             badge={
               <span className="flex items-center gap-[3px] rounded-full bg-[#eefbf4] px-[8px] py-[3px] text-[12px] font-semibold text-[#0f9f5d]">
-                <ArrowUpRight size={12} strokeWidth={2.5} />
+                <Icon name="arrow-up-right" size={12} />
                 +25%
               </span>
             }
@@ -134,7 +138,7 @@ export default function GovOverview() {
               ))}
             </div>
             <div className="flex h-[34px] w-[200px] items-center gap-[8px] rounded-[10px] border border-[#ededed] bg-[#fcfcfc] px-[12px]">
-              <Search size={14} strokeWidth={2.2} className="shrink-0 text-[#aaa]" />
+              <Icon name="search" size={14} className="shrink-0 text-[#aaa]" />
               <input
                 value={claimSearch}
                 onChange={e => setClaimSearch(e.target.value)}
@@ -160,21 +164,30 @@ export default function GovOverview() {
                   <tr>
                     <td colSpan={5} className="py-[36px] text-center text-[14px] text-[#aaa]">No claims found.</td>
                   </tr>
-                ) : filtered.map(c => (
-                  <tr key={c.id} className="h-[55px] transition-colors hover:bg-[#fbfbfb]">
-                    <td className="px-[16px] text-[14px] font-medium text-[#111]">{c.institution}</td>
-                    <td className="px-[16px] text-[14px] text-[#3f3f3f]">{fmt(c.claimed)}</td>
-                    <td className="px-[16px] text-[14px] text-[#3f3f3f]">{c.approved ? fmt(c.approved) : '—'}</td>
-                    <td className="px-[16px]">{statusBadge[c.status]}</td>
-                    <td className="pr-[16px] text-right">
-                      <DropdownMenu items={[
-                        { label: 'View Details',  onClick: () => {} },
-                        { label: 'Approve',       onClick: () => {}, disabled: c.status === 'approved' },
-                        { label: 'Flag',          onClick: () => {}, destructive: true },
-                      ]} />
-                    </td>
-                  </tr>
-                ))}
+                ) : filtered.map(c => {
+                  const schoolId = SCHOOL_ID_MAP[c.institution]
+                  return (
+                    <tr
+                      key={c.id}
+                      className="h-[55px] cursor-pointer transition-colors hover:bg-[#f7f9ff]"
+                      onClick={() => schoolId && navigate(`/gov/schools/${schoolId}`)}
+                    >
+                      <td className="px-[16px]">
+                        <span className="text-[14px] font-medium text-[#4ea4ff] hover:underline">{c.institution}</span>
+                      </td>
+                      <td className="px-[16px] text-[14px] text-[#3f3f3f]">{fmt(c.claimed)}</td>
+                      <td className="px-[16px] text-[14px] text-[#3f3f3f]">{c.approved ? fmt(c.approved) : '—'}</td>
+                      <td className="px-[16px]">{statusBadge[c.status]}</td>
+                      <td className="pr-[16px] text-right" onClick={e => e.stopPropagation()}>
+                        <DropdownMenu items={[
+                          { label: 'View School',  onClick: () => schoolId && navigate(`/gov/schools/${schoolId}`) },
+                          { label: 'Approve',      onClick: () => {}, disabled: c.status === 'approved' },
+                          { label: 'Flag',         onClick: () => {}, destructive: true },
+                        ]} />
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

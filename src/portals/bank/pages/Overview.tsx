@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowUpRight, Search, ShieldCheck } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
@@ -65,7 +65,7 @@ export default function BankOverview() {
         title="Overview"
         actions={
           <Button onClick={() => navigate('/bank/validate')}>
-            <ShieldCheck size={14} strokeWidth={2.5} />
+            <Icon name="shield-check" size={14} />
             Validate Token
           </Button>
         }
@@ -81,7 +81,7 @@ export default function BankOverview() {
             accent="bg-white"
             badge={
               <span className="flex items-center gap-[3px] rounded-full bg-[#eefbf4] px-[8px] py-[3px] text-[12px] font-semibold text-[#0f9f5d]">
-                <ArrowUpRight size={12} strokeWidth={2.5} />+25%
+                <Icon name="arrow-up-right" size={12} />+25%
               </span>
             }
           />
@@ -124,7 +124,7 @@ export default function BankOverview() {
               ))}
             </div>
             <div className="flex h-[34px] w-[200px] items-center gap-[8px] rounded-[10px] border border-[#ededed] bg-[#fcfcfc] px-[12px]">
-              <Search size={14} strokeWidth={2.2} className="shrink-0 text-[#aaa]" />
+              <Icon name="search" size={14} className="shrink-0 text-[#aaa]" />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="min-w-0 flex-1 bg-transparent text-[13px] text-[#555] outline-none placeholder:text-[#aaa]" />
             </div>
           </div>

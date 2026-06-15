@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Calculator, Info } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Button } from '../../../components/ui/Button'
 import { clsx } from 'clsx'
@@ -18,7 +18,7 @@ function NumInput({
         <label className="text-[13px] font-semibold text-[#333]">{label}</label>
         {hint && (
           <div className="group relative">
-            <Info size={13} strokeWidth={2} className="cursor-pointer text-[#bbb]" />
+            <Icon name="info-circle" size={13} className="cursor-pointer text-[#bbb]" />
             <div className="pointer-events-none absolute -top-[36px] left-1/2 z-10 hidden -translate-x-1/2 rounded-[6px] bg-[#111] px-[8px] py-[5px] text-[11px] text-white group-hover:block whitespace-nowrap">
               {hint}
             </div>
@@ -98,7 +98,7 @@ export default function BudgetCalculator() {
           {/* Inputs */}
           <div className="rounded-[16px] border border-[#f0f0f0] bg-white p-[24px]">
             <div className="flex items-center gap-[8px] mb-[20px]">
-              <Calculator size={16} strokeWidth={2.2} className="text-[#4ea4ff]" />
+              <Icon name="calculator" size={16} className="text-[#4ea4ff]" />
               <h2 className="text-[15px] font-bold text-[#111]">Parameters</h2>
             </div>
             <div className="space-y-[16px]">

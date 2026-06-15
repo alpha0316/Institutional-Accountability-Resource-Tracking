@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
@@ -44,7 +44,7 @@ export default function DeliveryLogger() {
 
   return (
     <>
-      <PageHeader title="Delivery Logger" actions={<Button onClick={() => setOpen(true)}><Plus size={14} strokeWidth={2.5} />Log Delivery</Button>} />
+      <PageHeader title="Delivery Logger" actions={<Button onClick={() => setOpen(true)}><Icon name="plus" size={14} />Log Delivery</Button>} />
       <div className="px-[36px] pb-[40px]">
         <div className="mb-[28px] grid grid-cols-3 gap-[1px] overflow-hidden rounded-[14px] border border-[#f0f0f0] bg-[#f0f0f0]">
           {[

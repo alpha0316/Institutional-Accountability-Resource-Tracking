@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react'
-import { Search } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { clsx } from 'clsx'
 import { Badge } from '../../../components/ui/Badge'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { type DropdownMenuItem } from '../../../components/ui/DropdownMenu'
+import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import {
   MOCK_FRAUD_ALERTS,
-  SEVERITY_MAP,
   type MockFraudAlert,
 } from '../../../lib/mockData'
 
@@ -48,27 +48,17 @@ export default function FraudAlerts() {
     {
       key: 'alertId',
       label: 'Alert ID',
-      width: '13%',
+      width: '16%',
       primaryKey: true,
       render: (a) => <span className="text-[15px] font-normal leading-none text-[#4ea4ff]">{a.alertId}</span>,
     },
-    { key: 'category',     label: 'Category',    width: '13%', render: (a) => a.category },
-    { key: 'title',        label: 'Title',       width: '28%', render: (a) => <span className="block truncate">{a.title}</span> },
-    { key: 'detectedAt',   label: 'Detected',    width: '14%', render: (a) => a.detectedAt },
-    { key: 'potentialExposure', label: 'Exposure', width: '12%', render: (a) => a.potentialExposure },
-    {
-      key: 'severity',
-      label: 'Severity',
-      width: '11%',
-      render: (a) => {
-        const m = SEVERITY_MAP[a.severity]
-        return <Badge variant={m.variant}>{m.label}</Badge>
-      },
-    },
+    { key: 'category',   label: 'Category', width: '16%', render: (a) => a.category },
+    { key: 'title',      label: 'Title',    width: '36%', render: (a) => <span className="block truncate">{a.title}</span> },
+    { key: 'detectedAt', label: 'Detected', width: '20%', render: (a) => a.detectedAt },
     {
       key: 'status',
       label: 'Status',
-      width: '9%',
+      width: '12%',
       render: (a) => (
         <Badge variant={a.status === 'open' ? 'red' : a.status === 'investigating' ? 'orange' : 'green'}>
           {a.status === 'open' ? 'Open' : a.status === 'investigating' ? 'Investigating' : 'Resolved'}
@@ -82,22 +72,29 @@ export default function FraudAlerts() {
       <PageHeader title="Fraud Alerts" />
 
       <div className="pl-[36px] pr-[20px] pt-[2px]">
-        <div className="grid grid-cols-4 gap-[30px]">
+        <StatCardGroup>
           {STATS.map((stat) => (
-            <div key={stat.label} className="min-w-0">
-              <div className={clsx('flex h-[25px] items-center justify-between rounded-[7px] px-[5px]', stat.tone)}>
-                <span className="truncate text-[15px] font-normal leading-none text-[#6f6f6f]">{stat.label}</span>
-                {stat.trend && <span className="shrink-0 text-[13px] font-semibold leading-none text-[#5fc98e]">{stat.trend}</span>}
-              </div>
-              <div className="mt-[29px]">
-                <p className="text-[26px] font-semibold leading-none text-[#414141]">{stat.value}</p>
-                <p className={clsx('mt-[12px] truncate text-[15px] font-normal leading-none', stat.alert ? 'text-[#ff3333]' : 'text-[#969696]')}>
-                  {stat.description}
-                </p>
-              </div>
-            </div>
+            <StatCard
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              sub={stat.alert
+                ? <span className="font-medium text-[#ff3333]">{stat.description}</span>
+                : stat.description
+              }
+              accent={
+                stat.tone === 'bg-[#f7fbff]' ? 'bg-gradient-to-br from-white to-blue-50/50' :
+                stat.tone === 'bg-[#f7fdf9]' ? 'bg-gradient-to-br from-white to-green-50/50' :
+                stat.tone === 'bg-[#fcf8f5]' ? 'bg-gradient-to-br from-white to-orange-50/50' :
+                'bg-gradient-to-br from-white to-red-50/50'
+              }
+              badge={stat.trend
+                ? <span className="flex items-center gap-[3px] rounded-full bg-[#eefbf4] px-[8px] py-[3px] text-[12px] font-semibold text-[#0f9f5d]">{stat.trend}</span>
+                : undefined
+              }
+            />
           ))}
-        </div>
+        </StatCardGroup>
 
         <section className="mt-[52px]">
           <h2 className="text-[22px] font-bold leading-[24px] text-black">Active Fraud Alerts</h2>
@@ -139,7 +136,7 @@ export default function FraudAlerts() {
               </div>
             </div>
             <div className="flex h-[31px] w-[217px] items-center gap-[10px] rounded-[8px] border border-[#e5e5e5] bg-[#fcfcfc] px-[12px]">
-              <Search size={15} strokeWidth={2.4} className="shrink-0 text-[#767676]" />
+              <Icon name="search" size={15} className="shrink-0 text-[#767676]" />
               <input placeholder="Search..." className="min-w-0 flex-1 bg-transparent text-[13px] text-[#555] outline-none placeholder:text-[#7e7e7e]" />
             </div>
           </div>

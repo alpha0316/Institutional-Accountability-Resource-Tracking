@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef } from 'react'
-import { QRCodeSVG } from 'qrcode.react'
-import { Plus, Search, User, Utensils, CreditCard, ClipboardCheck, History, ArrowLeft, ArrowRight, Check, Download } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { clsx } from 'clsx'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
@@ -9,13 +8,31 @@ import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { type DropdownMenuItem } from '../../../components/ui/DropdownMenu'
 import {
   MOCK_STUDENTS,
+  MOCK_CARDS,
   STUDENT_FILTERS,
   ACADEMIC_FILTERS,
   STUDENT_STATUS_MAP,
   CARD_STATUS_MAP,
   ENROLLMENT_STEPS,
   type MockStudent,
+  type House,
 } from '../../../lib/mockData'
+
+const HOUSES: House[] = ['St Augustine House', 'St Theresa House', 'St Francis House', 'St Monica House']
+
+function randomHouse(): House {
+  return HOUSES[Math.floor(Math.random() * HOUSES.length)]
+}
+
+function randomClass(): string {
+  const forms = ['1', '2', '3']
+  const subjects = ['Science', 'Arts', 'Business', 'Home Ec', 'Agric']
+  const sections = ['A', 'B', 'C']
+  const form = forms[Math.floor(Math.random() * forms.length)]
+  const subject = subjects[Math.floor(Math.random() * subjects.length)]
+  const section = sections[Math.floor(Math.random() * 2)]
+  return `${form} ${subject} ${section}`
+}
 
 type StudentFilterKey = 'all' | 'active' | 'pending' | 'suspended' | 'inactive'
 type AcademicFilterKey = 'all' | 'Form 1' | 'Form 2' | 'Form 3'
@@ -23,11 +40,11 @@ type SidebarView = 'detail' | 'enroll' | null
 type DetailTab = 'profile' | 'dining' | 'card' | 'attendance' | 'logs'
 
 const DETAIL_TABS: { label: string; value: DetailTab; icon: React.ReactNode }[] = [
-  { label: 'Profile',     value: 'profile',    icon: <User size={14} /> },
-  { label: 'Dining',      value: 'dining',      icon: <Utensils size={14} /> },
-  { label: 'Card Info',   value: 'card',        icon: <CreditCard size={14} /> },
-  { label: 'Attendance',  value: 'attendance',  icon: <ClipboardCheck size={14} /> },
-  { label: 'Audit Logs',  value: 'logs',        icon: <History size={14} /> },
+  { label: 'Profile',     value: 'profile',    icon: <Icon name="user" size={14} /> },
+  { label: 'Dining',      value: 'dining',      icon: <Icon name="tools-kitchen-2" size={14} /> },
+  { label: 'Card Info',   value: 'card',        icon: <Icon name="credit-card" size={14} /> },
+  { label: 'Attendance',  value: 'attendance',  icon: <Icon name="clipboard-check" size={14} /> },
+  { label: 'Audit Logs',  value: 'logs',        icon: <Icon name="history" size={14} /> },
 ]
 
 function SidebarDetailRow({ label, value }: { label: string; value: string }) {
@@ -55,6 +72,8 @@ export default function StudentRegistry() {
   const [detailTab, setDetailTab] = useState<DetailTab>('profile')
   const [enrollStep, setEnrollStep] = useState(1)
   const [lookupResult, setLookupResult] = useState<{ found: boolean; name?: string; bece?: string; programme?: string; school?: string } | null>(null)
+  const [enrollHouse, setEnrollHouse] = useState<House>(() => randomHouse())
+  const [enrollClass, setEnrollClass] = useState(() => randomClass())
   const qrContainerRef = useRef<HTMLDivElement>(null)
 
   const filtered = useMemo(() => {
@@ -82,6 +101,8 @@ export default function StudentRegistry() {
   function openEnroll() {
     setEnrollStep(1)
     setLookupResult(null)
+    setEnrollHouse(randomHouse())
+    setEnrollClass(randomClass())
     setSidebarView('enroll')
   }
 
@@ -251,13 +272,8 @@ export default function StudentRegistry() {
     {
       key: 'form',
       label: 'Year / Level',
-      width: '17%',
-      render: (s) => (
-        <div>
-          <p className="text-[15px] font-normal leading-[18px]">{s.form} &middot; {s.programme}</p>
-          <p className="mt-[2px] text-[12px] leading-none text-[#9a9a9a]">{s.house}</p>
-        </div>
-      ),
+      width: '13%',
+      render: (s) => s.form,
     },
     {
       key: 'cardStatus',
@@ -280,7 +296,7 @@ export default function StudentRegistry() {
     {
       key: 'fraudFlags',
       label: 'Flags',
-      width: '8%',
+      width: '6%',
       align: 'center',
       render: (s) => (
         <span className={s.fraudFlags > 0 ? 'text-[#ff3333] font-semibold' : ''}>
@@ -294,7 +310,7 @@ export default function StudentRegistry() {
     <div>
       <PageHeader
         title="Students"
-        actions={<Button onClick={openEnroll}><Plus size={14} />Enroll Student</Button>}
+        actions={<Button onClick={openEnroll}><Icon name="plus" size={14} />Enroll Student</Button>}
       />
 
       <div className="pl-[36px] pr-[20px] pt-[2px]">
@@ -359,7 +375,7 @@ export default function StudentRegistry() {
             </div>
 
             <div className="flex h-[31px] w-[217px] items-center gap-[10px] rounded-[8px] border border-[#e5e5e5] bg-[#fcfcfc] px-[12px]">
-              <Search size={15} strokeWidth={2.4} className="shrink-0 text-[#767676]" />
+              <Icon name="search" size={15} className="shrink-0 text-[#767676]" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -413,7 +429,7 @@ export default function StudentRegistry() {
                         'flex h-[22px] w-[22px] items-center justify-center rounded-full text-[11px] font-semibold',
                         enrollStep >= step.step ? 'bg-[#4ea4ff] text-white' : 'bg-[#efefef] text-[#999]'
                       )}>
-                        {enrollStep > step.step ? <Check size={12} /> : step.step}
+                        {enrollStep > step.step ? <Icon name="check" size={12} /> : step.step}
                       </div>
                       {step.step < 4 && <div className={clsx('h-[1px] w-[20px]', enrollStep > step.step ? 'bg-[#4ea4ff]' : 'bg-[#e5e5e5]')} />}
                     </div>
@@ -440,7 +456,7 @@ export default function StudentRegistry() {
                     </div>
 
                     <Button
-                      className="w-full mt-[8px]"
+                      className="w-fit mt-[8px]"
                       onClick={() => setLookupResult({
                         found: true,
                         name: 'Abena Mensah',
@@ -485,12 +501,23 @@ export default function StudentRegistry() {
                     </div>
                     <div>
                       <label className="text-[13px] font-medium text-[#555]">Class</label>
-                      <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="e.g. 1 Science A" />
+                      <input
+                        value={enrollClass}
+                        onChange={(e) => setEnrollClass(e.target.value)}
+                        className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]"
+                      />
                     </div>
                     <div>
                       <label className="text-[13px] font-medium text-[#555]">House</label>
-                      <select className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white">
-                        <option>Select...</option><option>St Augustine House</option><option>St Theresa House</option><option>St Francis House</option><option>St Monica House</option>
+                      <select
+                        value={enrollHouse}
+                        onChange={(e) => setEnrollHouse(e.target.value as House)}
+                        className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white"
+                      >
+                        <option>St Augustine House</option>
+                        <option>St Theresa House</option>
+                        <option>St Francis House</option>
+                        <option>St Monica House</option>
                       </select>
                     </div>
                   </div>
@@ -504,34 +531,68 @@ export default function StudentRegistry() {
                       <p className="text-[12px] text-[#3b82f6]">A unique validation card has been generated for this student</p>
                     </div>
 
-                    <div className="rounded-[14px] border border-[#e5e5e5] bg-white p-[20px]">
-                      <div className="flex items-center gap-[16px] mb-[16px]">
-                        <div ref={qrContainerRef} className="flex h-[80px] w-[80px] shrink-0 items-center justify-center rounded-[10px] border border-[#e5e5e5] bg-white p-[6px]">
-                          <QRCodeSVG
-                            value="SAC-2026-01490"
-                            size={68}
-                            bgColor="#ffffff"
-                            fgColor="#111111"
-                            level="M"
-                          />
+                    {/* Card Preview — matches export PDF design */}
+                    <div className="rounded-[14px] border border-[#e5e5e5] bg-[#dbd8d2] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.12)]">
+                      <div className="bg-[#1a3a6e] px-[16px] py-[12px] flex items-center justify-between">
+                        <div className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-white/15 text-white text-[11px] font-bold">SA</div>
+                        <span className="text-[13px] font-bold text-white tracking-[2px] uppercase">Student Identity Card</span>
+                        <div className="w-[30px]" />
+                      </div>
+                      <div className="h-[3px] bg-[#1a3a6e] opacity-25" />
+                      <div className="flex items-stretch p-[16px] gap-[14px] relative overflow-hidden">
+                        <div className="flex-shrink-0 w-[100px] flex flex-col items-start gap-[8px]">
+                          <div className="w-[100px] h-[125px] bg-[#b8b4ae] border-[2px] border-[#1a3a6e] rounded-[4px] flex items-center justify-center">
+                            <span className="text-[36px] font-bold text-[#1a3a6e] opacity-35">AM</span>
+                          </div>
+                          <span className="text-[9px] font-bold text-[#1a3a6e] uppercase tracking-[1px] opacity-60">Student Photo</span>
+                          <span className="text-[10px] font-bold text-[#1a3a6e]">ID: SAC-2026-01490</span>
                         </div>
-                        <div>
-                          <p className="text-[15px] font-semibold text-[#111]">CARD-0004833</p>
-                          <p className="text-[13px] text-[#888] mt-[2px]">Abena Mensah</p>
-                          <p className="text-[12px] text-[#aaa] mt-[2px]">SAC-2026-01490</p>
+                        <div className="flex-1 flex flex-col gap-0 pt-[2px]">
+                          <span className="text-[9px] font-semibold text-[#1a3a6e] uppercase tracking-[1px] opacity-60 mb-[10px]">St. Augustine College &middot; Ghana</span>
+                          <div className="mb-[8px]">
+                            <span className="text-[10px] font-bold text-[#1a3a6e] uppercase tracking-[1px]">Name</span>
+                            <p className="text-[13px] font-semibold text-[#111]">{lookupResult?.name ?? 'Abena Mensah'}</p>
+                          </div>
+                          <div className="mb-[8px]">
+                            <span className="text-[10px] font-bold text-[#1a3a6e] uppercase tracking-[1px]">Programme</span>
+                            <p className="text-[11px] font-medium text-[#333]">{lookupResult?.programme ?? 'General Science'}</p>
+                          </div>
+                          <div className="mb-[8px]">
+                            <span className="text-[10px] font-bold text-[#1a3a6e] uppercase tracking-[1px]">Form &amp; Class</span>
+                            <p className="text-[11px] font-medium text-[#333]">Form 1 &mdash; {enrollClass}</p>
+                          </div>
+                          <div className="mb-[8px]">
+                            <span className="text-[10px] font-bold text-[#1a3a6e] uppercase tracking-[1px]">House</span>
+                            <p className="text-[11px] font-medium text-[#333]">{enrollHouse}</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold text-[#1a3a6e] uppercase tracking-[1px]">Academic Year</span>
+                            <p className="text-[11px] font-medium text-[#333]">2025 / 2026</p>
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0 w-[90px] flex flex-col items-center justify-center gap-[6px] border-l-[1px] border-[#1a3a6e]/15 pl-[12px]">
+                          <div className="flex h-[70px] w-[70px] items-center justify-center rounded-[6px] border-[2px] border-[#1a3a6e] bg-white">
+                            <Icon name="qrcode" size={40} className="text-[#1a3a6e]" />
+                          </div>
+                          <span className="text-[9px] font-bold text-[#1a3a6e] uppercase tracking-[1px] text-center">Scan to Validate</span>
+                          <span className="text-[9px] text-[#555]">CARD-0004833</span>
+                        </div>
+                        <div className="absolute right-0 top-0 bottom-0 w-[14px] flex flex-col">
+                          {[...Array(12)].map((_, i) => (
+                            <span key={i} className="flex-1 bg-[#1a3a6e]" style={{ opacity: i % 2 === 0 ? 1 : 0.35, flex: i % 3 === 2 ? 1.8 : 1 }} />
+                          ))}
                         </div>
                       </div>
-                      <div className="rounded-[8px] border border-[#f0f0f0] bg-[#fafafa] p-[12px]">
-                        <div className="flex items-center justify-between text-[12px]">
-                          <span className="text-[#888]">Unique QR generated</span>
-                          <span className="font-medium text-[#10b981]">Active</span>
-                        </div>
-                        <p className="mt-[6px] text-[11px] text-[#aaa]">This QR code is unique to the student and will be used for meal validation scanning at dining halls.</p>
+                      <div className="bg-[#1a3a6e] px-[14px] py-[8px] flex justify-between items-center">
+                        <span className="text-[10px] text-white/65">Issued {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} &middot; Ministry of Education, Ghana</span>
+                        <span className="flex items-center gap-[4px] text-[10px] font-bold text-[#4ade80]">
+                          <span className="w-[5px] h-[5px] rounded-full bg-[#4ade80]" /> Active
+                        </span>
                       </div>
-                      <Button className="w-full mt-[14px]" variant="secondary" onClick={handleDownloadPDF}>
-                        <Download size={14} /> Export Physical Card
-                      </Button>
                     </div>
+                    <Button className="w-full mt-[14px]" variant="secondary" onClick={handleDownloadPDF}>
+                      <Icon name="download" size={14} /> Export Physical Card
+                    </Button>
                   </div>
                 )}
 
@@ -548,7 +609,7 @@ export default function StudentRegistry() {
                           { label: 'QR code assigned',           done: true },
                         ].map((item) => (
                           <div key={item.label} className="flex items-center gap-[8px]">
-                            <Check size={14} className="text-[#10b981]" />
+                            <Icon name="check" size={14} className="text-[#10b981]" />
                             <span className="text-[13px] text-[#065f46]">{item.label}</span>
                           </div>
                         ))}
@@ -564,7 +625,7 @@ export default function StudentRegistry() {
                         <li>&bull; Add to dining registry</li>
                       </ul>
                     </div>
-                    <Button className="w-full">Activate Student</Button>
+                    <Button className="w-full" onClick={closeSidebar}>Activate Student</Button>
                   </div>
                 )}
 
@@ -577,7 +638,7 @@ export default function StudentRegistry() {
                       enrollStep === 1 ? 'invisible' : 'text-[#888] hover:text-[#555]'
                     )}
                   >
-                    <ArrowLeft size={14} /> Back
+                    <Icon name="arrow-left" size={14} /> Back
                   </button>
                   <button
                     onClick={() => setEnrollStep(Math.min(4, enrollStep + 1))}
@@ -591,7 +652,7 @@ export default function StudentRegistry() {
                           : 'bg-[#4ea4ff] text-white hover:bg-[#3d93e8]'
                     )}
                   >
-                    {enrollStep === 3 ? 'Review & Activate' : 'Continue'} <ArrowRight size={14} />
+                    {enrollStep === 3 ? 'Review & Activate' : 'Continue'} <Icon name="arrow-right" size={14} />
                   </button>
                 </div>
               </div>
@@ -639,6 +700,19 @@ export default function StudentRegistry() {
                         <SidebarDetailRow label="House"         value={selectedStudent.house} />
                         <SidebarDetailRow label="Academic Year" value={selectedStudent.academicYear} />
                       </div>
+                      {(() => {
+                        const card = MOCK_CARDS.find(c => c.studentId === selectedStudent.studentId)
+                        if (!card) return null
+                        return (
+                          <div className="mt-[16px] rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
+                            <SidebarDetailRow label="Card ID"           value={card.cardUid !== '—' ? card.cardUid : '—'} />
+                            <SidebarDetailRow label="Card Status"       value={CARD_STATUS_MAP[card.status]?.label ?? card.status} />
+                            <SidebarDetailRow label="Issue Date"        value={card.issueDate !== '—' ? card.issueDate : '—'} />
+                            <SidebarDetailRow label="Last Scan"         value={card.lastUsed ?? '—'} />
+                            <SidebarDetailRow label="Validations Today" value={String(card.validationsToday)} />
+                          </div>
+                        )
+                      })()}
                     </>
                   )}
 
