@@ -9,7 +9,7 @@ interface StatCardProps {
   onClick?: () => void
 }
 
-export function StatCard({ label, value, sub, accent, badge, onClick }: StatCardProps) {
+export function StatCard({ label, value, sub, accent, onClick }: StatCardProps) {
   const Tag = onClick ? 'button' : 'div'
   return (
     <Tag
