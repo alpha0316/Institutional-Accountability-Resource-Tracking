@@ -21,8 +21,12 @@ export function Icon({ name, size = 16, className, stroke, color, filled }: Icon
       style={{
         fontSize: `${size}px`,
         lineHeight: 1,
-        display: 'inline-block',
-        verticalAlign: 'middle',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: `${size}px`,
+        height: `${size}px`,
+        flexShrink: 0,
         ...(color ? { color } : {}),
         ...(stroke ? { '--ti-stroke-width': `${stroke}px` } as React.CSSProperties : {}),
       }}

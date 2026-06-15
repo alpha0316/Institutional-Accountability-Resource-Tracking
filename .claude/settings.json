@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(curl -s \"https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.34.0/tabler-icons.min.css\")",
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.34.0/tabler-icons.min.css\")",
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.34.0/tabler-icons.min.css\" -o /tmp/tabler.css)",
+      "Read(//tmp/**)",
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.34.0/\" -o /tmp/tabler_index.txt)",
+      "Bash(curl -sL \"https://registry.npmjs.org/@tabler/icons-webfont/3.34.0\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\('dist',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(curl -sL \"https://data.jsdelivr.com/v1/packages/npm/@tabler/icons-webfont@3.34.0/flat\")",
+      "Bash(python3 -c \"import sys,json; files=json.load\\(sys.stdin\\); [print\\(f['name']\\) for f in files if 'css' in f['name'].lower\\(\\)]\")",
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.34.0/dist/tabler-icons.min.css\" -o /tmp/tabler3.css)"
     ]
   }
 }

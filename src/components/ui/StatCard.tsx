@@ -21,12 +21,12 @@ export function StatCard({ label, value, sub, accent, badge, onClick }: StatCard
       {...(onClick ? { onClick } : {})}
     >
       <p className="text-[13px] font-medium text-[#888]">{label}</p>
-      <div className="mt-[10px] flex items-end justify-between gap-2">
-        <p className="text-[28px] font-bold leading-none tracking-tight text-[#111]">{value}</p>
-        {badge}
+      <div className="mt-[24px] flex items-end justify-between gap-4">
+        <p className="text-[24px] font-bold leading-none tracking-tight text-[#111]">{value}</p>
+        {/* {badge} */}
       </div>
       {sub !== undefined && (
-        <div className="mt-[8px] text-[13px] text-[#888]">{sub}</div>
+        <div className="mt-[4px] text-[13px] text-[#888]">{sub}</div>
       )}
     </Tag>
   )

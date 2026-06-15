@@ -10,7 +10,6 @@ import {
   MOCK_STUDENTS,
   MOCK_CARDS,
   STUDENT_FILTERS,
-  ACADEMIC_FILTERS,
   STUDENT_STATUS_MAP,
   CARD_STATUS_MAP,
   ENROLLMENT_STEPS,
@@ -35,7 +34,6 @@ function randomClass(): string {
 }
 
 type StudentFilterKey = 'all' | 'active' | 'pending' | 'suspended' | 'inactive'
-type AcademicFilterKey = 'all' | 'Form 1' | 'Form 2' | 'Form 3'
 type SidebarView = 'detail' | 'enroll' | null
 type DetailTab = 'profile' | 'dining' | 'card' | 'attendance' | 'logs'
 
@@ -65,7 +63,7 @@ const STATS = [
 
 export default function StudentRegistry() {
   const [statusFilter, setStatusFilter] = useState<StudentFilterKey>('all')
-  const [academicFilter, setAcademicFilter] = useState<AcademicFilterKey>('all')
+
   const [search, setSearch] = useState('')
   const [sidebarView, setSidebarView] = useState<SidebarView>(null)
   const [selectedStudent, setSelectedStudent] = useState<MockStudent | null>(null)
@@ -79,7 +77,6 @@ export default function StudentRegistry() {
   const filtered = useMemo(() => {
     let rows = MOCK_STUDENTS
     if (statusFilter !== 'all') rows = rows.filter(s => s.studentStatus === statusFilter)
-    if (academicFilter !== 'all') rows = rows.filter(s => s.form === academicFilter)
     if (search.trim()) {
       const q = search.toLowerCase()
       rows = rows.filter(s =>
@@ -90,7 +87,7 @@ export default function StudentRegistry() {
       )
     }
     return rows
-  }, [statusFilter, academicFilter, search])
+  }, [statusFilter, search])
 
   function openDetail(student: MockStudent) {
     setSelectedStudent(student)
@@ -259,26 +256,26 @@ export default function StudentRegistry() {
     {
       key: 'studentId',
       label: 'Student ID',
-      width: '15%',
+      width: '16%',
       primaryKey: true,
       render: (s) => <span className="text-[15px] font-normal leading-none text-[#4ea4ff]">{s.studentId}</span>,
     },
     {
       key: 'fullName',
       label: 'Student Name',
-      width: '17%',
+      width: '20%',
       render: (s) => s.fullName,
     },
     {
       key: 'form',
       label: 'Year / Level',
-      width: '13%',
+      width: '15%',
       render: (s) => s.form,
     },
     {
       key: 'cardStatus',
       label: 'Card',
-      width: '12%',
+      width: '14%',
       render: (s) => {
         const m = CARD_STATUS_MAP[s.cardStatus]
         return <Badge variant={m.variant}>{m.label}</Badge>
@@ -287,7 +284,7 @@ export default function StudentRegistry() {
     {
       key: 'studentStatus',
       label: 'Status',
-      width: '12%',
+      width: '14%',
       render: (s) => {
         const m = STUDENT_STATUS_MAP[s.studentStatus]
         return <Badge variant={m.variant}>{m.label}</Badge>
@@ -296,7 +293,7 @@ export default function StudentRegistry() {
     {
       key: 'fraudFlags',
       label: 'Flags',
-      width: '6%',
+      width: '15%',
       align: 'center',
       render: (s) => (
         <span className={s.fraudFlags > 0 ? 'text-[#ff3333] font-semibold' : ''}>
@@ -347,23 +344,6 @@ export default function StudentRegistry() {
                     className={clsx(
                       'flex h-[22px] items-center rounded-[4px] px-[9px] text-[12px] font-medium leading-none transition-colors',
                       statusFilter === f.key
-                        ? 'border border-[#e7edf5] bg-white text-[#4ea4ff] shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
-                        : 'text-[#7e7e7e] hover:text-[#555]'
-                    )}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-              {/* Academic filters */}
-              <div className="flex h-[25px] items-center rounded-[5px] border border-[#f0f0f0] bg-[#fbfbfb] p-[1px]">
-                {ACADEMIC_FILTERS.map((f) => (
-                  <button
-                    key={f.key}
-                    onClick={() => setAcademicFilter(f.key as AcademicFilterKey)}
-                    className={clsx(
-                      'flex h-[22px] items-center rounded-[4px] px-[9px] text-[12px] font-medium leading-none transition-colors',
-                      academicFilter === f.key
                         ? 'border border-[#e7edf5] bg-white text-[#4ea4ff] shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
                         : 'text-[#7e7e7e] hover:text-[#555]'
                     )}

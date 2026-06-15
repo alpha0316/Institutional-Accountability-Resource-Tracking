@@ -8,18 +8,18 @@ const navGroups = [
   {
     section: 'General',
     items: [
-      { label: 'Overview',        to: '/admin',          icon: 'home',              end: true },
-      { label: 'Students',        to: '/admin/students', icon: 'file-check' },
+      { label: 'Overview',        to: '/admin',          icon: 'layout-grid',  end: true },
+      { label: 'Students',        to: '/admin/students', icon: 'user' },
       { label: 'Card Management', to: '/admin/cards',    icon: 'briefcase' },
     ],
   },
   {
     section: 'Operations',
     items: [
-      { label: 'Dining Hall Feed', to: '/admin/feed',    icon: 'clipboard-check' },
+      { label: 'Dining Hall Feed', to: '/admin/feed',    icon: 'clipboard' },
       { label: 'Supply Logger',    to: '/admin/supply',  icon: 'archive' },
       { label: 'Fraud Alerts',     to: '/admin/fraud',   icon: 'shield-check' },
-      { label: 'Daily Report',     to: '/admin/reports', icon: 'file-text' },
+      { label: 'Daily Report',     to: '/admin/reports', icon: 'file' },
     ],
   },
 ]
@@ -81,7 +81,7 @@ export function Sidebar() {
                       <>
                         <Icon
                           name={icon}
-                          size={18}
+                          size={isActive ? 15 : 17}
                           filled={isActive}
                           className={isActive ? 'text-[#000000]' : 'text-[#9a9a9a]'}
                         />

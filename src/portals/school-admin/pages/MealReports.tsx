@@ -193,10 +193,8 @@ export default function MealReports() {
       const rl = riskLevel(r.riskScore)
       return <span className={clsx('text-[13px] font-semibold', rl.color)}>{r.riskScore}</span>
     }},
-    { key: 'alerts',   label: 'Alerts',      width: '9%',  render: (r) => <span className={r.fraudAlerts > 0 ? 'text-[#ff3333] font-semibold' : ''}>{r.fraudAlerts}</span> },
-    { key: 'net',      label: 'Net Eligible',width: '14%', render: (r) => r.netEligible },
-    { key: 'status',   label: 'Status',      width: '16%', render: (r) => { const m = REPORT_STATUS_MAP[r.status]; return <Badge variant={m.variant}>{m.label}</Badge> } },
-    { key: 'updated',  label: 'Updated',     width: '14%', render: (r) => r.updatedAt },
+    { key: 'net',      label: 'Net Eligible',width: '18%', render: (r) => r.netEligible },
+    { key: 'status',   label: 'Status',      width: '20%', render: (r) => { const m = REPORT_STATUS_MAP[r.status]; return <Badge variant={m.variant}>{m.label}</Badge> } },
   ]
 
   const kanbanGroups = useMemo(() => {
