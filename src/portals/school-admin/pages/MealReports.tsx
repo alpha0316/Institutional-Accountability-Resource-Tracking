@@ -154,12 +154,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 // ── Kanban card styles by stage ───────────────────────────────────────────────
-const STAGE_BORDER: Record<string, string> = {
-  generated:          '3px solid #fb923c',
-  operational_review: '3px solid #3b82f6',
-  compliance_review:  '3px solid #ef4444',
-  claim_eligible:     '3px solid #22c55e',
-}
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function MealReports() {
