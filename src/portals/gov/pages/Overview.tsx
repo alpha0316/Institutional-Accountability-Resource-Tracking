@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
-import { Button } from '../../../components/ui/Button'
-import { DropdownMenu } from '../../../components/ui/DropdownMenu'
+import { DataTable, type Column } from '../../../components/ui/DataTable'
+import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import { clsx } from 'clsx'
 
 import { GOV_CLAIMS, GOV_RECENT_TOKENS, GOV_SCHOOL_PROFILES } from '../../../lib/mockData'
@@ -29,29 +29,6 @@ function fmt(n: number) {
   return `GH₵${n.toLocaleString()}`
 }
 
-// ─── Stat card ────────────────────────────────────────────────────────────────
-
-function StatCard({
-  label, value, sub, accent, badge,
-}: {
-  label: string
-  value: string | number
-  sub: React.ReactNode
-  accent?: string
-  badge?: React.ReactNode
-}) {
-  return (
-    <div className={clsx('relative flex-1 overflow-hidden rounded-[16px] border border-[#f0f0f0] bg-white px-[24px] py-[20px]', accent)}>
-      <p className="text-[13px] font-medium text-[#888]">{label}</p>
-      <div className="mt-[10px] flex items-end justify-between gap-2">
-        <p className="text-[28px] font-bold leading-none tracking-tight text-[#111]">{value}</p>
-        {badge}
-      </div>
-      <div className="mt-[8px] text-[13px] text-[#888]">{sub}</div>
-    </div>
-  )
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function GovOverview() {
@@ -65,22 +42,45 @@ export default function GovOverview() {
     return matchFilter && matchSearch
   })
 
+  const claimColumns: Column<(typeof claims)[number]>[] = [
+    {
+      key: 'institution',
+      label: 'Institution',
+      width: '28%',
+      primaryKey: true,
+      render: (c) => c.institution,
+    },
+    { key: 'claimed',  label: 'Claimed Amount',  width: '22%', render: (c) => fmt(c.claimed) },
+    { key: 'approved', label: 'Approved Amount', width: '22%', render: (c) => c.approved ? fmt(c.approved) : '—' },
+    { key: 'status',   label: 'Status',          width: '18%', render: (c) => statusBadge[c.status] },
+  ]
+
+  const tokenColumns: Column<(typeof recentTokens)[number]>[] = [
+    { key: 'id',       label: 'Token ID', width: '28%', primaryKey: true, render: (t) => t.id },
+    { key: 'amount',   label: 'Amount',   width: '18%', render: (t) => fmt(t.amount) },
+    {
+      key: 'supplier',
+      label: 'Supplier',
+      width: '32%',
+      render: (t) => (
+        <span>
+          {t.supplier} <span className="text-[#bbb]">·</span> {t.institution}
+        </span>
+      ),
+    },
+    { key: 'status', label: 'Status', width: '12%', render: (t) => statusBadge[t.status] },
+  ]
+
   return (
     <>
       <PageHeader
         title="Overview"
-        actions={
-          <Button>
-            <Icon name="plus" size={14} />
-            Enroll Student
-          </Button>
-        }
       />
 
       <div className="px-[36px] pb-[40px]">
 
         {/* Stat cards */}
-        <div className="flex gap-[1px] overflow-hidden rounded-[16px] border border-[#f0f0f0] bg-[#f0f0f0]">
+        <StatCardGroup>
           <StatCard
             label="Institutions Connected"
             value="47"
@@ -111,7 +111,7 @@ export default function GovOverview() {
             sub={<span className="text-[#df6b13] font-medium">Claims awaiting approval</span>}
             accent="bg-gradient-to-br from-white to-red-50/60"
           />
-        </div>
+        </StatCardGroup>
 
         {/* Institutional Claims */}
         <div className="mt-[36px]">
@@ -148,85 +148,38 @@ export default function GovOverview() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-[16px] border-[0.5px] border-black/[0.06]">
-            <table className="w-full table-fixed border-separate border-spacing-0">
-              <thead>
-                <tr>
-                  <th className="w-[28%] rounded-tl-[16px] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Institution</th>
-                  <th className="w-[22%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Claimed Amount</th>
-                  <th className="w-[22%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Approved Amount</th>
-                  <th className="w-[18%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Status</th>
-                  <th className="w-[10%] rounded-tr-[16px] bg-[#fbfbfb] pr-[16px] py-[10px] text-right text-[13px] font-semibold text-[#666]">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-[36px] text-center text-[14px] text-[#aaa]">No claims found.</td>
-                  </tr>
-                ) : filtered.map(c => {
-                  const schoolId = SCHOOL_ID_MAP[c.institution]
-                  return (
-                    <tr
-                      key={c.id}
-                      className="h-[55px] cursor-pointer transition-colors hover:bg-[#f7f9ff]"
-                      onClick={() => schoolId && navigate(`/gov/schools/${schoolId}`)}
-                    >
-                      <td className="px-[16px]">
-                        <span className="text-[14px] font-medium text-[#4ea4ff] hover:underline">{c.institution}</span>
-                      </td>
-                      <td className="px-[16px] text-[14px] text-[#3f3f3f]">{fmt(c.claimed)}</td>
-                      <td className="px-[16px] text-[14px] text-[#3f3f3f]">{c.approved ? fmt(c.approved) : '—'}</td>
-                      <td className="px-[16px]">{statusBadge[c.status]}</td>
-                      <td className="pr-[16px] text-right" onClick={e => e.stopPropagation()}>
-                        <DropdownMenu items={[
-                          { label: 'View School',  onClick: () => schoolId && navigate(`/gov/schools/${schoolId}`) },
-                          { label: 'Approve',      onClick: () => {}, disabled: c.status === 'approved' },
-                          { label: 'Flag',         onClick: () => {}, destructive: true },
-                        ]} />
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={claimColumns}
+            data={filtered}
+            rowKey={(c) => c.id}
+            emptyMessage="No claims found."
+            onRowClick={(c) => {
+              const schoolId = SCHOOL_ID_MAP[c.institution]
+              if (schoolId) navigate(`/gov/schools/${schoolId}`)
+            }}
+            rowActions={(c) => {
+              const schoolId = SCHOOL_ID_MAP[c.institution]
+              return [
+                { label: 'View School', onClick: () => schoolId && navigate(`/gov/schools/${schoolId}`) },
+                { label: 'Approve',     onClick: () => {}, disabled: c.status === 'approved' },
+                { label: 'Flag',        onClick: () => {}, destructive: true },
+              ]
+            }}
+          />
         </div>
 
-        {/* Recent Tokens */}
-        <div className="mt-[36px]">
-          <h2 className="mb-[16px] text-[17px] font-bold text-[#111]">Recent Tokens</h2>
-          <div className="overflow-hidden rounded-[16px] border-[0.5px] border-black/[0.06]">
-            <table className="w-full table-fixed border-separate border-spacing-0">
-              <thead>
-                <tr>
-                  <th className="w-[28%] rounded-tl-[16px] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Token ID</th>
-                  <th className="w-[18%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Amount</th>
-                  <th className="w-[32%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Supplier</th>
-                  <th className="w-[12%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Status</th>
-                  <th className="w-[10%] rounded-tr-[16px] bg-[#fbfbfb] pr-[16px] py-[10px] text-right text-[13px] font-semibold text-[#666]">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentTokens.map(t => (
-                  <tr key={t.id} className="h-[55px] transition-colors hover:bg-[#fbfbfb]">
-                    <td className="px-[16px] text-[13px] font-medium text-[#4ea4ff] underline underline-offset-2">{t.id}</td>
-                    <td className="px-[16px] text-[14px] text-[#3f3f3f]">{fmt(t.amount)}</td>
-                    <td className="px-[16px] text-[14px] text-[#3f3f3f]">
-                      {t.supplier} <span className="text-[#bbb]">·</span> {t.institution}
-                    </td>
-                    <td className="px-[16px]">{statusBadge[t.status]}</td>
-                    <td className="pr-[16px] text-right">
-                      <DropdownMenu items={[
-                        { label: 'View Token',   onClick: () => {} },
-                        { label: 'Revoke Token', onClick: () => {}, destructive: true },
-                      ]} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* Recent Tokens */}
+          <div className="mt-[36px]">
+            <h2 className="mb-[16px] text-[17px] font-bold text-[#111]">Recent Tokens</h2>
+          <DataTable
+            columns={tokenColumns}
+            data={recentTokens}
+            rowKey={(t) => t.id}
+            rowActions={() => [
+              { label: 'View Token',   onClick: () => {} },
+              { label: 'Revoke Token', onClick: () => {}, destructive: true },
+            ]}
+          />
         </div>
 
       </div>

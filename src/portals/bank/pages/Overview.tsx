@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
-import { DropdownMenu } from '../../../components/ui/DropdownMenu'
+import { DataTable, type Column } from '../../../components/ui/DataTable'
+import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import { clsx } from 'clsx'
 import type { BankTransaction } from '../../../types'
 
@@ -29,21 +30,6 @@ const txStatusBadge: Record<BankTransaction['status'], React.ReactNode> = {
   rejected: <Badge variant="red">Rejected</Badge>,
 }
 
-function StatCard({ label, value, sub, accent, badge }: {
-  label: string; value: string; sub: React.ReactNode; accent?: string; badge?: React.ReactNode
-}) {
-  return (
-    <div className={clsx('relative flex-1 overflow-hidden rounded-[16px] border border-[#f0f0f0] bg-white px-[24px] py-[20px]', accent)}>
-      <p className="text-[13px] font-medium text-[#888]">{label}</p>
-      <div className="mt-[10px] flex items-end justify-between gap-2">
-        <p className="text-[28px] font-bold leading-none tracking-tight text-[#111]">{value}</p>
-        {badge}
-      </div>
-      <div className="mt-[8px] text-[13px] text-[#888]">{sub}</div>
-    </div>
-  )
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function BankOverview() {
@@ -59,6 +45,33 @@ export default function BankOverview() {
 
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 
+  const tokenColumns: Column<PendingToken>[] = [
+    {
+      key: 'code',
+      label: 'Token ID',
+      width: '32%',
+      render: (t) => (
+        <span className="inline-flex min-w-0 items-center gap-[6px]">
+          <span className="truncate">{t.code}</span>
+          {t.isNew && (
+            <span className="rounded-full bg-[#eefbf4] px-[6px] py-[1px] text-[10px] font-bold text-[#0f9f5d]">NEW</span>
+          )}
+        </span>
+      ),
+    },
+    { key: 'amount', label: 'Amount', width: '20%', render: (t) => `GH₵${t.amount.toLocaleString()}` },
+    { key: 'expiry', label: 'Expiry', width: '22%', render: (t) => t.expiry ? fmtDate(t.expiry) : '—' },
+    { key: 'status', label: 'Status', width: '16%', render: (t) => tokenStatusBadge[t.status] },
+  ]
+
+  const transactionColumns: Column<BankTransaction>[] = [
+    { key: 'tokenCode', label: 'Token Code', width: '26%', primaryKey: true, render: (t) => t.tokenCode },
+    { key: 'supplier',  label: 'Supplier',   width: '26%', render: (t) => t.supplierName },
+    { key: 'amount',    label: 'Amount',     width: '18%', render: (t) => `GH₵${t.amount.toLocaleString()}` },
+    { key: 'date',      label: 'Date',       width: '16%', render: (t) => fmtDate(t.processedAt) },
+    { key: 'status',    label: 'Status',     width: '14%', render: (t) => txStatusBadge[t.status] },
+  ]
+
   return (
     <>
       <PageHeader
@@ -73,7 +86,7 @@ export default function BankOverview() {
 
       <div className="px-[36px] pb-[40px]">
         {/* Stat cards */}
-        <div className="flex gap-[1px] overflow-hidden rounded-[16px] border border-[#f0f0f0] bg-[#f0f0f0]">
+        <StatCardGroup>
           <StatCard
             label="Pending Tokens"
             value="4"
@@ -103,7 +116,7 @@ export default function BankOverview() {
             sub={<span className="text-[#df6b13] font-medium">This month</span>}
             accent="bg-gradient-to-br from-white to-red-50/60"
           />
-        </div>
+        </StatCardGroup>
 
         {/* Pending Token Validations */}
         <div className="mt-[36px]">
@@ -129,68 +142,22 @@ export default function BankOverview() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-[16px] border-[0.5px] border-black/[0.06] mb-[36px]">
-            <table className="w-full table-fixed border-separate border-spacing-0">
-              <thead>
-                <tr>
-                  <th className="w-[32%] rounded-tl-[16px] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Token ID</th>
-                  <th className="w-[20%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Amount</th>
-                  <th className="w-[22%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Expiry</th>
-                  <th className="w-[16%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Status</th>
-                  <th className="w-[10%] rounded-tr-[16px] bg-[#fbfbfb] pr-[16px] py-[10px] text-right text-[13px] font-semibold text-[#666]">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(t => (
-                  <tr key={t.id} className="h-[55px] hover:bg-[#fbfbfb] transition-colors">
-                    <td className="px-[16px] text-[13px]">
-                      <span className="font-medium text-[#4ea4ff] underline underline-offset-2">{t.code}</span>
-                      {t.isNew && (
-                        <span className="ml-[6px] rounded-full bg-[#eefbf4] px-[6px] py-[1px] text-[10px] font-bold text-[#0f9f5d]">NEW</span>
-                      )}
-                    </td>
-                    <td className="px-[16px] text-[14px] text-[#3f3f3f]">GH₵{t.amount.toLocaleString()}</td>
-                    <td className="px-[16px] text-[14px] text-[#3f3f3f]">{t.expiry ? fmtDate(t.expiry) : '—'}</td>
-                    <td className="px-[16px]">{tokenStatusBadge[t.status]}</td>
-                    <td className="pr-[16px] text-right">
-                      <DropdownMenu items={[
-                        { label: 'Validate Token',  onClick: () => navigate('/bank/validate'), disabled: t.status !== 'pending' },
-                        { label: 'Release Cash',    onClick: () => navigate('/bank/cash-release'), disabled: t.status !== 'released' },
-                        { label: 'Reject Token',    onClick: () => {}, destructive: true, disabled: t.status !== 'pending' },
-                      ]} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={tokenColumns}
+            data={filtered}
+            rowKey={(t) => t.id}
+            emptyMessage="No pending tokens found."
+            className="mb-[36px]"
+            rowActions={(t) => [
+              { label: 'Validate Token', onClick: () => navigate('/bank/validate'), disabled: t.status !== 'pending' },
+              { label: 'Release Cash',   onClick: () => navigate('/bank/cash-release'), disabled: t.status !== 'released' },
+              { label: 'Reject Token',   onClick: () => {}, destructive: true, disabled: t.status !== 'pending' },
+            ]}
+          />
 
           {/* Recent Transactions */}
           <h2 className="mb-[16px] text-[17px] font-bold text-[#111]">Recent Transactions</h2>
-          <div className="overflow-hidden rounded-[16px] border-[0.5px] border-black/[0.06]">
-            <table className="w-full table-fixed border-separate border-spacing-0">
-              <thead>
-                <tr>
-                  <th className="w-[26%] rounded-tl-[16px] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Token Code</th>
-                  <th className="w-[26%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Supplier</th>
-                  <th className="w-[18%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Amount</th>
-                  <th className="w-[16%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Date</th>
-                  <th className="w-[14%] rounded-tr-[16px] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentTransactions.map(t => (
-                  <tr key={t.id} className="h-[55px] hover:bg-[#fbfbfb] transition-colors">
-                    <td className="px-[16px] text-[13px] font-medium text-[#4ea4ff] underline underline-offset-2">{t.tokenCode}</td>
-                    <td className="px-[16px] text-[14px] text-[#3f3f3f]">{t.supplierName}</td>
-                    <td className="px-[16px] text-[14px] text-[#3f3f3f]">GH₵{t.amount.toLocaleString()}</td>
-                    <td className="px-[16px] text-[13px] text-[#555]">{fmtDate(t.processedAt)}</td>
-                    <td className="px-[16px]">{txStatusBadge[t.status]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable columns={transactionColumns} data={recentTransactions} rowKey={(t) => t.id} />
         </div>
       </div>
     </>

@@ -38,6 +38,10 @@ import IssueTokens     from '../portals/gov/pages/IssueTokens'
 import TokenLedger     from '../portals/gov/pages/TokenLedger'
 import Reimbursements  from '../portals/gov/pages/Reimbursements'
 import FraudReports    from '../portals/gov/pages/FraudReports'
+import ClaimsWorkflow  from '../portals/gov/pages/ClaimsWorkflow'
+import RegionalDashboard from '../portals/gov/pages/RegionalDashboard'
+import FinancialDashboard from '../portals/gov/pages/FinancialDashboard'
+import AuditDashboard    from '../portals/gov/pages/AuditDashboard'
 
 // Admin portal pages
 import Dashboard       from '../portals/school-admin/pages/Dashboard'
@@ -151,6 +155,10 @@ export default function AppRouter() {
           <Route path="tokens/ledger"     element={<TokenLedger />} />
           <Route path="reimbursements"    element={<Reimbursements />} />
           <Route path="fraud"             element={<FraudReports />} />
+          <Route path="claims"            element={<ClaimsWorkflow />} />
+          <Route path="dashboard/regional"  element={<RegionalDashboard />} />
+          <Route path="dashboard/financial" element={<FinancialDashboard />} />
+          <Route path="dashboard/audit"     element={<AuditDashboard />} />
         </Route>
 
         {/* Supplier portal */}

@@ -2041,3 +2041,291 @@ export const SUPPLIER_TRANSACTIONS: BankTransaction[] = [
   { id: 'BTX-P03', tokenId: '5', tokenCode: 'GOV-SAC-SEM1-007', supplierName: 'Golden Harvest Foods', amount: 200000, processedAt: '2025-08-20', status: 'rejected' },
   { id: 'BTX-004', tokenId: '2', tokenCode: 'GOV-SAC-SEM1-005', supplierName: 'Golden Harvest Foods', amount: 620000, processedAt: '2026-03-14', status: 'pending'  },
 ]
+
+// ────────────────────────────────────────────────────────────────────────────────
+// 9. GOVERNMENT CLAIMS WORKFLOW
+// ────────────────────────────────────────────────────────────────────────────────
+export type GovWorkflowStage =
+  | 'received'
+  | 'intake'
+  | 'regional'
+  | 'financial'
+  | 'audit'
+  | 'budget'
+  | 'token_generated'
+  | 'supplier_redemption'
+  | 'bank_settlement'
+  | 'closed'
+
+export const GOV_WORKFLOW_COLUMNS: { id: GovWorkflowStage; label: string; dot: string; actor: string }[] = [
+  { id: 'received',             label: 'Received',              dot: 'bg-gray-400',   actor: 'System' },
+  { id: 'intake',                label: 'Intake Verification',   dot: 'bg-blue-400',   actor: 'Claims Officer' },
+  { id: 'regional',              label: 'Regional Review',       dot: 'bg-indigo-400', actor: 'Regional Officer' },
+  { id: 'financial',             label: 'Financial Assessment',  dot: 'bg-yellow-400', actor: 'Financial Officer' },
+  { id: 'audit',                 label: 'Audit & Risk Review',   dot: 'bg-red-400',    actor: 'Audit Officer' },
+  { id: 'budget',                label: 'Budget Authorization',  dot: 'bg-purple-400', actor: 'Budget Officer' },
+  { id: 'token_generated',       label: 'Token Generated',       dot: 'bg-green-400',  actor: 'Treasury' },
+  { id: 'supplier_redemption',   label: 'Supplier Redemption',   dot: 'bg-teal-400',   actor: 'Supplier' },
+  { id: 'bank_settlement',       label: 'Bank Settlement',       dot: 'bg-emerald-400',actor: 'Bank' },
+  { id: 'closed',                label: 'Closed',               dot: 'bg-gray-500',   actor: 'System' },
+]
+
+export interface GovApprovalLog {
+  date: string
+  action: string
+  actor: string
+  notes?: string
+}
+
+export interface GovSemesterClaim {
+  id: string
+  claimId: string
+  school: string
+  schoolId: string
+  semester: string
+  verifiedStudents: number
+  claimValue: string
+  riskScore: number
+  fraudFlags: number
+  stage: GovWorkflowStage
+  submittedAt: string
+  updatedAt: string
+  // School data for sidebar
+  attendancePct: number
+  attendanceHistory: { month: string; meals: number; eligible: number }[]
+  supplyBreakdown: { item: string; semester: string; cost: string }[]
+  policyDeductions: { reason: string; amount: string }[]
+  supportingDocs: { name: string; type: string }[]
+  approvalHistory: GovApprovalLog[]
+  governmentNotes: string
+}
+
+export const MOCK_GOV_CLAIMS: GovSemesterClaim[] = [
+  {
+    id: '1', claimId: 'CLM-2027-00042', school: 'St. Augustine SHS', schoolId: 'SCH-001',
+    semester: 'Jan–Apr 2027', verifiedStudents: 2847, claimValue: 'GHS 2,410,300', riskScore: 22, fraudFlags: 0,
+    stage: 'financial', submittedAt: '01 May 2027', updatedAt: '06 May 2027',
+    attendancePct: 89, attendanceHistory: [
+      { month: 'Jan', meals: 72500, eligible: 82000 }, { month: 'Feb', meals: 68000, eligible: 81000 },
+      { month: 'Mar', meals: 71200, eligible: 81500 }, { month: 'Apr', meals: 74000, eligible: 82000 },
+    ],
+    supplyBreakdown: [
+      { item: 'Rice', semester: '2,100 Bags', cost: 'GHS 525,000' },
+      { item: 'Beans', semester: '840 Bags', cost: 'GHS 268,800' },
+      { item: 'Oil', semester: '420 Litres', cost: 'GHS 75,600' },
+    ],
+    policyDeductions: [
+      { reason: 'Operational ceiling exceeded — Mar 2027', amount: '-GHS 18,200' },
+      { reason: 'Duplicate scan adjustments', amount: '-GHS 6,400' },
+    ],
+    supportingDocs: [
+      { name: 'Dining Hall Summary', type: 'PDF' }, { name: 'Enrolment Register', type: 'XLSX' },
+      { name: 'Daily Reports Package', type: 'ZIP' }, { name: 'Storekeeper Logs', type: 'PDF' },
+    ],
+    approvalHistory: [
+      { date: '01 May', action: 'Claim Submitted', actor: 'School Admin' },
+      { date: '02 May', action: 'Intake Verification Approved', actor: 'Claims Officer' },
+      { date: '04 May', action: 'Regional Review Approved', actor: 'Regional Officer' },
+      { date: '06 May', action: 'Sent to Financial Assessment', actor: 'Regional Officer' },
+    ],
+    governmentNotes: 'School has a strong compliance record. Minor variance in March supply usage — already accounted for in policy deductions.',
+  },
+  {
+    id: '2', claimId: 'CLM-2027-00038', school: 'Opoku Ware SHS', schoolId: 'SCH-002',
+    semester: 'Jan–Apr 2027', verifiedStudents: 3120, claimValue: 'GHS 3,150,000', riskScore: 45, fraudFlags: 3,
+    stage: 'audit', submittedAt: '28 Apr 2027', updatedAt: '10 May 2027',
+    attendancePct: 83, attendanceHistory: [
+      { month: 'Jan', meals: 81000, eligible: 98000 }, { month: 'Feb', meals: 79000, eligible: 97000 },
+      { month: 'Mar', meals: 76000, eligible: 96000 }, { month: 'Apr', meals: 83000, eligible: 98000 },
+    ],
+    supplyBreakdown: [
+      { item: 'Rice', semester: '2,800 Bags', cost: 'GHS 700,000' },
+      { item: 'Beans', semester: '1,100 Bags', cost: 'GHS 352,000' },
+      { item: 'Oil', semester: '550 Litres', cost: 'GHS 99,000' },
+    ],
+    policyDeductions: [
+      { reason: 'Excess supply — Rice 22% above benchmark', amount: '-GHS 154,000' },
+      { reason: 'Card incident — suspended card usage', amount: '-GHS 12,500' },
+    ],
+    supportingDocs: [
+      { name: 'Dining Hall Summary', type: 'PDF' }, { name: 'Enrolment Register', type: 'XLSX' },
+      { name: 'Supply Reconciliation', type: 'PDF' }, { name: 'Fraud Investigation Report', type: 'PDF' },
+    ],
+    approvalHistory: [
+      { date: '28 Apr', action: 'Claim Submitted', actor: 'School Admin' },
+      { date: '29 Apr', action: 'Intake Verification Approved', actor: 'Claims Officer' },
+      { date: '02 May', action: 'Regional Review Approved', actor: 'Regional Officer' },
+      { date: '05 May', action: 'Financial Assessment — Partially Verified', actor: 'Financial Officer' },
+      { date: '10 May', action: 'Escalated to Audit — risk score 45, fraud flags present', actor: 'Financial Officer' },
+    ],
+    governmentNotes: 'Elevated risk score due to supply anomaly. Audit officer reviewing fraud report from March card incident.',
+  },
+  {
+    id: '3', claimId: 'CLM-2027-00041', school: 'Mfantsipim SHS', schoolId: 'SCH-003',
+    semester: 'Jan–Apr 2027', verifiedStudents: 2650, claimValue: 'GHS 2,180,000', riskScore: 8, fraudFlags: 0,
+    stage: 'budget', submittedAt: '20 Apr 2027', updatedAt: '12 May 2027',
+    attendancePct: 94, attendanceHistory: [
+      { month: 'Jan', meals: 62500, eligible: 67000 }, { month: 'Feb', meals: 61000, eligible: 66000 },
+      { month: 'Mar', meals: 63000, eligible: 67000 }, { month: 'Apr', meals: 64000, eligible: 67000 },
+    ],
+    supplyBreakdown: [
+      { item: 'Rice', semester: '1,800 Bags', cost: 'GHS 450,000' },
+      { item: 'Beans', semester: '720 Bags', cost: 'GHS 230,400' },
+      { item: 'Oil', semester: '360 Litres', cost: 'GHS 64,800' },
+    ],
+    policyDeductions: [],
+    supportingDocs: [
+      { name: 'Dining Hall Summary', type: 'PDF' }, { name: 'Enrolment Register', type: 'XLSX' },
+      { name: 'Daily Reports Package', type: 'ZIP' },
+    ],
+    approvalHistory: [
+      { date: '20 Apr', action: 'Claim Submitted', actor: 'School Admin' },
+      { date: '21 Apr', action: 'Intake Verification Approved', actor: 'Claims Officer' },
+      { date: '24 Apr', action: 'Regional Review Approved', actor: 'Regional Officer' },
+      { date: '28 Apr', action: 'Financial Assessment Approved', actor: 'Financial Officer' },
+      { date: '03 May', action: 'Audit Review — Clean, risk score 8', actor: 'Audit Officer' },
+      { date: '12 May', action: 'Awaiting Budget Authorization', actor: 'Budget Officer' },
+    ],
+    governmentNotes: 'Exemplary compliance. All reports clean. No deductions. Recommended for priority settlement.',
+  },
+  {
+    id: '4', claimId: 'CLM-2027-00035', school: 'Wesley Girls SHS', schoolId: 'SCH-004',
+    semester: 'Jan–Apr 2027', verifiedStudents: 2890, claimValue: 'GHS 2,890,000', riskScore: 12, fraudFlags: 0,
+    stage: 'token_generated', submittedAt: '15 Apr 2027', updatedAt: '08 Jun 2027',
+    attendancePct: 91, attendanceHistory: [
+      { month: 'Jan', meals: 74000, eligible: 82000 }, { month: 'Feb', meals: 71000, eligible: 81000 },
+      { month: 'Mar', meals: 73000, eligible: 81500 }, { month: 'Apr', meals: 75000, eligible: 82000 },
+    ],
+    supplyBreakdown: [
+      { item: 'Rice', semester: '2,200 Bags', cost: 'GHS 550,000' },
+      { item: 'Beans', semester: '950 Bags', cost: 'GHS 304,000' },
+      { item: 'Oil', semester: '480 Litres', cost: 'GHS 86,400' },
+    ],
+    policyDeductions: [{ reason: 'Minor supply variance — within tolerance', amount: '-GHS 5,200' }],
+    supportingDocs: [
+      { name: 'Dining Hall Summary', type: 'PDF' }, { name: 'Enrolment Register', type: 'XLSX' },
+      { name: 'Daily Reports Package', type: 'ZIP' },
+    ],
+    approvalHistory: [
+      { date: '15 Apr', action: 'Claim Submitted', actor: 'School Admin' },
+      { date: '16 Apr', action: 'Intake Verification Approved', actor: 'Claims Officer' },
+      { date: '20 Apr', action: 'Regional Review Approved', actor: 'Regional Officer' },
+      { date: '25 Apr', action: 'Financial Assessment Approved', actor: 'Financial Officer' },
+      { date: '30 Apr', action: 'Audit Review Approved', actor: 'Audit Officer' },
+      { date: '05 May', action: 'Budget Authorized', actor: 'Budget Officer' },
+      { date: '08 Jun', action: 'Token Generated — GT-2027-0088', actor: 'Treasury' },
+    ],
+    governmentNotes: 'Full approval chain complete. Token issued. Awaiting supplier redemption.',
+  },
+  {
+    id: '5', claimId: 'CLM-2027-00029', school: 'Achimota SHS', schoolId: 'SCH-005',
+    semester: 'Jan–Apr 2027', verifiedStudents: 3050, claimValue: 'GHS 3,020,000', riskScore: 3, fraudFlags: 0,
+    stage: 'closed', submittedAt: '05 Apr 2027', updatedAt: '20 May 2027',
+    attendancePct: 93, attendanceHistory: [
+      { month: 'Jan', meals: 78000, eligible: 85000 }, { month: 'Feb', meals: 75000, eligible: 84000 },
+      { month: 'Mar', meals: 77000, eligible: 84500 }, { month: 'Apr', meals: 79000, eligible: 85000 },
+    ],
+    supplyBreakdown: [
+      { item: 'Rice', semester: '2,400 Bags', cost: 'GHS 600,000' },
+      { item: 'Beans', semester: '1,000 Bags', cost: 'GHS 320,000' },
+      { item: 'Oil', semester: '500 Litres', cost: 'GHS 90,000' },
+    ],
+    policyDeductions: [],
+    supportingDocs: [
+      { name: 'Dining Hall Summary', type: 'PDF' }, { name: 'Enrolment Register', type: 'XLSX' },
+      { name: 'Daily Reports Package', type: 'ZIP' },
+    ],
+    approvalHistory: [
+      { date: '05 Apr', action: 'Claim Submitted', actor: 'School Admin' },
+      { date: '06 Apr', action: 'Intake Verification Approved', actor: 'Claims Officer' },
+      { date: '10 Apr', action: 'Regional Review Approved', actor: 'Regional Officer' },
+      { date: '15 Apr', action: 'Financial Assessment Approved', actor: 'Financial Officer' },
+      { date: '20 Apr', action: 'Audit Review Approved', actor: 'Audit Officer' },
+      { date: '25 Apr', action: 'Budget Authorized', actor: 'Budget Officer' },
+      { date: '30 Apr', action: 'Token Generated — GT-2027-0055', actor: 'Treasury' },
+      { date: '10 May', action: 'Supplier Redeemed Token', actor: 'Supplier' },
+      { date: '20 May', action: 'Bank Settlement — Cash Released', actor: 'Ghana Commercial Bank' },
+    ],
+    governmentNotes: 'Fully settled. All stages complete. Token redeemed by Golden Harvest Foods. Payment released by Ghana Commercial Bank.',
+  },
+  {
+    id: '6', claimId: 'CLM-2027-00044', school: 'Sunyani SHS', schoolId: 'SCH-006',
+    semester: 'Jan–Apr 2027', verifiedStudents: 1980, claimValue: 'GHS 1,650,000', riskScore: 18, fraudFlags: 1,
+    stage: 'regional', submittedAt: '03 May 2027', updatedAt: '05 May 2027',
+    attendancePct: 78, attendanceHistory: [
+      { month: 'Jan', meals: 48000, eligible: 62000 }, { month: 'Feb', meals: 46000, eligible: 61000 },
+      { month: 'Mar', meals: 45000, eligible: 60000 }, { month: 'Apr', meals: 49000, eligible: 62000 },
+    ],
+    supplyBreakdown: [
+      { item: 'Rice', semester: '1,400 Bags', cost: 'GHS 350,000' },
+      { item: 'Beans', semester: '600 Bags', cost: 'GHS 192,000' },
+      { item: 'Oil', semester: '280 Litres', cost: 'GHS 50,400' },
+    ],
+    policyDeductions: [],
+    supportingDocs: [
+      { name: 'Dining Hall Summary', type: 'PDF' }, { name: 'Enrolment Register', type: 'XLSX' },
+    ],
+    approvalHistory: [
+      { date: '03 May', action: 'Claim Submitted', actor: 'School Admin' },
+      { date: '04 May', action: 'Intake Verification — Missing Documents Returned', actor: 'Claims Officer', notes: 'Storekeeper logs missing' },
+      { date: '05 May', action: 'Documents Resubmitted', actor: 'School Admin' },
+    ],
+    governmentNotes: 'Below-average attendance rate (78%). Regional officer to verify enrollment vs attendance discrepancy.',
+  },
+  {
+    id: '7', claimId: 'CLM-2027-00040', school: 'Tamale SHS', schoolId: 'SCH-007',
+    semester: 'Jan–Apr 2027', verifiedStudents: 2150, claimValue: 'GHS 1,820,000', riskScore: 8, fraudFlags: 0,
+    stage: 'supplier_redemption', submittedAt: '18 Apr 2027', updatedAt: '05 Jun 2027',
+    attendancePct: 86, attendanceHistory: [
+      { month: 'Jan', meals: 52000, eligible: 62000 }, { month: 'Feb', meals: 50000, eligible: 61000 },
+      { month: 'Mar', meals: 54000, eligible: 62000 }, { month: 'Apr', meals: 53000, eligible: 61500 },
+    ],
+    supplyBreakdown: [
+      { item: 'Rice', semester: '1,600 Bags', cost: 'GHS 400,000' },
+      { item: 'Beans', semester: '680 Bags', cost: 'GHS 217,600' },
+      { item: 'Oil', semester: '320 Litres', cost: 'GHS 57,600' },
+    ],
+    policyDeductions: [],
+    supportingDocs: [
+      { name: 'Dining Hall Summary', type: 'PDF' }, { name: 'Enrolment Register', type: 'XLSX' },
+      { name: 'Daily Reports Package', type: 'ZIP' },
+    ],
+    approvalHistory: [
+      { date: '18 Apr', action: 'Claim Submitted', actor: 'School Admin' },
+      { date: '19 Apr', action: 'Intake Verification Approved', actor: 'Claims Officer' },
+      { date: '23 Apr', action: 'Regional Review Approved', actor: 'Regional Officer' },
+      { date: '28 Apr', action: 'Financial Assessment Approved', actor: 'Financial Officer' },
+      { date: '02 May', action: 'Audit Review Approved', actor: 'Audit Officer' },
+      { date: '08 May', action: 'Budget Authorized', actor: 'Budget Officer' },
+      { date: '15 May', action: 'Token Generated — GT-2027-0061', actor: 'Treasury' },
+      { date: '05 Jun', action: 'Supplier Redeemed Token — Awaiting Bank Settlement', actor: 'Supplier' },
+    ],
+    governmentNotes: 'Token redeemed by Ashanti Agro Supplies. Bank settlement in progress.',
+  },
+  {
+    id: '8', claimId: 'CLM-2027-00036', school: 'Tarkwa SHS', schoolId: 'SCH-008',
+    semester: 'Jan–Apr 2027', verifiedStudents: 1620, claimValue: 'GHS 1,380,000', riskScore: 55, fraudFlags: 7,
+    stage: 'intake', submittedAt: '02 May 2027', updatedAt: '03 May 2027',
+    attendancePct: 62, attendanceHistory: [
+      { month: 'Jan', meals: 35000, eligible: 58000 }, { month: 'Feb', meals: 32000, eligible: 57000 },
+      { month: 'Mar', meals: 38000, eligible: 58000 }, { month: 'Apr', meals: 36000, eligible: 57500 },
+    ],
+    supplyBreakdown: [
+      { item: 'Rice', semester: '1,200 Bags', cost: 'GHS 300,000' },
+      { item: 'Beans', semester: '500 Bags', cost: 'GHS 160,000' },
+      { item: 'Oil', semester: '240 Litres', cost: 'GHS 43,200' },
+    ],
+    policyDeductions: [
+      { reason: 'Unknown cards — 286 incidents flagged', amount: '-GHS 78,000' },
+      { reason: 'Supply-anomaly — 7 fraud flags active', amount: 'Under review' },
+    ],
+    supportingDocs: [
+      { name: 'Dining Hall Summary', type: 'PDF' },
+    ],
+    approvalHistory: [
+      { date: '02 May', action: 'Claim Submitted', actor: 'School Admin' },
+      { date: '03 May', action: 'Intake — High Risk Flag, Audit Hold', actor: 'Claims Officer', notes: '286 unknown card incidents. Missing fraud investigation report.' },
+    ],
+    governmentNotes: 'CRITICAL: 286 unknown card scans. Missing fraud investigation report. Missing supply reconciliation. Claims officer placed on audit hold. Risk score elevated to 55.',
+  },
+]

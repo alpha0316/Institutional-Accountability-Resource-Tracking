@@ -12,7 +12,26 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\('dist',{}\\).keys\\(\\)\\)\\)\")",
       "Bash(curl -sL \"https://data.jsdelivr.com/v1/packages/npm/@tabler/icons-webfont@3.34.0/flat\")",
       "Bash(python3 -c \"import sys,json; files=json.load\\(sys.stdin\\); [print\\(f['name']\\) for f in files if 'css' in f['name'].lower\\(\\)]\")",
-      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.34.0/dist/tabler-icons.min.css\" -o /tmp/tabler3.css)"
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.34.0/dist/tabler-icons.min.css\" -o /tmp/tabler3.css)",
+      "Bash(sed -n '85,100p' src/portals/supplier/pages/DeliveryLogger.tsx)",
+      "Bash(sed -n '165,180p' src/portals/gov/pages/IssueTokens.tsx)",
+      "Bash(java -version)",
+      "Bash(mvn -version)",
+      "Bash(brew install *)",
+      "Bash(curl -s https://start.spring.io/starter.zip -d type=maven-project -d language=java -d bootVersion=3.3.5 -d baseDir=backend -d groupId=com.iarts -d artifactId=backend -d name=backend -d packageName=com.iarts -d javaVersion=17 -d dependencies=web,data-jpa,postgresql,validation,security,data-redis,devtools,flyway,lombok -o backend.zip)",
+      "Bash(unzip -q backend.zip -d .)",
+      "Bash(rm backend.zip)",
+      "Bash(curl -s https://start.spring.io/starter.zip -d type=maven-project -d language=java -d bootVersion=3.5.0 -d baseDir=backend -d groupId=com.iarts -d artifactId=backend -d name=backend -d packageName=com.iarts -d javaVersion=17 -d dependencies=web,data-jpa,postgresql,validation,security,data-redis,devtools,flyway,lombok -o backend.zip)",
+      "Bash(curl -s -X POST \"http://localhost:8080/api/v1/auth/dev-login?role=bank\")",
+      "Bash(python3 -m json.tool)",
+      "Bash(pkill -f \"spring-boot:run\")",
+      "Bash(pkill -f \"com.iarts.BackendApplication\")",
+      "Bash(lsof -ti:8080)",
+      "Bash(xargs -r kill -9)",
+      "Bash(break)",
+      "Bash(curl -s -i -X OPTIONS http://localhost:8080/api/v1/auth/dev-login?role=school_admin -H 'Origin: http://localhost:5173' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type')",
+      "Bash(curl -s -i -X POST http://localhost:8080/api/v1/auth/dev-login?role=school_admin -H 'Origin: http://localhost:5173' -H 'Content-Type: application/json')",
+      "WebFetch(domain:www.aza.systems)"
     ]
   }
 }

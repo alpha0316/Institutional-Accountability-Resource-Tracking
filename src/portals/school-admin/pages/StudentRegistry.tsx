@@ -35,14 +35,13 @@ function randomClass(): string {
 
 type StudentFilterKey = 'all' | 'active' | 'pending' | 'suspended' | 'inactive'
 type SidebarView = 'detail' | 'enroll' | null
-type DetailTab = 'profile' | 'dining' | 'card' | 'attendance' | 'logs'
+type DetailTab = 'profile' | 'dining' | 'card' | 'attendance'
 
 const DETAIL_TABS: { label: string; value: DetailTab; icon: React.ReactNode }[] = [
   { label: 'Profile',     value: 'profile',    icon: <Icon name="user" size={14} /> },
   { label: 'Dining',      value: 'dining',      icon: <Icon name="tools-kitchen-2" size={14} /> },
   { label: 'Card Info',   value: 'card',        icon: <Icon name="credit-card" size={14} /> },
   { label: 'Attendance',  value: 'attendance',  icon: <Icon name="clipboard-check" size={14} /> },
-  { label: 'Audit Logs',  value: 'logs',        icon: <Icon name="history" size={14} /> },
 ]
 
 function SidebarDetailRow({ label, value }: { label: string; value: string }) {
@@ -247,7 +246,6 @@ export default function StudentRegistry() {
       { label: 'View Profile',      onClick: () => openDetail(student) },
       { label: 'Edit Student',      onClick: () => openDetail(student) },
       { label: 'Manage Card',       onClick: () => { openDetail(student); setDetailTab('card') } },
-      { label: 'View Audit Logs',   onClick: () => { openDetail(student); setDetailTab('logs') } },
       { label: 'Deactivate Student',onClick: () => {}, destructive: true, disabled: student.studentStatus === 'inactive' },
     ]
   }
@@ -726,23 +724,6 @@ export default function StudentRegistry() {
                       <SidebarDetailRow label="Last Validation"     value={selectedStudent.lastMealTime ?? '—'} />
                       <SidebarDetailRow label="Duplicate Attempts"  value={String(selectedStudent.duplicateAttempts)} />
                       <SidebarDetailRow label="Missed Validations"  value={String(selectedStudent.missedValidations)} />
-                    </div>
-                  )}
-
-                  {/* Audit Logs tab */}
-                  {detailTab === 'logs' && (
-                    <div className="space-y-[12px]">
-                      {selectedStudent.auditLogs.map((log, i) => (
-                        <div key={i} className="flex items-start gap-[12px]">
-                          <span className="shrink-0 w-[65px] text-[12px] font-medium text-[#888]">{log.time}</span>
-                          <span className="text-[13px] text-[#333]">{log.event}</span>
-                        </div>
-                      ))}
-                      {selectedStudent.auditLogs.length > 0 && (
-                        <p className="text-[12px] text-[#4ea4ff] mt-[12px] pt-[12px] border-t border-[#f0f0f0]">
-                          Next system event: {selectedStudent.cardStatus === 'pending' ? 'Card issuance pending' : 'Waiting for next meal validation'}
-                        </p>
-                      )}
                     </div>
                   )}
                 </div>

@@ -4,6 +4,7 @@ import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
+import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import { clsx } from 'clsx'
 
 type Severity  = 'high' | 'medium' | 'low'
@@ -94,22 +95,19 @@ export default function FraudReports() {
         )}
 
         {/* Stat strip */}
-        <div className="mb-[28px] grid grid-cols-4 gap-[1px] overflow-hidden rounded-[14px] border border-[#f0f0f0] bg-[#f0f0f0]">
+        <StatCardGroup>
           {[
             { label: 'Open Cases',     value: openCount,                               color: 'text-[#de3d36]' },
             { label: 'High Severity',  value: highCount,                               color: 'text-[#df6b13]' },
             { label: 'Est. Total Impact', value: `GH₵${totalImpact.toLocaleString()}`, color: 'text-[#111]' },
             { label: 'Total Reports',  value: reports.length,                          color: 'text-[#111]' },
           ].map(s => (
-            <div key={s.label} className="bg-white px-[22px] py-[18px]">
-              <p className="text-[12px] font-medium text-[#888]">{s.label}</p>
-              <p className={`mt-[6px] text-[22px] font-bold leading-none ${s.color}`}>{s.value}</p>
-            </div>
+            <StatCard key={s.label} label={s.label} value={s.value} valueClassName={s.color} />
           ))}
-        </div>
+        </StatCardGroup>
 
         {/* Filter tabs */}
-        <div className="mb-[14px] flex items-center gap-[4px] rounded-[10px] border border-[#efefef] bg-white p-[3px] w-fit">
+        <div className="mb-[14px] mt-[28px] flex items-center gap-[4px] rounded-[10px] border border-[#efefef] bg-white p-[3px] w-fit">
           {FILTERS.map(f => (
             <button
               key={f.key}

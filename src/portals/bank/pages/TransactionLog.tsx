@@ -4,6 +4,7 @@ import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
+import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import type { BankTransaction } from '../../../types'
 import { clsx } from 'clsx'
 
@@ -45,21 +46,18 @@ export default function TransactionLog() {
     <>
       <PageHeader title="Transaction Log" actions={<Button variant="secondary"><Icon name="download" size={14} />Export</Button>} />
       <div className="px-[36px] pb-[40px]">
-        <div className="mb-[28px] grid grid-cols-4 gap-[1px] overflow-hidden rounded-[14px] border border-[#f0f0f0] bg-[#f0f0f0]">
+        <StatCardGroup>
           {[
             { label: 'Total Released',  value: `GH₵${(totalReleased / 1e6).toFixed(2)}M`, color: 'text-[#0f9f5d]' },
             { label: 'Transactions',    value: transactions.length,                         color: 'text-[#111]' },
             { label: 'Pending',         value: transactions.filter(t => t.status === 'pending').length,  color: 'text-[#df6b13]' },
             { label: 'Rejected',        value: transactions.filter(t => t.status === 'rejected').length, color: 'text-[#de3d36]' },
           ].map(s => (
-            <div key={s.label} className="bg-white px-[22px] py-[18px]">
-              <p className="text-[12px] font-medium text-[#888]">{s.label}</p>
-              <p className={`mt-[6px] text-[22px] font-bold leading-none ${s.color}`}>{s.value}</p>
-            </div>
+            <StatCard key={s.label} label={s.label} value={s.value} valueClassName={s.color} />
           ))}
-        </div>
+        </StatCardGroup>
 
-        <div className="mb-[14px] flex gap-[4px] rounded-[10px] border border-[#efefef] bg-white p-[3px] w-fit">
+        <div className="mb-[14px] mt-[28px] flex gap-[4px] rounded-[10px] border border-[#efefef] bg-white p-[3px] w-fit">
           {FILTERS.map(f => (
             <button key={f.key} onClick={() => setFilter(f.key)}
               className={clsx('rounded-[7px] px-[12px] py-[5px] text-[13px] font-medium transition-colors',

@@ -4,6 +4,7 @@ import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
+import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import { Modal } from '../../../components/ui/Modal'
 import type { GovernmentToken } from '../../../types'
 
@@ -106,21 +107,19 @@ export default function IssueTokens() {
       <div className="px-[36px] pb-[40px]">
 
         {/* Summary */}
-        <div className="mb-[28px] grid grid-cols-4 gap-[1px] overflow-hidden rounded-[14px] border border-[#f0f0f0] bg-[#f0f0f0]">
+        <StatCardGroup>
           {[
             { label: 'Active Tokens',  value: tokens.filter(t => t.status === 'active').length,   color: 'text-[#0f9f5d]' },
             { label: 'Pending',        value: tokens.filter(t => t.status === 'pending').length,  color: 'text-[#df6b13]' },
             { label: 'Redeemed',       value: tokens.filter(t => t.status === 'redeemed').length, color: 'text-[#4ea4ff]' },
             { label: 'Total Issued',   value: tokens.length,                                      color: 'text-[#111]' },
           ].map(s => (
-            <div key={s.label} className="bg-white px-[22px] py-[18px]">
-              <p className="text-[12px] font-medium text-[#888]">{s.label}</p>
-              <p className={`mt-[6px] text-[26px] font-bold leading-none ${s.color}`}>{s.value}</p>
-            </div>
+            <StatCard key={s.label} label={s.label} value={s.value} valueClassName={s.color} />
           ))}
-        </div>
+        </StatCardGroup>
 
         <DataTable
+          className="mt-[28px]"
           columns={columns}
           data={tokens}
           rowKey={r => r.id}

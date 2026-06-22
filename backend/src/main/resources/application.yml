@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/iarts}
+    username: ${DB_USER:iarts}
+    password: ${DB_PASSWORD:iarts}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /api/v1
+
+iarts:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-secret-change-me-please-this-needs-32-bytes-min}
+    expiry-hours: 24
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+
+aza:
+  base-url: ${AZA_BASE_URL:https://api.aza.systems}
+  oauth:
+    client-id: ${AZA_CLIENT_ID:}
+    client-secret: ${AZA_CLIENT_SECRET:}
+  webhook:
+    tolerance-seconds: 300

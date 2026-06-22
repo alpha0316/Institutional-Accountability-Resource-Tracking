@@ -4,8 +4,10 @@ import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
-import { DropdownMenu } from '../../../components/ui/DropdownMenu'
+import { DataTable, type Column } from '../../../components/ui/DataTable'
+import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import { clsx } from 'clsx'
+import { MOCK_GOV_CLAIMS } from '../../../lib/mockData'
 
 import { SUPPLIER_TOKENS, SUPPLIER_DELIVERIES, type SupplierTokenItem, type SupplierDeliveryItem } from '../../../lib/mockData'
 
@@ -37,21 +39,6 @@ const deliveryStatusBadge: Record<DeliveryStatus, React.ReactNode> = {
 
 type TokenFilter = 'all' | TokenStatus
 
-function StatCard({ label, value, sub, accent, badge }: {
-  label: string; value: string; sub: React.ReactNode; accent?: string; badge?: React.ReactNode
-}) {
-  return (
-    <div className={clsx('relative flex-1 overflow-hidden rounded-[16px] border border-[#f0f0f0] bg-white px-[24px] py-[20px]', accent)}>
-      <p className="text-[13px] font-medium text-[#888]">{label}</p>
-      <div className="mt-[10px] flex items-end justify-between gap-2">
-        <p className="text-[28px] font-bold leading-none tracking-tight text-[#111]">{value}</p>
-        {badge}
-      </div>
-      <div className="mt-[8px] text-[13px] text-[#888]">{sub}</div>
-    </div>
-  )
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function SupplierOverview() {
@@ -67,6 +54,34 @@ export default function SupplierOverview() {
 
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 
+  const tokenColumns: Column<SupplierToken>[] = [
+    {
+      key: 'code',
+      label: 'Token ID',
+      width: '32%',
+      render: (t) => (
+        <span className="inline-flex min-w-0 items-center gap-[6px]">
+          <span className="truncate">{t.code}</span>
+          {t.isNew && (
+            <span className="rounded-full bg-[#eefbf4] px-[6px] py-[1px] text-[10px] font-bold text-[#0f9f5d]">NEW</span>
+          )}
+        </span>
+      ),
+    },
+    { key: 'amount', label: 'Amount', width: '20%', render: (t) => `GH₵${t.amount.toLocaleString()}` },
+    { key: 'expiry', label: 'Expiry', width: '22%', render: (t) => t.expiry ? fmtDate(t.expiry) : '—' },
+    { key: 'status', label: 'Status', width: '16%', render: (t) => tokenStatusBadge[t.status] },
+  ]
+
+  const deliveryColumns: Column<Delivery>[] = [
+    { key: 'institution', label: 'Institution', width: '18%', primaryKey: true, render: (d) => d.institution },
+    { key: 'items',       label: 'Items',       width: '28%', render: (d) => <span className="truncate">{d.items}</span> },
+    { key: 'qty',         label: 'Qty',         width: '8%',  render: (d) => d.qty },
+    { key: 'tokenRef',    label: 'Token Ref',   width: '18%', primaryKey: true, render: (d) => d.tokenRef },
+    { key: 'date',        label: 'Date',        width: '14%', render: (d) => fmtDate(d.date) },
+    { key: 'status',      label: 'Status',      width: '14%', render: (d) => deliveryStatusBadge[d.status] },
+  ]
+
   return (
     <>
       <PageHeader
@@ -81,7 +96,7 @@ export default function SupplierOverview() {
 
       <div className="px-[36px] pb-[40px]">
         {/* Stat cards */}
-        <div className="flex gap-[1px] overflow-hidden rounded-[16px] border border-[#f0f0f0] bg-[#f0f0f0]">
+        <StatCardGroup>
           <StatCard
             label="Active Tokens"
             value="2"
@@ -111,6 +126,33 @@ export default function SupplierOverview() {
             sub={<span className="text-[#df6b13] font-medium">Action required</span>}
             accent="bg-gradient-to-br from-white to-red-50/60"
           />
+        </StatCardGroup>
+
+        {/* Claim Token Tracker — See government-approved claims */}
+        <div className="mt-[28px] rounded-[14px] border border-[#efefef] bg-white p-[20px]">
+          <h3 className="text-[16px] font-semibold text-black mb-[14px]">Approved Claims Awaiting Token</h3>
+          <div className="space-y-[10px]">
+            {MOCK_GOV_CLAIMS.filter(c =>
+              c.stage === 'budget' || c.stage === 'token_generated' || c.stage === 'supplier_redemption'
+            ).slice(0, 3).map(claim => (
+              <div key={claim.id} className="flex items-center justify-between rounded-[10px] border border-[#f5f5f5] bg-[#fafafa] p-[14px]">
+                <div>
+                  <p className="text-[13px] font-semibold text-[#111]">{claim.school}</p>
+                  <p className="text-[12px] text-[#888]">{claim.claimId} · {claim.semester}</p>
+                </div>
+                <div className="flex items-center gap-[12px]">
+                  <span className="text-[14px] font-bold text-[#4ea4ff]">{claim.claimValue}</span>
+                  <Badge variant={
+                    claim.stage === 'budget' ? 'orange' :
+                    claim.stage === 'token_generated' ? 'blue' : 'green'
+                  }>
+                    {claim.stage === 'budget' ? 'Pending Token' :
+                     claim.stage === 'token_generated' ? 'Token Issued' : 'Redeemed'}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Token Inbox */}
@@ -137,70 +179,21 @@ export default function SupplierOverview() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-[16px] border-[0.5px] border-black/[0.06] mb-[36px]">
-            <table className="w-full table-fixed border-separate border-spacing-0">
-              <thead>
-                <tr>
-                  <th className="w-[32%] rounded-tl-[16px] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Token ID</th>
-                  <th className="w-[20%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Amount</th>
-                  <th className="w-[22%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Expiry</th>
-                  <th className="w-[16%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Status</th>
-                  <th className="w-[10%] rounded-tr-[16px] bg-[#fbfbfb] pr-[16px] py-[10px] text-right text-[13px] font-semibold text-[#666]">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(t => (
-                  <tr key={t.id} className="h-[55px] hover:bg-[#fbfbfb] transition-colors">
-                    <td className="px-[16px] text-[13px]">
-                      <span className="font-medium text-[#4ea4ff] underline underline-offset-2">{t.code}</span>
-                      {t.isNew && (
-                        <span className="ml-[6px] rounded-full bg-[#eefbf4] px-[6px] py-[1px] text-[10px] font-bold text-[#0f9f5d]">NEW</span>
-                      )}
-                    </td>
-                    <td className="px-[16px] text-[14px] text-[#3f3f3f]">GH₵{t.amount.toLocaleString()}</td>
-                    <td className="px-[16px] text-[14px] text-[#3f3f3f]">{t.expiry ? fmtDate(t.expiry) : '—'}</td>
-                    <td className="px-[16px]">{tokenStatusBadge[t.status]}</td>
-                    <td className="pr-[16px] text-right">
-                      <DropdownMenu items={[
-                        { label: 'View Token',    onClick: () => {} },
-                        { label: 'Submit to Bank',onClick: () => navigate('/supplier/submit-bank'), disabled: t.status !== 'unsubmitted' },
-                        { label: 'Report Issue',  onClick: () => {}, destructive: true },
-                      ]} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={tokenColumns}
+            data={filtered}
+            rowKey={(t) => t.id}
+            className="mb-[36px]"
+            rowActions={(t) => [
+              { label: 'View Token',     onClick: () => {} },
+              { label: 'Submit to Bank', onClick: () => navigate('/supplier/submit-bank'), disabled: t.status !== 'unsubmitted' },
+              { label: 'Report Issue',   onClick: () => {}, destructive: true },
+            ]}
+          />
 
           {/* Recent Deliveries */}
           <h2 className="mb-[16px] text-[17px] font-bold text-[#111]">Recent Deliveries</h2>
-          <div className="overflow-hidden rounded-[16px] border-[0.5px] border-black/[0.06]">
-            <table className="w-full table-fixed border-separate border-spacing-0">
-              <thead>
-                <tr>
-                  <th className="w-[18%] rounded-tl-[16px] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Institution</th>
-                  <th className="w-[28%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Items</th>
-                  <th className="w-[8%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Qty</th>
-                  <th className="w-[18%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Token Ref</th>
-                  <th className="w-[14%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Date</th>
-                  <th className="w-[14%] rounded-tr-[16px] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {deliveries.map(d => (
-                  <tr key={d.id} className="h-[55px] hover:bg-[#fbfbfb] transition-colors">
-                    <td className="px-[16px] text-[14px] font-medium text-[#111]">{d.institution}</td>
-                    <td className="px-[16px] text-[13px] text-[#555] truncate">{d.items}</td>
-                    <td className="px-[16px] text-[14px] text-[#3f3f3f]">{d.qty}</td>
-                    <td className="px-[16px] text-[13px] font-medium text-[#4ea4ff] underline underline-offset-2">{d.tokenRef}</td>
-                    <td className="px-[16px] text-[13px] text-[#555]">{fmtDate(d.date)}</td>
-                    <td className="px-[16px]">{deliveryStatusBadge[d.status]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable columns={deliveryColumns} data={deliveries} rowKey={(d) => d.id} />
         </div>
       </div>
     </>

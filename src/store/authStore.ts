@@ -13,10 +13,13 @@ interface AuthStore {
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set) => ({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      login: (user, token) => set({ user, token, isAuthenticated: true }),
+      user: { id: '1', name: 'Essandoh Prince', email: 'Princeessandoh@gmail.com', role: 'school_admin', schoolId: 'SCH-001' },
+      token: 'dev-token',
+      isAuthenticated: true,
+      login: (user, token) => {
+        localStorage.setItem('token', token)
+        set({ user, token, isAuthenticated: true })
+      },
       logout: () => {
         localStorage.removeItem('token')
         set({ user: null, token: null, isAuthenticated: false })

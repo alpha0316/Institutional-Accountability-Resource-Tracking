@@ -3,6 +3,7 @@ import { Button } from '../../../components/ui/Button'
 import { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
+import { DataTable, type Column } from '../../../components/ui/DataTable'
 
 import { BANK_CASH_READY, type BankReadyToken } from '../../../lib/mockData'
 
@@ -25,6 +26,30 @@ export default function CashRelease() {
     setSelected(new Set())
   }
 
+  const columns: Column<ReadyToken>[] = [
+    {
+      key: 'select',
+      label: '',
+      icon: 'square-check',
+      width: '5%',
+      render: (t) => (
+        <input
+          type="checkbox"
+          checked={selected.has(t.id)}
+          onChange={() => toggle(t.id)}
+          className="h-[16px] w-[16px] accent-[#4ea4ff]"
+          onClick={e => e.stopPropagation()}
+        />
+      ),
+    },
+    { key: 'code',        label: 'Token Code',  width: '19%', primaryKey: true, render: t => t.code },
+    { key: 'supplier',    label: 'Supplier',    width: '20%', render: t => t.supplier },
+    { key: 'institution', label: 'Institution', width: '20%', render: t => t.institution },
+    { key: 'amount',      label: 'Amount',      width: '14%', render: t => `GH₵${t.amount.toLocaleString()}` },
+    { key: 'validated',   label: 'Validated',   width: '12%', render: t => fmtDate(t.validatedAt) },
+    { key: 'status',      label: 'Status',      width: '10%', render: () => <Badge variant="blue">Validated</Badge> },
+  ]
+
   return (
     <>
       <PageHeader title="Cash Release" />
@@ -33,36 +58,13 @@ export default function CashRelease() {
           Validated tokens below are ready for cash disbursement to suppliers.
         </p>
 
-        <div className="mb-[24px] overflow-hidden rounded-[16px] border-[0.5px] border-black/[0.06]">
-          <table className="w-full table-fixed border-separate border-spacing-0">
-            <thead>
-              <tr>
-                <th className="w-[5%] rounded-tl-[16px] bg-[#fbfbfb] px-[16px] py-[10px]" />
-                {['Token Code','Supplier','Institution','Amount','Validated','Status'].map((h, i, arr) => (
-                  <th key={h} className={`bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666] ${i === arr.length - 1 ? 'rounded-tr-[16px]' : ''}`}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {pending.length === 0 ? (
-                <tr><td colSpan={7} className="py-[40px] text-center text-[14px] text-[#aaa]">All tokens have been released.</td></tr>
-              ) : pending.map(t => (
-                <tr key={t.id} onClick={() => toggle(t.id)} className="h-[55px] cursor-pointer hover:bg-[#fbfbfb] transition-colors">
-                  <td className="px-[16px]">
-                    <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggle(t.id)}
-                      className="h-[16px] w-[16px] accent-[#4ea4ff]" onClick={e => e.stopPropagation()} />
-                  </td>
-                  <td className="px-[16px] text-[13px] font-medium text-[#4ea4ff] underline underline-offset-2">{t.code}</td>
-                  <td className="px-[16px] text-[14px] text-[#3f3f3f]">{t.supplier}</td>
-                  <td className="px-[16px] text-[14px] text-[#3f3f3f]">{t.institution}</td>
-                  <td className="px-[16px] text-[14px] text-[#3f3f3f]">GH₵{t.amount.toLocaleString()}</td>
-                  <td className="px-[16px] text-[13px] text-[#555]">{fmtDate(t.validatedAt)}</td>
-                  <td className="px-[16px]"><Badge variant="blue">Validated</Badge></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={columns}
+          data={pending}
+          rowKey={t => t.id}
+          onRowClick={t => toggle(t.id)}
+          emptyMessage="All tokens have been released."
+        />
 
         <div className="flex items-center justify-between rounded-[14px] border border-[#f0f0f0] bg-[#fafafa] px-[20px] py-[16px]">
           <div>

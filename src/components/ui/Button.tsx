@@ -30,7 +30,7 @@ export function Button({
   return (
     <button
       className={clsx(
-        'inline-flex cursor-pointer items-center gap-[7px] whitespace-nowrap font-semibold leading-none transition-colors',
+        'inline-flex cursor-pointer items-center justify-center gap-[7px] whitespace-nowrap font-semibold leading-none transition-colors',
         variantClasses[variant],
         sizeClasses[size],
         className

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { clsx } from 'clsx'
 import { Icon } from './Icon'
 import { DropdownMenu, type DropdownMenuItem } from './DropdownMenu'
@@ -8,6 +8,7 @@ const PAGE_SIZE = 10
 export interface Column<T> {
   key: string
   label: string
+  icon?: string | React.ReactNode
   width?: string
   align?: 'left' | 'right' | 'center'
   primaryKey?: boolean
@@ -22,6 +23,7 @@ interface DataTableProps<T> {
   rowActions?: (row: T) => DropdownMenuItem[]
   emptyMessage?: string
   pageSize?: number
+  className?: string
 }
 
 export function DataTable<T>({
@@ -32,10 +34,15 @@ export function DataTable<T>({
   rowActions,
   emptyMessage = 'No data available.',
   pageSize = PAGE_SIZE,
+  className,
 }: DataTableProps<T>) {
   const hasActions = !!rowActions
   const [page, setPage] = useState(0)
   const totalPages = Math.max(1, Math.ceil(data.length / pageSize))
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, totalPages - 1))
+  }, [totalPages])
 
   const pageData = useMemo(() => {
     const start = page * pageSize
@@ -43,79 +50,94 @@ export function DataTable<T>({
   }, [data, page, pageSize])
 
   return (
-    <div className="overflow-hidden rounded-[16px] border-[0.5px] border-black/[0.06] mb-[24px]">
-      <table className="w-full table-fixed border-separate border-spacing-0">
-        <thead>
-          <tr>
-            {columns.map((col, ci) => (
-              <th
-                key={col.key}
-                style={{ width: col.width }}
-                className={clsx(
-                  'py-[10px] bg-[#fbfbfb] px-[16px] text-[15px] font-semibold leading-none text-[#666]',
-                  ci === 0 && 'rounded-l-[7px]',
-                  ci === columns.length - 1 && !hasActions && 'rounded-r-[7px]',
-                  col.align === 'right' && 'text-right',
-                  col.align === 'center' && 'text-center',
-                  col.align === 'left' && 'text-left',
-                  !col.align && 'text-left'
-                )}
-              >
-                {col.label}
-              </th>
-            ))}
-            {hasActions && (
-              <th className="h-[25px] w-[50px] rounded-r-[7px] bg-[#fbfbfb] pr-[16px] text-right text-[15px] font-normal leading-none text-[#666]">
-                Action
-              </th>
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {data.length === 0 ? (
+    <div className={clsx('mb-[24px] overflow-hidden rounded-[16px] border border-[#e9e9e9] bg-white', className)}>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] table-fixed border-separate border-spacing-0">
+          <thead>
             <tr>
-              <td colSpan={columns.length + (hasActions ? 1 : 0)} className="py-[40px] text-center text-[14px] text-[#9a9a9a]">
-                {emptyMessage}
-              </td>
-            </tr>
-          ) : (
-            pageData.map((row) => (
-              <tr
-                key={rowKey(row)}
-                onClick={() => onRowClick?.(row)}
-                className={clsx(
-                  'h-[55px] transition-colors hover:bg-[#fbfbfb]',
-                  onRowClick && 'cursor-pointer'
-                )}
-              >
-                {columns.map((col) => (
-                  <td
-                    key={col.key}
+              {columns.map((col, ci) => (
+                <th
+                  key={col.key}
+                  style={{ width: col.width }}
+                  className={clsx(
+                    'border-b border-r border-[#ededed] bg-[#fbfbfb] px-[12px] py-[12px] text-[14px] font-medium leading-none text-[#696969]',
+                    ci === columns.length - 1 && !hasActions && 'border-r-0',
+                    col.align === 'right' && 'text-right',
+                    col.align === 'center' && 'text-center',
+                    col.align === 'left' && 'text-left',
+                    !col.align && 'text-left'
+                  )}
+                >
+                  <span
                     className={clsx(
-                      'px-[16px] text-[15px] font-normal',
-                      col.primaryKey && 'underline underline-offset-[2px] text-[#4ea4ff]',
-                      !col.primaryKey && 'text-[#3f3f3f]',
-                      col.align === 'right' && 'text-right',
-                      col.align === 'center' && 'text-center'
+                      'flex items-center gap-[9px]',
+                      col.align === 'right' && 'justify-end',
+                      col.align === 'center' && 'justify-center'
                     )}
                   >
-                    {col.render(row)}
-                  </td>
-                ))}
-                {hasActions && (
-                  <td className="pr-[16px] text-right">
-                    <DropdownMenu items={rowActions(row)} />
-                  </td>
-                )}
+                    {col.label}
+                  </span>
+                </th>
+              ))}
+              {hasActions && (
+                <th className="w-[58px] border-b border-[#ededed] bg-[#fbfbfb] px-[12px] py-[12px] text-right text-[14px] font-medium leading-none text-[#696969]">
+                  <span className="sr-only">Action</span>
+                </th>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length + (hasActions ? 1 : 0)} className="py-[40px] text-center text-[14px] text-[#9a9a9a]">
+                  {emptyMessage}
+                </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              pageData.map((row, ri) => (
+                <tr
+                  key={rowKey(row)}
+                  onClick={() => onRowClick?.(row)}
+                  className={clsx(
+                    'h-[68px] transition-colors hover:bg-[#fbfbfb]',
+                    onRowClick && 'cursor-pointer'
+                  )}
+                >
+                  {columns.map((col, ci) => (
+                    <td
+                      key={col.key}
+                      className={clsx(
+                        'border-r border-[#efefef] px-[12px] text-[15px]',
+                        ci === columns.length - 1 && !hasActions && 'border-r-0',
+                        ri !== pageData.length - 1 && 'border-b border-[#efefef]',
+                        col.primaryKey ? 'font-semibold text-[#111]' : 'font-semibold text-[#101010]',
+                        col.align === 'right' && 'text-right',
+                        col.align === 'center' && 'text-center'
+                      )}
+                    >
+                      {col.render(row)}
+                    </td>
+                  ))}
+                  {hasActions && (
+                    <td
+                      className={clsx(
+                        'px-[12px] text-right',
+                        ri !== pageData.length - 1 && 'border-b border-[#efefef]'
+                      )}
+                    >
+                      <DropdownMenu items={rowActions(row)} />
+                    </td>
+                  )}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-[14px] flex items-center justify-between text-[13px] text-[#888]">
+        <div className="flex items-center justify-between border-t border-[#efefef] bg-white px-[14px] py-[12px] text-[13px] text-[#888]">
           <span>
             Showing {page * pageSize + 1}–{Math.min((page + 1) * pageSize, data.length)} of {data.length}
           </span>
@@ -124,7 +146,7 @@ export function DataTable<T>({
               onClick={() => setPage(Math.max(0, page - 1))}
               disabled={page === 0}
               className={clsx(
-                'flex h-[28px] w-[28px] items-center justify-center rounded-[6px] border border-[#e5e5e5] transition-colors',
+                'flex h-[30px] w-[30px] items-center justify-center rounded-[8px] border border-[#e5e5e5] transition-colors',
                 page === 0 ? 'cursor-not-allowed text-[#ccc]' : 'hover:bg-[#f5f5f5] text-[#555]'
               )}
             >
@@ -135,9 +157,9 @@ export function DataTable<T>({
                 key={i}
                 onClick={() => setPage(i)}
                 className={clsx(
-                  'flex h-[28px] min-w-[28px] items-center justify-center rounded-[6px] border px-[8px] text-[12px] font-medium transition-colors',
+                  'flex h-[30px] min-w-[30px] items-center justify-center rounded-[8px] border px-[8px] text-[12px] font-medium transition-colors',
                   page === i
-                    ? 'border-[#4ea4ff] bg-[#4ea4ff] text-white'
+                    ? 'border-[#111] bg-[#111] text-white'
                     : 'border-[#e5e5e5] text-[#555] hover:bg-[#f5f5f5]'
                 )}
               >
@@ -148,7 +170,7 @@ export function DataTable<T>({
               onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
               disabled={page >= totalPages - 1}
               className={clsx(
-                'flex h-[28px] w-[28px] items-center justify-center rounded-[6px] border border-[#e5e5e5] transition-colors',
+                'flex h-[30px] w-[30px] items-center justify-center rounded-[8px] border border-[#e5e5e5] transition-colors',
                 page >= totalPages - 1 ? 'cursor-not-allowed text-[#ccc]' : 'hover:bg-[#f5f5f5] text-[#555]'
               )}
             >

@@ -116,7 +116,7 @@ export default function Dashboard() {
           ))}
         </StatCardGroup>
 
-        <section className="mt-[52px]">
+        <section className="mt-[40px]">
           <h2 className="text-[22px] font-bold leading-[24px] text-black">Live Dining Hall Feed Today</h2>
           <div className="mt-[6px] flex h-[31px] items-center justify-between">
             <div className="flex h-[25px] items-center rounded-[5px] border border-[#f0f0f0] bg-[#fbfbfb] p-[1px]">

@@ -10,6 +10,7 @@ import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import {
   MOCK_DAILY_REPORTS,
   REIMBURSEMENT_BREAKDOWN,
+  // SUPPLY_CLAIM_BRIDGE, // TODO: supply-to-claim bridge
   ATTENDANCE_SESSIONS,
   WORKFLOW_COLUMNS,
   REPORT_STATUS_MAP,

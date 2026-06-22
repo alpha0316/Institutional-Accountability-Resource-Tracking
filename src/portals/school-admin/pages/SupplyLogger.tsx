@@ -403,9 +403,9 @@ export default function SupplyLogger() {
                 <p className="text-[11px] font-medium text-[#1e40af] mb-[4px]">How this works</p>
                 <p className="text-[11px] text-[#3b82f6] leading-[16px]">Your request is forwarded to the district education office. Once approved, a government token is issued and a supplier is notified to schedule delivery.</p>
               </div>
-              <div className="mt-auto pt-[20px] space-y-[8px]">
-                <Button className="w-full">Submit Request</Button>
-                <Button variant="secondary" className="w-full" onClick={closeForm}>Cancel</Button>
+              <div className="mt-auto flex gap-[8px] pt-[20px]">
+                <Button variant="secondary" className="flex-1" onClick={closeForm}>Cancel</Button>
+                <Button className="flex-1">Submit Request</Button>
               </div>
             </div>
           </div>
@@ -457,9 +457,9 @@ export default function SupplyLogger() {
                   <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="Storekeeper name" />
                 </div>
               </div>
-              <div className="mt-auto pt-[20px] space-y-[8px]">
-                <Button className="w-full">Confirm Receipt</Button>
-                <Button variant="secondary" className="w-full" onClick={closeForm}>Cancel</Button>
+              <div className="mt-auto flex gap-[8px] pt-[20px]">
+                <Button variant="secondary" className="flex-1" onClick={closeForm}>Cancel</Button>
+                <Button className="flex-1">Confirm Receipt</Button>
               </div>
             </div>
           </div>
@@ -509,9 +509,9 @@ export default function SupplyLogger() {
                   <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="Optional" />
                 </div>
               </div>
-              <div className="mt-auto pt-[20px] space-y-[8px]">
-                <Button className="w-full">Log Delivery</Button>
-                <Button variant="secondary" className="w-full" onClick={closeForm}>Cancel</Button>
+              <div className="mt-auto flex gap-[8px] pt-[20px]">
+                <Button variant="secondary" className="flex-1" onClick={closeForm}>Cancel</Button>
+                <Button className="flex-1">Log Delivery</Button>
               </div>
             </div>
           </div>
@@ -564,9 +564,9 @@ export default function SupplyLogger() {
                 <p className="text-[11px] font-medium text-[#92400e] mb-[4px]">Reasonability Check</p>
                 <p className="text-[11px] text-[#a16207] leading-[16px]">The system will cross-check consumption against student attendance. Abnormal variance triggers fraud review.</p>
               </div>
-              <div className="mt-auto pt-[20px] space-y-[8px]">
-                <Button className="w-full">Log Consumption</Button>
-                <Button variant="secondary" className="w-full" onClick={closeForm}>Cancel</Button>
+              <div className="mt-auto flex gap-[8px] pt-[20px]">
+                <Button variant="secondary" className="flex-1" onClick={closeForm}>Cancel</Button>
+                <Button className="flex-1">Log Consumption</Button>
               </div>
             </div>
           </div>

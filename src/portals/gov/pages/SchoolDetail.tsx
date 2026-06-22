@@ -3,6 +3,8 @@ import { Icon } from '../../../components/ui/Icon'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { PageHeader } from '../../../components/layout/PageHeader'
+import { DataTable, type Column } from '../../../components/ui/DataTable'
+import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import { clsx } from 'clsx'
 import { GOV_SCHOOL_PROFILES, type GovSchoolProfile } from '../../../lib/mockData'
 
@@ -81,6 +83,48 @@ export default function SchoolDetail() {
     flagged:  <Badge variant="red">Flagged</Badge>,
   }[school.claimStatus]
 
+  const validationColumns: Column<GovSchoolProfile['recentValidations'][number]>[] = [
+    { key: 'date',   label: 'Date',         width: '18%', render: v => v.date },
+    { key: 'meals',  label: 'Meals Served', width: '18%', render: v => v.mealsServed.toLocaleString() },
+    {
+      key: 'alerts',
+      label: 'Alerts',
+      width: '14%',
+      render: v => v.fraudAlerts > 0
+        ? <span className="font-semibold text-[#de3d36]">{v.fraudAlerts}</span>
+        : <span className="text-[#0f9f5d]">—</span>,
+    },
+    {
+      key: 'risk',
+      label: 'Risk',
+      width: '16%',
+      render: v => {
+        const risk = riskColor(v.riskScore)
+        return v.riskScore === 0
+          ? <span className="text-[12px] text-[#0f9f5d]">Clear</span>
+          : <span className={clsx('inline-block rounded-full px-[7px] py-[2px] text-[11px] font-medium', risk.cls)}>
+              {v.riskScore} · {risk.label}
+            </span>
+      },
+    },
+    {
+      key: 'stage',
+      label: 'Stage',
+      render: v => {
+        const stage = stageLabel(v.stage)
+        return <span className={clsx('text-[12px] font-medium', stage.color)}>{stage.label}</span>
+      },
+    },
+  ]
+
+  const supplyColumns: Column<GovSchoolProfile['supplyRequests'][number]>[] = [
+    { key: 'item',        label: 'Item',         width: '16%', primaryKey: true, render: req => req.item },
+    { key: 'qty',         label: 'Qty',          width: '14%', render: req => req.qty },
+    { key: 'requestedBy', label: 'Requested By', render: req => req.requestedBy },
+    { key: 'requiredBy',  label: 'Required By',  width: '17%', render: req => req.requiredBy },
+    { key: 'status',      label: 'Status',       width: '14%', render: req => supplyStatusBadge(req.status) },
+  ]
+
   return (
     <>
       <PageHeader
@@ -96,7 +140,7 @@ export default function SchoolDetail() {
       <div className="px-[36px] pb-[40px]">
 
         {/* ── KPI strip ──────────────────────────────────────────────────── */}
-        <div className="flex gap-[1px] overflow-hidden rounded-[16px] border border-[#f0f0f0] bg-[#f0f0f0]">
+        <StatCardGroup>
           {[
             { label: 'Enrolled Students',  value: school.enrolled.toLocaleString(),      accent: 'bg-gradient-to-br from-white to-blue-50/50',   badge: undefined },
             { label: 'Meals Validated',    value: school.mealsValidated.toLocaleString(), accent: 'bg-gradient-to-br from-white to-green-50/50',  badge: undefined },
@@ -114,21 +158,23 @@ export default function SchoolDetail() {
             { label: 'Claim Status',       value: school.approvedAmount ? fmt(school.approvedAmount) : fmt(school.claimedAmount),
               accent: 'bg-gradient-to-br from-white to-orange-50/50', badge: claimBadge },
           ].map((s) => (
-            <div key={s.label} className={clsx('relative flex-1 overflow-hidden rounded-[16px] border border-[#f0f0f0] bg-white px-[24px] py-[20px]', s.accent)}>
-              <p className="text-[13px] font-medium text-[#888]">{s.label}</p>
-              <div className="mt-[10px] flex items-end justify-between gap-2">
-                <p className="text-[28px] font-bold leading-none tracking-tight text-[#111]">{s.value}</p>
-                {s.badge}
-              </div>
-              <div className="mt-[8px] text-[13px] text-[#888]">
+            <StatCard
+              key={s.label}
+              label={s.label}
+              value={s.value}
+              accent={s.accent}
+              badge={s.badge}
+              sub={
+                <>
                 {s.label === 'Enrolled Students' && `${school.region} Region`}
                 {s.label === 'Meals Validated'   && 'App-verified scans, current semester'}
                 {s.label === 'Avg Attendance'    && `${school.mealsValidated.toLocaleString()} total validated meals`}
                 {s.label === 'Claim Status'      && (school.approvedAmount ? 'Government approved amount' : 'Submitted, awaiting approval')}
-              </div>
-            </div>
+                </>
+              }
+            />
           ))}
-        </div>
+        </StatCardGroup>
 
         {/* ── Main grid ──────────────────────────────────────────────────── */}
         <div className="mt-[28px] flex gap-[20px]">
@@ -142,46 +188,12 @@ export default function SchoolDetail() {
                 <h3 className="text-[15px] font-semibold text-[#111]">Recent Validation Reports</h3>
                 <p className="mt-[2px] text-[13px] text-[#888]">Daily meal counts recorded via IARTS app scanning</p>
               </div>
-              <table className="w-full table-fixed border-separate border-spacing-0">
-                <thead>
-                  <tr>
-                    <th className="bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[12px] font-semibold text-[#888] w-[18%]">Date</th>
-                    <th className="bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[12px] font-semibold text-[#888] w-[18%]">Meals Served</th>
-                    <th className="bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[12px] font-semibold text-[#888] w-[14%]">Alerts</th>
-                    <th className="bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[12px] font-semibold text-[#888] w-[16%]">Risk</th>
-                    <th className="bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[12px] font-semibold text-[#888]">Stage</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {school.recentValidations.map((v, i) => {
-                    const risk  = riskColor(v.riskScore)
-                    const stage = stageLabel(v.stage)
-                    return (
-                      <tr key={i} className="h-[50px] border-t border-[#f5f5f5] hover:bg-[#fafafa] transition-colors">
-                        <td className="px-[16px] text-[13px] text-[#555]">{v.date}</td>
-                        <td className="px-[16px] text-[13px] font-semibold text-[#111]">{v.mealsServed.toLocaleString()}</td>
-                        <td className="px-[16px] text-[13px]">
-                          {v.fraudAlerts > 0
-                            ? <span className="font-semibold text-[#de3d36]">{v.fraudAlerts}</span>
-                            : <span className="text-[#0f9f5d]">—</span>
-                          }
-                        </td>
-                        <td className="px-[16px]">
-                          {v.riskScore === 0
-                            ? <span className="text-[12px] text-[#0f9f5d]">Clear</span>
-                            : <span className={clsx('inline-block rounded-full px-[7px] py-[2px] text-[11px] font-medium', risk.cls)}>
-                                {v.riskScore} · {risk.label}
-                              </span>
-                          }
-                        </td>
-                        <td className="px-[16px]">
-                          <span className={clsx('text-[12px] font-medium', stage.color)}>{stage.label}</span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+              <DataTable
+                columns={validationColumns}
+                data={school.recentValidations}
+                rowKey={v => v.date}
+                className="mb-0 rounded-none border-0"
+              />
             </div>
 
             {/* Supply requests */}
@@ -190,28 +202,12 @@ export default function SchoolDetail() {
                 <h3 className="text-[15px] font-semibold text-[#111]">Supply Requests</h3>
                 <p className="mt-[2px] text-[13px] text-[#888]">Requests submitted by storekeeper this period</p>
               </div>
-              <table className="w-full table-fixed border-separate border-spacing-0">
-                <thead>
-                  <tr>
-                    <th className="bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[12px] font-semibold text-[#888] w-[16%]">Item</th>
-                    <th className="bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[12px] font-semibold text-[#888] w-[14%]">Qty</th>
-                    <th className="bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[12px] font-semibold text-[#888]">Requested By</th>
-                    <th className="bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[12px] font-semibold text-[#888] w-[17%]">Required By</th>
-                    <th className="bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[12px] font-semibold text-[#888] w-[14%]">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {school.supplyRequests.map((req, i) => (
-                    <tr key={i} className="h-[50px] border-t border-[#f5f5f5] hover:bg-[#fafafa] transition-colors">
-                      <td className="px-[16px] text-[13px] font-semibold text-[#111]">{req.item}</td>
-                      <td className="px-[16px] text-[13px] text-[#555]">{req.qty}</td>
-                      <td className="px-[16px] text-[13px] text-[#555]">{req.requestedBy}</td>
-                      <td className="px-[16px] text-[13px] text-[#555]">{req.requiredBy}</td>
-                      <td className="px-[16px]">{supplyStatusBadge(req.status)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DataTable
+                columns={supplyColumns}
+                data={school.supplyRequests}
+                rowKey={req => `${req.item}-${req.requiredBy}`}
+                className="mb-0 rounded-none border-0"
+              />
             </div>
 
           </div>

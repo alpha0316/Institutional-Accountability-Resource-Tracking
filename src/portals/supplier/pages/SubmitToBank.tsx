@@ -3,6 +3,7 @@ import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
+import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { clsx } from 'clsx'
 
 interface SubmittableToken { id: string; code: string; institution: string; amount: number; issuedDate: string }
@@ -27,6 +28,34 @@ export default function SubmitToBank() {
     if (selected.size === 0) return
     setSubmitted(true)
   }
+
+  const columns: Column<SubmittableToken>[] = [
+    {
+      key: 'select',
+      label: '',
+      icon: 'square-check',
+      width: '6%',
+      render: (t) => (
+        <input
+          type="checkbox"
+          checked={selected.has(t.id)}
+          onChange={() => toggle(t.id)}
+          className="h-[16px] w-[16px] cursor-pointer accent-[#4ea4ff]"
+          onClick={e => e.stopPropagation()}
+        />
+      ),
+    },
+    { key: 'code',        label: 'Token ID',    width: '28%', primaryKey: true, render: t => t.code },
+    { key: 'institution', label: 'Institution', width: '22%', render: t => t.institution },
+    { key: 'amount',      label: 'Amount',      width: '20%', render: t => `GH₵${t.amount.toLocaleString()}` },
+    {
+      key: 'issued',
+      label: 'Issued',
+      width: '16%',
+      render: t => new Date(t.issuedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }),
+    },
+    { key: 'status', label: 'Status', width: '8%', render: () => <Badge variant="orange">Unsubmitted</Badge> },
+  ]
 
   if (submitted) {
     return (
@@ -56,35 +85,12 @@ export default function SubmitToBank() {
           Select unsubmitted tokens below and submit them to Ghana Commercial Bank for cash release.
         </p>
 
-        <div className="mb-[24px] overflow-hidden rounded-[16px] border-[0.5px] border-black/[0.06]">
-          <table className="w-full table-fixed border-separate border-spacing-0">
-            <thead>
-              <tr>
-                <th className="w-[6%] rounded-tl-[16px] bg-[#fbfbfb] px-[16px] py-[10px]" />
-                <th className="w-[28%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Token ID</th>
-                <th className="w-[22%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Institution</th>
-                <th className="w-[20%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Amount</th>
-                <th className="w-[16%] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Issued</th>
-                <th className="w-[8%] rounded-tr-[16px] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666]">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tokens.map(t => (
-                <tr key={t.id} onClick={() => toggle(t.id)} className="h-[55px] cursor-pointer hover:bg-[#fbfbfb] transition-colors">
-                  <td className="px-[16px]">
-                    <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggle(t.id)}
-                      className="h-[16px] w-[16px] cursor-pointer accent-[#4ea4ff]" onClick={e => e.stopPropagation()} />
-                  </td>
-                  <td className="px-[16px] text-[13px] font-medium text-[#4ea4ff] underline underline-offset-2">{t.code}</td>
-                  <td className="px-[16px] text-[14px] text-[#3f3f3f]">{t.institution}</td>
-                  <td className="px-[16px] text-[14px] text-[#3f3f3f]">GH₵{t.amount.toLocaleString()}</td>
-                  <td className="px-[16px] text-[13px] text-[#555]">{new Date(t.issuedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}</td>
-                  <td className="px-[16px]"><Badge variant="orange">Unsubmitted</Badge></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={columns}
+          data={tokens}
+          rowKey={t => t.id}
+          onRowClick={t => toggle(t.id)}
+        />
 
         <div className={clsx('flex items-center justify-between rounded-[14px] border border-[#f0f0f0] bg-[#fafafa] px-[20px] py-[16px]', selected.size === 0 && 'opacity-50')}>
           <div>

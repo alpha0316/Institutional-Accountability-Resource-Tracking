@@ -5,28 +5,43 @@ interface StatCardProps {
   value: string | number
   sub?: React.ReactNode
   accent?: string
+  valueClassName?: string
   badge?: React.ReactNode
   onClick?: () => void
 }
 
-export function StatCard({ label, value, sub, accent, onClick }: StatCardProps) {
+function textToneFromAccent(accent?: string) {
+  return accent
+    ?.split(' ')
+    .filter((token) => token.startsWith('text-'))
+    .join(' ')
+}
+
+export function StatCard({ label, value, sub, accent, valueClassName, badge, onClick }: StatCardProps) {
   const Tag = onClick ? 'button' : 'div'
+  const legacyValueTone = textToneFromAccent(accent)
+
   return (
     <Tag
       className={clsx(
-        'relative flex-1 overflow-hidden rounded-[16px] border border-[#f0f0f0] bg-white px-[24px] py-[20px] text-left transition-[filter]',
-        accent,
+        'relative min-w-0 flex-1 bg-transparent px-[18px] py-[18px] text-left transition-colors md:px-[24px]',
         onClick && 'cursor-pointer hover:brightness-[0.97]'
       )}
       {...(onClick ? { onClick } : {})}
     >
-      <p className="text-[13px] font-medium text-[#888]">{label}</p>
-      <div className="mt-[24px] flex items-end justify-between gap-4">
-        <p className="text-[24px] font-bold leading-none tracking-tight text-[#111]">{value}</p>
-        {/* {badge} */}
+      <p className="truncate text-[14px] font-bold uppercase leading-none text-[#858585]">{label}</p>
+      <div className="mt-[26px] flex min-h-[25px] items-end gap-[9px]">
+        <p className={clsx('min-w-0 text-[24px] font-bold leading-none text-[#050505]', legacyValueTone, valueClassName)}>
+          {value}
+        </p>
+        {badge && (
+          <div className="mb-[1px] shrink-0 text-[13px] font-medium leading-none text-[#25b96f]">
+            {badge}
+          </div>
+        )}
       </div>
       {sub !== undefined && (
-        <div className="mt-[4px] text-[13px] text-[#888]">{sub}</div>
+        <div className="mt-[8px] truncate text-[13px] leading-[18px] text-[#8b8b8b]">{sub}</div>
       )}
     </Tag>
   )
@@ -34,7 +49,7 @@ export function StatCard({ label, value, sub, accent, onClick }: StatCardProps) 
 
 export function StatCardGroup({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex gap-[1px] overflow-hidden rounded-[16px] border border-[#f0f0f0] bg-[#f0f0f0]">
+    <div className="flex overflow-hidden rounded-[16px] border border-[#f5f5f5] bg-[#fbfbfb] shadow-[0_1px_0_rgba(0,0,0,0.02)] [&>*+*]:border-l [&>*+*]:border-dashed [&>*+*]:border-[#dedede]">
       {children}
     </div>
   )

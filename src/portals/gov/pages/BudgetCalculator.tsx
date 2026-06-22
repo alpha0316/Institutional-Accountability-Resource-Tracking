@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Button } from '../../../components/ui/Button'
+import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { clsx } from 'clsx'
 
 const MEAL_COST_PER_STUDENT_PER_DAY = 12.5 // GH₵
@@ -85,6 +86,25 @@ export default function BudgetCalculator() {
 
   const fmt = (n: number) => n < 0 ? '—' : `GH₵${Math.round(n).toLocaleString()}`
 
+  const breakdownColumns: Column<InstRow>[] = [
+    { key: 'institution', label: 'Institution', width: '35%', primaryKey: true, render: row => row.name },
+    { key: 'students',    label: 'Students',    width: '20%', render: row => row.students.toLocaleString() },
+    {
+      key: 'cost',
+      label: 'Est. Cost',
+      width: '25%',
+      render: row => fmt(row.students * row.days * r),
+    },
+    {
+      key: 'share',
+      label: 'Govt. Share',
+      width: '20%',
+      render: row => (
+        <span className="text-[#4ea4ff]">{fmt((row.students * row.days * r * cov) / 100)}</span>
+      ),
+    },
+  ]
+
   return (
     <>
       <PageHeader title="Budget Calculator" />
@@ -143,31 +163,12 @@ export default function BudgetCalculator() {
             </div>
 
             {/* Per-institution breakdown */}
-            <div className="overflow-hidden rounded-[16px] border-[0.5px] border-black/[0.06]">
-              <table className="w-full table-fixed border-separate border-spacing-0">
-                <thead>
-                  <tr>
-                    <th className="rounded-tl-[16px] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666] w-[35%]">Institution</th>
-                    <th className="bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666] w-[20%]">Students</th>
-                    <th className="bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666] w-[25%]">Est. Cost</th>
-                    <th className="rounded-tr-[16px] bg-[#fbfbfb] px-[16px] py-[10px] text-left text-[13px] font-semibold text-[#666] w-[20%]">Govt. Share</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {breakdown.map(row => {
-                    const rowCost = row.students * row.days * r
-                    return (
-                      <tr key={row.name} className="h-[50px] hover:bg-[#fbfbfb]">
-                        <td className="px-[16px] text-[13px] font-medium text-[#111]">{row.name}</td>
-                        <td className="px-[16px] text-[13px] text-[#555]">{row.students.toLocaleString()}</td>
-                        <td className="px-[16px] text-[13px] text-[#555]">{fmt(rowCost)}</td>
-                        <td className="px-[16px] text-[13px] text-[#4ea4ff]">{fmt(rowCost * cov / 100)}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={breakdownColumns}
+              data={breakdown}
+              rowKey={row => row.name}
+              className="mb-0"
+            />
           </div>
         </div>
       </div>
