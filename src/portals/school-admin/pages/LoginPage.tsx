@@ -43,9 +43,9 @@ const portalDefs: {
 
 const mockUsers: Record<User['role'], User> = {
   school_admin: { id: '1', name: 'Essandoh Prince', email: 'Princeessandoh@gmail.com', role: 'school_admin', schoolId: 'SCH-001' },
-  government:   { id: '2', name: 'Dr. Ama Boateng',  email: 'ama@gov.gh',               role: 'government' },
-  supplier:     { id: '3', name: 'Supply Co.',        email: 'ops@supplyco.gh',           role: 'supplier', supplierId: 'SUP-001' },
-  bank:         { id: '4', name: 'Bank Officer',      email: 'officer@bank.gh',           role: 'bank' },
+  government:   { id: '2', name: 'Gov Official',    email: 'official@gov.gh',              role: 'government' },
+  supplier:     { id: '3', name: 'Supply Co.',       email: 'ops@supplyco.gh',              role: 'supplier',  supplierId: 'SUP-001' },
+  bank:         { id: '4', name: 'Bank Officer',     email: 'officer@bank.gh',              role: 'bank' },
 }
 
 export default function LoginPage() {
@@ -55,21 +55,16 @@ export default function LoginPage() {
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
   const [showPw,   setShowPw]   = useState(false)
-  const [loading,  setLoading]  = useState<User['role'] | null>(null)
-  const [error,    setError]    = useState('')
 
-  // Stand-in for "Login with Aza" until Phase 2 QR login ships — mints a real
-  // IARTS JWT from the backend so the rest of the app runs against real auth.
   const enterAs = (role: User['role']) => {
-    setError('')
-    setLoading(role)
     login(mockUsers[role], 'dev-token')
-    setLoading(null)
+    // PublicRoute redirects automatically — no navigate() needed
   }
 
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault()
-    enterAs('school_admin')
+    // placeholder — wire to POST /api/v1/auth/login later
+    login(mockUsers['school_admin'], 'dev-token')
   }
 
   return (
@@ -123,18 +118,13 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading !== null}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-[13px] font-medium py-2.5 rounded-lg transition-colors mt-1"
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-medium py-2.5 rounded-lg transition-colors mt-1"
             >
-              {loading === 'school_admin' ? 'Signing in…' : 'Sign In'}
+              Sign In
               <Icon name="arrow-right" size={15} />
             </button>
           </form>
         </div>
-
-        {error && (
-          <p className="text-center text-[12px] text-red-500 -mt-1">{error}</p>
-        )}
 
         {/* quick portal access */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
@@ -149,14 +139,13 @@ export default function LoginPage() {
               <button
                 key={role}
                 onClick={() => enterAs(role)}
-                disabled={loading !== null}
-                className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all disabled:opacity-60 ${color}`}
+                className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${color}`}
               >
                 <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-gray-200 flex items-center justify-center shrink-0">
                   <span className="text-[12px] font-bold text-gray-700">{initial}</span>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[12px] font-semibold text-gray-900 truncate">{loading === role ? 'Signing in…' : label}</p>
+                  <p className="text-[12px] font-semibold text-gray-900 truncate">{label}</p>
                   <p className="text-[10px] text-gray-400 truncate leading-tight">{description}</p>
                 </div>
               </button>
