@@ -31,13 +31,10 @@ import RejectedTokens  from '../portals/bank/pages/RejectedTokens'
 
 // Government portal
 import GovLayout       from '../portals/gov/layout/GovLayout'
-import GovOverview     from '../portals/gov/pages/Overview'
-import AttendanceReview from '../portals/gov/pages/AttendanceReview'
+import { GovIndexRedirect } from '../portals/gov/layout/GovLayout'
 import SchoolDetail from '../portals/gov/pages/SchoolDetail'
 import IssueTokens     from '../portals/gov/pages/IssueTokens'
 import TokenLedger     from '../portals/gov/pages/TokenLedger'
-import Reimbursements  from '../portals/gov/pages/Reimbursements'
-import FraudReports    from '../portals/gov/pages/FraudReports'
 import ClaimsWorkflow  from '../portals/gov/pages/ClaimsWorkflow'
 import RegionalDashboard from '../portals/gov/pages/RegionalDashboard'
 import FinancialDashboard from '../portals/gov/pages/FinancialDashboard'
@@ -148,13 +145,10 @@ export default function AppRouter() {
 
         {/* Government portal */}
         <Route path="/gov" element={<PrivateRoute><GovLayout /></PrivateRoute>}>
-          <Route index                    element={<GovOverview />} />
-          <Route path="attendance"        element={<AttendanceReview />} />
+          <Route index                    element={<GovIndexRedirect />} />
           <Route path="schools/:schoolId" element={<SchoolDetail />} />
           <Route path="tokens/issue"      element={<IssueTokens />} />
           <Route path="tokens/ledger"     element={<TokenLedger />} />
-          <Route path="reimbursements"    element={<Reimbursements />} />
-          <Route path="fraud"             element={<FraudReports />} />
           <Route path="claims"            element={<ClaimsWorkflow />} />
           <Route path="dashboard/regional"  element={<RegionalDashboard />} />
           <Route path="dashboard/financial" element={<FinancialDashboard />} />

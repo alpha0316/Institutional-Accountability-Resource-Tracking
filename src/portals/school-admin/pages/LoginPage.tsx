@@ -19,11 +19,25 @@ const portalDefs: {
     initial:     'A',
   },
   {
-    role:        'government',
-    label:       'Government',
-    description: 'Review reports & issue tokens',
+    role:        'regional_officer',
+    label:       'Regional Officer',
+    description: 'Verify school operations & attendance',
     color:       'bg-violet-50 border-violet-200 hover:border-violet-400',
-    initial:     'G',
+    initial:     'R',
+  },
+  {
+    role:        'financial_officer',
+    label:       'Financial Officer',
+    description: 'Verify claim calculations & rates',
+    color:       'bg-indigo-50 border-indigo-200 hover:border-indigo-400',
+    initial:     'F',
+  },
+  {
+    role:        'audit_officer',
+    label:       'Audit & Risk Officer',
+    description: 'Investigate fraud & compliance',
+    color:       'bg-rose-50 border-rose-200 hover:border-rose-400',
+    initial:     'A',
   },
   {
     role:        'supplier',
@@ -42,10 +56,12 @@ const portalDefs: {
 ]
 
 const mockUsers: Record<User['role'], User> = {
-  school_admin: { id: '1', name: 'Essandoh Prince', email: 'Princeessandoh@gmail.com', role: 'school_admin', schoolId: 'SCH-001' },
-  government:   { id: '2', name: 'Gov Official',    email: 'official@gov.gh',              role: 'government' },
-  supplier:     { id: '3', name: 'Supply Co.',       email: 'ops@supplyco.gh',              role: 'supplier',  supplierId: 'SUP-001' },
-  bank:         { id: '4', name: 'Bank Officer',     email: 'officer@bank.gh',              role: 'bank' },
+  school_admin:      { id: '1', name: 'Essandoh Prince',  email: 'admin@shsdining.gh',     role: 'school_admin',      schoolId: 'SCH-001' },
+  regional_officer:  { id: '2', name: 'Kwabena Asante',   email: 'regional@shsdining.gh',  role: 'regional_officer' },
+  financial_officer: { id: '5', name: 'Dr. Ama Boateng',  email: 'financial@shsdining.gh', role: 'financial_officer' },
+  audit_officer:     { id: '6', name: 'Yaw Owusu',        email: 'audit@shsdining.gh',     role: 'audit_officer' },
+  supplier:          { id: '3', name: 'Golden Harvest',   email: 'supplier@shsdining.gh',  role: 'supplier',          supplierId: 'SUP-001' },
+  bank:              { id: '4', name: 'Ghana Comm Bank',  email: 'bank@shsdining.gh',      role: 'bank' },
 }
 
 export default function LoginPage() {

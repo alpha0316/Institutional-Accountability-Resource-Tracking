@@ -1,7 +1,7 @@
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Icon } from '../../../components/ui/Icon'
 import { clsx } from 'clsx'
-import { MOCK_GOV_CLAIMS } from '../../../lib/mockData'
+import { useGovClaimsStore } from '../govClaimsStore'
 
 const RISK_LEVELS = [
   { level: 'Low Risk',   count: 124, color: 'bg-[#10b981]', text: 'text-[#065f46]', bg: 'bg-[#d1fae5]' },
@@ -9,9 +9,11 @@ const RISK_LEVELS = [
   { level: 'High Risk',  count: 7,   color: 'bg-[#ef4444]', text: 'text-[#991b1b]', bg: 'bg-[#fee2e2]' },
 ]
 
-const highRiskClaims = MOCK_GOV_CLAIMS.filter(c => c.riskScore >= 40)
-
 export default function AuditDashboard() {
+  const claims = useGovClaimsStore(s => s.claims)
+  const highRiskClaims = claims.filter(c => c.riskScore >= 40)
+  const frozenCount = claims.filter(c => c.frozen).length
+
   return (
     <div>
       <PageHeader title="Risk & Audit Center" />
@@ -25,7 +27,7 @@ export default function AuditDashboard() {
           {[
             { label: 'Open Investigations', value: '14',   sub: 'Active cases under review',                tone: 'bg-[#fff7f8]', alert: true },
             { label: 'Fraud Alerts',        value: '67',   sub: 'Unknown cards, duplicates, anomalies',     tone: 'bg-[#fcf8f5]' },
-            { label: 'Claims Frozen',       value: '2',    sub: 'Claims on audit hold',                     tone: 'bg-[#fff7f8]', alert: true },
+            { label: 'Claims Frozen',       value: String(frozenCount), sub: 'Claims on audit hold',        tone: 'bg-[#fff7f8]', alert: frozenCount > 0 },
             { label: 'Compliance Score',    value: '87%',  sub: 'Overall school compliance rating',         tone: 'bg-[#f7fdf9]' },
           ].map(s => (
             <div key={s.label} className="min-w-0">

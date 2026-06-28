@@ -7,8 +7,7 @@ import { Button } from '../../../components/ui/Button'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import { clsx } from 'clsx'
-import { MOCK_GOV_CLAIMS } from '../../../lib/mockData'
-
+import { useGovClaimsStore } from '../../gov/govClaimsStore'
 import { SUPPLIER_TOKENS, SUPPLIER_DELIVERIES, type SupplierTokenItem, type SupplierDeliveryItem } from '../../../lib/mockData'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -45,6 +44,11 @@ export default function SupplierOverview() {
   const navigate = useNavigate()
   const [filter, setFilter] = useState<TokenFilter>('all')
   const [search, setSearch] = useState('')
+  const claims = useGovClaimsStore(s => s.claims)
+  const redeemToken = useGovClaimsStore(s => s.redeemToken)
+  const approvedClaims = claims.filter(c =>
+    c.stage === 'budget' || c.stage === 'token_generated' || c.stage === 'supplier_redemption'
+  )
 
   const filtered = tokens.filter(t => {
     const matchFilter = filter === 'all' || t.status === filter
@@ -128,13 +132,11 @@ export default function SupplierOverview() {
           />
         </StatCardGroup>
 
-        {/* Claim Token Tracker — See government-approved claims */}
+        {/* Claim Token Tracker */}
         <div className="mt-[28px] rounded-[14px] border border-[#efefef] bg-white p-[20px]">
           <h3 className="text-[16px] font-semibold text-black mb-[14px]">Approved Claims Awaiting Token</h3>
           <div className="space-y-[10px]">
-            {MOCK_GOV_CLAIMS.filter(c =>
-              c.stage === 'budget' || c.stage === 'token_generated' || c.stage === 'supplier_redemption'
-            ).slice(0, 3).map(claim => (
+            {approvedClaims.slice(0, 3).map(claim => (
               <div key={claim.id} className="flex items-center justify-between rounded-[10px] border border-[#f5f5f5] bg-[#fafafa] p-[14px]">
                 <div>
                   <p className="text-[13px] font-semibold text-[#111]">{claim.school}</p>
@@ -149,6 +151,14 @@ export default function SupplierOverview() {
                     {claim.stage === 'budget' ? 'Pending Token' :
                      claim.stage === 'token_generated' ? 'Token Issued' : 'Redeemed'}
                   </Badge>
+                  {claim.stage === 'token_generated' && (
+                    <button
+                      onClick={() => redeemToken(claim.id)}
+                      className="rounded-[6px] bg-[#10b981] px-[10px] py-[5px] text-[11px] font-semibold text-white hover:bg-[#059669]"
+                    >
+                      Redeem
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

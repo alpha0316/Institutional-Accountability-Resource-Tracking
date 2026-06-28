@@ -2,12 +2,9 @@ import { useState, useMemo } from 'react'
 import { clsx } from 'clsx'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Icon } from '../../../components/ui/Icon'
-import {
-  MOCK_GOV_CLAIMS,
-  GOV_WORKFLOW_COLUMNS,
-  type GovSemesterClaim,
-} from '../../../lib/mockData'
+import { GOV_WORKFLOW_COLUMNS } from '../../../lib/mockData'
 import { useGovRole, GOV_ROLES, stageRoleMap } from '../GovRoleContext'
+import { useGovClaimsStore } from '../govClaimsStore'
 
 type DetailTab = 'overview' | 'attendance' | 'supply' | 'history'
 
@@ -33,16 +30,24 @@ function SidebarDetailRow({ label, value, valueClass = '' }: { label: string; va
 }
 
 export default function ClaimsWorkflow() {
-  const { role } = useGovRole()
-  const [selected, setSelected] = useState<GovSemesterClaim | null>(null)
+  const { role, roleDef } = useGovRole()
+  const claims = useGovClaimsStore(s => s.claims)
+  const approve = useGovClaimsStore(s => s.approve)
+  const returnToSchool = useGovClaimsStore(s => s.returnToSchool)
+  const reject = useGovClaimsStore(s => s.reject)
+  const escalate = useGovClaimsStore(s => s.escalate)
+  const freeze = useGovClaimsStore(s => s.freeze)
+
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [detailTab, setDetailTab] = useState<DetailTab>('overview')
+  const selected = claims.find(c => c.id === selectedId) ?? null
 
   const kanbanGroups = useMemo(() => {
-    const g: Record<string, GovSemesterClaim[]> = {}
+    const g: Record<string, typeof claims> = {}
     for (const col of GOV_WORKFLOW_COLUMNS) g[col.id] = []
-    for (const c of MOCK_GOV_CLAIMS) g[c.stage]?.push(c)
+    for (const c of claims) g[c.stage]?.push(c)
     return g
-  }, [])
+  }, [claims])
 
   const currentOfficer = GOV_ROLES.find(r => r.value === role)
 
@@ -66,12 +71,22 @@ export default function ClaimsWorkflow() {
           <div className="flex gap-4 min-w-max">
             {GOV_WORKFLOW_COLUMNS.map((col) => {
               const items = kanbanGroups[col.id] ?? []
+              const ownerRole = stageRoleMap[col.id]
+              const isMyColumn = ownerRole === role
+              const isOtherOfficerColumn = ownerRole !== undefined && ownerRole !== role
               return (
-                <div key={col.id} className="w-[210px] shrink-0 flex flex-col gap-3 rounded-2xl bg-neutral-50 p-3">
+                <div
+                  key={col.id}
+                  className={clsx(
+                    'w-[210px] shrink-0 flex flex-col gap-3 rounded-2xl p-3',
+                    isMyColumn ? 'bg-blue-50/60 ring-1 ring-[#4ea4ff]/40' : 'bg-neutral-50'
+                  )}
+                >
                   <div className="flex items-center justify-between px-[2px]">
                     <div className="flex items-center gap-[6px]">
                       <span className={clsx('h-[7px] w-[7px] shrink-0 rounded-full', col.dot)} />
                       <p className="text-[13px] font-semibold text-black">{col.label}</p>
+                      {isOtherOfficerColumn && <Icon name="lock" size={11} className="text-black/30" />}
                     </div>
                     <span className="text-[12px] text-black/50">{items.length}</span>
                   </div>
@@ -80,7 +95,7 @@ export default function ClaimsWorkflow() {
                     {items.map((claim) => (
                       <button
                         key={claim.id}
-                        onClick={() => { setSelected(claim); setDetailTab('overview') }}
+                        onClick={() => { setSelectedId(claim.id); setDetailTab('overview') }}
                         className="w-full rounded-xl border border-[#efefef] bg-white p-[12px] text-left shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_3px_10px_rgba(0,0,0,0.08)]"
                       >
                         <div className="mb-[4px] flex items-center gap-[6px]">
@@ -89,6 +104,9 @@ export default function ClaimsWorkflow() {
                             <span className={clsx('rounded-full px-[6px] py-[1px] text-[10px] font-medium', GET_RISK_COLOR(claim.riskScore))}>
                               R{claim.riskScore}
                             </span>
+                          )}
+                          {claim.frozen && (
+                            <span className="rounded-full bg-[#fef3c7] px-[6px] py-[1px] text-[10px] font-medium text-[#92400e]">Frozen</span>
                           )}
                         </div>
                         <p className="text-[11px] leading-[16px] text-[#aaa]">{claim.school}</p>
@@ -111,8 +129,15 @@ export default function ClaimsWorkflow() {
                   </div>
 
                   <div className="mt-auto pt-[8px] border-t border-[#e5e5e5]">
-                    <p className="text-[11px] text-[#aaa] text-center">
-                      {['budget', 'token_generated', 'supplier_redemption', 'bank_settlement', 'closed'].includes(col.id) ? 'Automated' : col.actor}
+                    <p className={clsx(
+                      'text-[11px] text-center font-medium',
+                      isMyColumn ? 'text-[#1d6fd1]' : isOtherOfficerColumn ? 'text-black/35' : 'text-[#aaa]'
+                    )}>
+                      {isMyColumn
+                        ? 'Your Queue'
+                        : isOtherOfficerColumn
+                        ? `View Only — ${col.actor}`
+                        : ['budget', 'token_generated', 'supplier_redemption', 'bank_settlement', 'closed'].includes(col.id) ? 'Automated' : col.actor}
                     </p>
                   </div>
                 </div>
@@ -125,7 +150,7 @@ export default function ClaimsWorkflow() {
       {/* ── Claim Detail Sidebar ─────────────────────────────────────── */}
       {selected && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" onClick={() => setSelected(null)} />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" onClick={() => setSelectedId(null)} />
           <div className="absolute right-[12px] top-[12px] flex h-[calc(100vh-24px)] w-[500px] flex-col overflow-y-auto rounded-[22px] bg-white shadow-[0_20px_70px_rgba(0,0,0,0.2)]">
             <div className="px-[20px] pb-[10px] pt-[22px]">
               <div className="flex items-center gap-[10px]">
@@ -133,8 +158,14 @@ export default function ClaimsWorkflow() {
                 <span className={clsx('rounded-full px-[8px] py-[2px] text-[11px] font-semibold', GET_RISK_COLOR(selected.riskScore))}>
                   Risk {selected.riskScore}
                 </span>
+                {selected.frozen && (
+                  <span className="rounded-full bg-[#fef3c7] px-[8px] py-[2px] text-[11px] font-semibold text-[#92400e]">Frozen</span>
+                )}
+                {selected.rejected && (
+                  <span className="rounded-full bg-[#fee2e2] px-[8px] py-[2px] text-[11px] font-semibold text-[#991b1b]">Rejected</span>
+                )}
               </div>
-              <button onClick={() => setSelected(null)} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
+              <button onClick={() => setSelectedId(null)} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
                 <Icon name="x" size={18} />
               </button>
             </div>
@@ -155,7 +186,7 @@ export default function ClaimsWorkflow() {
               ))}
             </div>
 
-            <div className="px-[20px] pb-[24px] pt-[16px] space-y-[14px]">
+            <div className="px-[20px] pb-[24px] pt-[20px] space-y-[14px]">
               {/* Overview Tab */}
               {detailTab === 'overview' && (
                 <>
@@ -209,7 +240,7 @@ export default function ClaimsWorkflow() {
                   )}
 
                   {/* Role-based Actions */}
-                  {stageRoleMap[selected.stage] === role && (
+                  {stageRoleMap[selected.stage] === role && !selected.frozen && !selected.rejected && (
                     <div className="rounded-[13px] border border-[#e5e5e5] bg-white p-[16px] space-y-[8px]">
                       <div className="flex items-center gap-[8px] mb-[4px]">
                         <div className="flex h-[24px] w-[24px] items-center justify-center rounded-[6px] bg-[#3b82f6]">
@@ -229,17 +260,42 @@ export default function ClaimsWorkflow() {
                         </ul>
                       </div>
                       <button
-                        onClick={() => setSelected(null)}
+                        onClick={() => approve(selected.id, role)}
                         className="flex w-full items-center justify-center gap-[6px] rounded-[8px] bg-[#10b981] px-[16px] py-[10px] text-[13px] font-semibold text-white transition-colors hover:bg-[#059669]"
                       >
                         <Icon name="circle-check" size={15} /> Approve & Advance
                       </button>
-                      <button className="flex w-full items-center justify-center gap-[6px] rounded-[8px] border border-[#fecaca] bg-[#fef2f2] px-[16px] py-[10px] text-[13px] font-medium text-[#de3d36] transition-colors hover:bg-[#fee2e2]">
-                        <Icon name="x" size={15} /> Return to School
+                      <button
+                        onClick={() => (role === 'audit_officer' ? reject(selected.id, role) : returnToSchool(selected.id, role))}
+                        className="flex w-full items-center justify-center gap-[6px] rounded-[8px] border border-[#fecaca] bg-[#fef2f2] px-[16px] py-[10px] text-[13px] font-medium text-[#de3d36] transition-colors hover:bg-[#fee2e2]"
+                      >
+                        <Icon name="x" size={15} /> {role === 'audit_officer' ? 'Reject Claim' : role === 'financial_officer' ? 'Return for Recalculation' : 'Return to School'}
                       </button>
-                      <button className="flex w-full items-center justify-center gap-[6px] rounded-[8px] border border-[#e5e5e5] bg-white px-[16px] py-[10px] text-[13px] font-medium text-[#555] transition-colors hover:bg-[#f5f5f5]">
+                      {roleDef.canFreeze && (
+                        <button
+                          onClick={() => freeze(selected.id, role)}
+                          className="flex w-full items-center justify-center gap-[6px] rounded-[8px] border border-[#fde68a] bg-[#fffbeb] px-[16px] py-[10px] text-[13px] font-medium text-[#92400e] transition-colors hover:bg-[#fef3c7]"
+                        >
+                          <Icon name="lock" size={15} /> Freeze Claim
+                        </button>
+                      )}
+                      <button
+                        onClick={() => escalate(selected.id, role)}
+                        className="flex w-full items-center justify-center gap-[6px] rounded-[8px] border border-[#e5e5e5] bg-white px-[16px] py-[10px] text-[13px] font-medium text-[#555] transition-colors hover:bg-[#f5f5f5]"
+                      >
                         <Icon name="shield-exclamation" size={15} /> Escalate
                       </button>
+                    </div>
+                  )}
+
+                  {/* View-only notice: claim belongs to another officer's queue */}
+                  {stageRoleMap[selected.stage] && stageRoleMap[selected.stage] !== role && (
+                    <div className="flex items-center gap-[10px] rounded-[10px] border border-[#e5e5e5] bg-[#fafafa] p-[14px]">
+                      <Icon name="lock" size={16} className="text-black/30 shrink-0" />
+                      <p className="text-[12px] leading-[17px] text-[#888]">
+                        View only — this claim is in the{' '}
+                        <span className="font-medium text-[#555]">{GOV_ROLES.find(r => r.value === stageRoleMap[selected.stage])?.label}</span>'s queue.
+                      </p>
                     </div>
                   )}
 

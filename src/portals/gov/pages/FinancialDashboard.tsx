@@ -1,12 +1,13 @@
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { clsx } from 'clsx'
-import { MOCK_GOV_CLAIMS } from '../../../lib/mockData'
-
-const totalValue = MOCK_GOV_CLAIMS.reduce((a, c) => a + parseFloat(c.claimValue.replace(/[^0-9.]/g, '')), 0)
-const financialClaims = MOCK_GOV_CLAIMS.filter(c => c.stage === 'financial' || c.stage === 'audit' || c.stage === 'budget')
+import { useGovClaimsStore } from '../govClaimsStore'
 
 export default function FinancialDashboard() {
+  const claims = useGovClaimsStore(s => s.claims)
+  const totalValue = claims.reduce((a, c) => a + parseFloat(c.claimValue.replace(/[^0-9.]/g, '')), 0)
+  const financialClaims = claims.filter(c => c.stage === 'financial' || c.stage === 'audit' || c.stage === 'budget')
+
   return (
     <div>
       <PageHeader title="Financial Dashboard" />

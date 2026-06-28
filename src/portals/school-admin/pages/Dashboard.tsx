@@ -7,6 +7,7 @@ import { PageHeader } from '../../../components/layout/PageHeader'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { type DropdownMenuItem } from '../../../components/ui/DropdownMenu'
 import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
+import { useGovClaimsStore } from '../../gov/govClaimsStore'
 import {
   MOCK_VALIDATIONS,
   VALIDATION_STATUS_MAP,
@@ -29,6 +30,8 @@ const SESSION_DATA = {
 export default function Dashboard() {
   const navigate = useNavigate()
   const [filter, setFilter] = useState<FeedFilter>('all')
+  const claims = useGovClaimsStore(s => s.claims)
+  const schoolClaim = claims.find(c => c.schoolId === 'SCH-001')
 
   const isAfternoon = new Date().getHours() >= 12
   const STATS = [
@@ -115,6 +118,24 @@ export default function Dashboard() {
             />
           ))}
         </StatCardGroup>
+
+        {/* Live Gov Claim Status */}
+        {schoolClaim && (
+          <div className="mt-[24px] rounded-[10px] border border-[#dbeafe] bg-[#eff6ff] p-[14px] flex items-center justify-between">
+            <div className="flex items-center gap-[10px]">
+              <div className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[8px] bg-[#3b82f6]">
+                <Icon name="building" size={16} className="text-white" />
+              </div>
+              <div>
+                <p className="text-[13px] font-semibold text-[#1e40af]">Semester Claim — {schoolClaim.claimId}</p>
+                <p className="text-[11px] text-[#3b82f6]">{schoolClaim.semester} · {schoolClaim.claimValue} · Stage: {schoolClaim.stage.replace(/_/g, ' ')}</p>
+              </div>
+            </div>
+            <Badge variant={schoolClaim.stage === 'closed' ? 'green' : schoolClaim.stage === 'token_generated' || schoolClaim.stage === 'supplier_redemption' ? 'blue' : 'orange'}>
+              {schoolClaim.stage === 'closed' ? 'Settled' : schoolClaim.stage === 'token_generated' ? 'Token Issued' : schoolClaim.stage === 'supplier_redemption' ? 'Redeeming' : 'Under Review'}
+            </Badge>
+          </div>
+        )}
 
         <section className="mt-[40px]">
           <h2 className="text-[22px] font-bold leading-[24px] text-black">Live Dining Hall Feed Today</h2>

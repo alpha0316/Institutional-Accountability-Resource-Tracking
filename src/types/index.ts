@@ -1,5 +1,5 @@
 // ─── Auth ────────────────────────────────────────────────────────────────────
-export type UserRole = 'school_admin' | 'government' | 'supplier' | 'bank'
+export type UserRole = 'school_admin' | 'regional_officer' | 'financial_officer' | 'audit_officer' | 'supplier' | 'bank'
 
 export interface User {
   id: string
