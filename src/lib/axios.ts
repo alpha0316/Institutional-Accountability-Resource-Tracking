@@ -1,5 +1,12 @@
 import axios from 'axios'
 
+/** Every Spring Boot endpoint wraps its payload this way — see ApiResponse.java. */
+export interface ApiResponse<T> {
+  data: T
+  message: string | null
+  status: number
+}
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
   headers: { 'Content-Type': 'application/json' },

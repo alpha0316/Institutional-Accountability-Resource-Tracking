@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
+import { useAuthStore } from '../../store/authStore'
 
 export type GovRole = 'regional_officer' | 'financial_officer' | 'audit_officer'
 
@@ -31,7 +32,6 @@ export const GOV_ROLES: GovRoleDefinition[] = [
     navigation: [
       { label: 'Regional Overview',    to: '/gov/dashboard/regional',    icon: 'building-community' },
       { label: 'Claims Queue',         to: '/gov/claims',                icon: 'clipboard-list' },
-      { label: 'Attendance Analytics', to: '/gov/attendance',            icon: 'calendar-check' },
       { label: 'School Profiles',      to: '/gov/schools/sac',           icon: 'school' },
     ],
   },
@@ -67,8 +67,6 @@ export const GOV_ROLES: GovRoleDefinition[] = [
     navigation: [
       { label: 'Risk Center',          to: '/gov/dashboard/audit',       icon: 'shield-exclamation' },
       { label: 'Claims Queue',         to: '/gov/claims',                icon: 'clipboard-list' },
-      { label: 'Fraud Reports',        to: '/gov/fraud',                 icon: 'shield-check' },
-      { label: 'Investigations',       to: '/gov/reimbursements',        icon: 'zoom-question' },
     ],
   },
 ]
@@ -81,20 +79,22 @@ export const stageRoleMap: Record<string, GovRole> = {
 
 interface GovRoleContextType {
   role: GovRole
-  setRole: (r: GovRole) => void
   roleDef: GovRoleDefinition
 }
 
 const GovRoleContext = createContext<GovRoleContextType>({
   role: 'regional_officer',
-  setRole: () => {},
   roleDef: GOV_ROLES[0],
 })
 
+/**
+ * Role now comes from whoever is actually logged in — no more free-switching.
+ * Falls back to the first defined role if a non-gov user somehow lands in this provider.
+ */
 export function GovRoleProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<GovRole>('regional_officer')
-  const roleDef = GOV_ROLES.find(r => r.value === role) ?? GOV_ROLES[0]
-  return <GovRoleContext.Provider value={{ role, setRole, roleDef }}>{children}</GovRoleContext.Provider>
+  const { user } = useAuthStore()
+  const roleDef = GOV_ROLES.find(r => r.value === user?.role) ?? GOV_ROLES[0]
+  return <GovRoleContext.Provider value={{ role: roleDef.value, roleDef }}>{children}</GovRoleContext.Provider>
 }
 
 export function useGovRole() {

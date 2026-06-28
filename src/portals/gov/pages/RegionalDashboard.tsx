@@ -2,7 +2,7 @@ import { PageHeader } from '../../../components/layout/PageHeader'
 import { Icon } from '../../../components/ui/Icon'
 import { Badge } from '../../../components/ui/Badge'
 import { clsx } from 'clsx'
-import { MOCK_GOV_CLAIMS } from '../../../lib/mockData'
+import { useClaimsQuery } from '../useClaims'
 
 const SCHOOLS = [
   { name: 'St. Augustine SHS',  enrollment: 2850, attendance: 84, claims: 1, status: 'Under Review' },
@@ -12,8 +12,9 @@ const SCHOOLS = [
 ]
 
 export default function RegionalDashboard() {
-  const pendingCount = MOCK_GOV_CLAIMS.filter(c => c.stage === 'regional').length
-  const reviewCount = MOCK_GOV_CLAIMS.filter(c => c.stage === 'regional' || c.stage === 'intake').length
+  const claims = useClaimsQuery().data ?? []
+  const pendingCount = claims.filter(c => c.stage === 'regional').length
+  const reviewCount = claims.filter(c => c.stage === 'regional' || c.stage === 'intake').length
 
   return (
     <div>

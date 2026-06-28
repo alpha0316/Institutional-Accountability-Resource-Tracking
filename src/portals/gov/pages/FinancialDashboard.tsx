@@ -1,12 +1,13 @@
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { clsx } from 'clsx'
-import { MOCK_GOV_CLAIMS } from '../../../lib/mockData'
-
-const totalValue = MOCK_GOV_CLAIMS.reduce((a, c) => a + parseFloat(c.claimValue.replace(/[^0-9.]/g, '')), 0)
-const financialClaims = MOCK_GOV_CLAIMS.filter(c => c.stage === 'financial' || c.stage === 'audit' || c.stage === 'budget')
+import { useClaimsQuery } from '../useClaims'
 
 export default function FinancialDashboard() {
+  const claims = useClaimsQuery().data ?? []
+  const totalValue = claims.reduce((a, c) => a + c.claimValue, 0)
+  const financialClaims = claims.filter(c => c.stage === 'financial' || c.stage === 'audit' || c.stage === 'budget')
+
   return (
     <div>
       <PageHeader title="Financial Dashboard" />
@@ -103,9 +104,9 @@ export default function FinancialDashboard() {
             <tbody>
               {financialClaims.map((c) => (
                 <tr key={c.id} className="border-b border-[#f8f8f8] last:border-0">
-                  <td className="py-[14px] text-[13px] font-medium text-[#4ea4ff]">{c.claimId}</td>
-                  <td className="py-[14px] text-[14px] text-[#3f3f3f]">{c.school}</td>
-                  <td className="py-[14px] text-[14px] font-semibold text-[#111]">{c.claimValue}</td>
+                  <td className="py-[14px] text-[13px] font-medium text-[#4ea4ff]">{c.claimCode}</td>
+                  <td className="py-[14px] text-[14px] text-[#3f3f3f]">{c.schoolName}</td>
+                  <td className="py-[14px] text-[14px] font-semibold text-[#111]">GHS {c.claimValue.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   <td className="py-[14px]">
                     <Badge variant={c.stage === 'audit' ? 'orange' : c.stage === 'financial' ? 'blue' : 'green'}>
                       {c.stage === 'financial' ? 'Under Review' : c.stage === 'audit' ? 'In Audit' : 'Budget'}

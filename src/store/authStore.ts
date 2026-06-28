@@ -31,8 +31,10 @@ export const useAuthStore = create<AuthStore>()(
 
 // Role-to-portal route map
 export const roleHomeRoute: Record<UserRole, string> = {
-  school_admin: '/admin',
-  government:   '/gov',
-  supplier:     '/supplier',
-  bank:         '/bank',
+  school_admin:      '/admin',
+  regional_officer:  '/gov',
+  financial_officer: '/gov',
+  audit_officer:     '/gov',
+  supplier:          '/supplier',
+  bank:              '/bank',
 }

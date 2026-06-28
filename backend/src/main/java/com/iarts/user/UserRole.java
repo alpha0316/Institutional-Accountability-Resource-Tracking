@@ -6,7 +6,9 @@ import com.fasterxml.jackson.annotation.JsonValue;
 /** Wire format is lowercase snake_case to match the frontend's UserRole union type. */
 public enum UserRole {
     SCHOOL_ADMIN,
-    GOVERNMENT,
+    REGIONAL_OFFICER,
+    FINANCIAL_OFFICER,
+    AUDIT_OFFICER,
     SUPPLIER,
     BANK;
 

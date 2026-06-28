@@ -2,12 +2,13 @@ import { useState, useMemo } from 'react'
 import { clsx } from 'clsx'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Icon } from '../../../components/ui/Icon'
-import {
-  MOCK_GOV_CLAIMS,
-  GOV_WORKFLOW_COLUMNS,
-  type GovSemesterClaim,
-} from '../../../lib/mockData'
+import { GOV_WORKFLOW_COLUMNS } from '../../../lib/mockData'
 import { useGovRole, GOV_ROLES, stageRoleMap } from '../GovRoleContext'
+import {
+  useClaimsQuery, useClaimDetailQuery,
+  useApproveClaim, useReturnClaim, useRejectClaim, useEscalateClaim, useFreezeClaim,
+} from '../useClaims'
+import type { ApiClaim } from '../../../lib/api/claims'
 
 type DetailTab = 'overview' | 'attendance' | 'supply' | 'history'
 
@@ -23,6 +24,9 @@ const GET_RISK_COLOR = (score: number) =>
   score >= 20 ? 'bg-[#fef3c7] text-[#92400e]' :
   'bg-[#d1fae5] text-[#065f46]'
 
+const formatGHS = (value: number) => `GHS ${value.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const formatDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+
 function SidebarDetailRow({ label, value, valueClass = '' }: { label: string; value: string; valueClass?: string }) {
   return (
     <div className="flex items-center justify-between border-b border-[#f2f2f2] py-[13px] last:border-0">
@@ -33,16 +37,28 @@ function SidebarDetailRow({ label, value, valueClass = '' }: { label: string; va
 }
 
 export default function ClaimsWorkflow() {
-  const { role } = useGovRole()
-  const [selected, setSelected] = useState<GovSemesterClaim | null>(null)
+  const { role, roleDef } = useGovRole()
+  const claimsQuery = useClaimsQuery()
+  const claimsData = claimsQuery.data
+
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [detailTab, setDetailTab] = useState<DetailTab>('overview')
+  const detailQuery = useClaimDetailQuery(selectedId)
+  const selected = detailQuery.data ?? null
+
+  const approve = useApproveClaim()
+  const returnToSchool = useReturnClaim()
+  const reject = useRejectClaim()
+  const escalate = useEscalateClaim()
+  const freeze = useFreezeClaim()
+  const actionPending = approve.isPending || returnToSchool.isPending || reject.isPending || escalate.isPending || freeze.isPending
 
   const kanbanGroups = useMemo(() => {
-    const g: Record<string, GovSemesterClaim[]> = {}
+    const g: Record<string, ApiClaim[]> = {}
     for (const col of GOV_WORKFLOW_COLUMNS) g[col.id] = []
-    for (const c of MOCK_GOV_CLAIMS) g[c.stage]?.push(c)
+    for (const c of claimsData ?? []) g[c.stage]?.push(c)
     return g
-  }, [])
+  }, [claimsData])
 
   const currentOfficer = GOV_ROLES.find(r => r.value === role)
 
@@ -62,16 +78,34 @@ export default function ClaimsWorkflow() {
           </div>
         </div>
 
+        {claimsQuery.isLoading && (
+          <div className="flex h-[200px] items-center justify-center text-[13px] text-[#aaa]">Loading claims…</div>
+        )}
+        {claimsQuery.isError && (
+          <div className="flex h-[200px] items-center justify-center text-[13px] text-[#de3d36]">Could not load claims from the server.</div>
+        )}
+
+        {!claimsQuery.isLoading && !claimsQuery.isError && (
         <div className="w-full overflow-x-auto pb-4">
           <div className="flex gap-4 min-w-max">
             {GOV_WORKFLOW_COLUMNS.map((col) => {
               const items = kanbanGroups[col.id] ?? []
+              const ownerRole = stageRoleMap[col.id]
+              const isMyColumn = ownerRole === role
+              const isOtherOfficerColumn = ownerRole !== undefined && ownerRole !== role
               return (
-                <div key={col.id} className="w-[210px] shrink-0 flex flex-col gap-3 rounded-2xl bg-neutral-50 p-3">
+                <div
+                  key={col.id}
+                  className={clsx(
+                    'w-[210px] shrink-0 flex flex-col gap-3 rounded-2xl p-3',
+                    isMyColumn ? 'bg-blue-50/60 ring-1 ring-[#4ea4ff]/40' : 'bg-neutral-50'
+                  )}
+                >
                   <div className="flex items-center justify-between px-[2px]">
                     <div className="flex items-center gap-[6px]">
                       <span className={clsx('h-[7px] w-[7px] shrink-0 rounded-full', col.dot)} />
                       <p className="text-[13px] font-semibold text-black">{col.label}</p>
+                      {isOtherOfficerColumn && <Icon name="lock" size={11} className="text-black/30" />}
                     </div>
                     <span className="text-[12px] text-black/50">{items.length}</span>
                   </div>
@@ -80,20 +114,23 @@ export default function ClaimsWorkflow() {
                     {items.map((claim) => (
                       <button
                         key={claim.id}
-                        onClick={() => { setSelected(claim); setDetailTab('overview') }}
+                        onClick={() => { setSelectedId(claim.id); setDetailTab('overview') }}
                         className="w-full rounded-xl border border-[#efefef] bg-white p-[12px] text-left shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_3px_10px_rgba(0,0,0,0.08)]"
                       >
                         <div className="mb-[4px] flex items-center gap-[6px]">
-                          <span className="text-[12px] font-semibold text-[#111]">{claim.claimId}</span>
+                          <span className="text-[12px] font-semibold text-[#111]">{claim.claimCode}</span>
                           {claim.riskScore >= 20 && (
                             <span className={clsx('rounded-full px-[6px] py-[1px] text-[10px] font-medium', GET_RISK_COLOR(claim.riskScore))}>
                               R{claim.riskScore}
                             </span>
                           )}
+                          {claim.frozen && (
+                            <span className="rounded-full bg-[#fef3c7] px-[6px] py-[1px] text-[10px] font-medium text-[#92400e]">Frozen</span>
+                          )}
                         </div>
-                        <p className="text-[11px] leading-[16px] text-[#aaa]">{claim.school}</p>
-                        <p className="text-[11px] text-[#888]">{claim.semester}</p>
-                        <p className="mt-[6px] text-[13px] font-semibold text-[#111]">{claim.claimValue}</p>
+                        <p className="text-[11px] leading-[16px] text-[#aaa]">{claim.schoolName}</p>
+                        <p className="text-[11px] text-[#888]">{claim.semesterLabel}</p>
+                        <p className="mt-[6px] text-[13px] font-semibold text-[#111]">{formatGHS(claim.claimValue)}</p>
                         <div className="mt-[8px] flex items-center justify-between border-t border-[#f5f5f5] pt-[8px]">
                           <span className="text-[11px] text-[#aaa]">{claim.verifiedStudents.toLocaleString()} students</span>
                           {claim.fraudFlags > 0 && (
@@ -111,8 +148,15 @@ export default function ClaimsWorkflow() {
                   </div>
 
                   <div className="mt-auto pt-[8px] border-t border-[#e5e5e5]">
-                    <p className="text-[11px] text-[#aaa] text-center">
-                      {['budget', 'token_generated', 'supplier_redemption', 'bank_settlement', 'closed'].includes(col.id) ? 'Automated' : col.actor}
+                    <p className={clsx(
+                      'text-[11px] text-center font-medium',
+                      isMyColumn ? 'text-[#1d6fd1]' : isOtherOfficerColumn ? 'text-black/35' : 'text-[#aaa]'
+                    )}>
+                      {isMyColumn
+                        ? 'Your Queue'
+                        : isOtherOfficerColumn
+                        ? `View Only — ${col.actor}`
+                        : ['budget', 'token_generated', 'supplier_redemption', 'bank_settlement', 'closed'].includes(col.id) ? 'Automated' : col.actor}
                     </p>
                   </div>
                 </div>
@@ -120,21 +164,36 @@ export default function ClaimsWorkflow() {
             })}
           </div>
         </div>
+        )}
       </div>
 
       {/* ── Claim Detail Sidebar ─────────────────────────────────────── */}
-      {selected && (
+      {selectedId && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" onClick={() => setSelected(null)} />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" onClick={() => setSelectedId(null)} />
           <div className="absolute right-[12px] top-[12px] flex h-[calc(100vh-24px)] w-[500px] flex-col overflow-y-auto rounded-[22px] bg-white shadow-[0_20px_70px_rgba(0,0,0,0.2)]">
+            {detailQuery.isLoading && (
+              <div className="flex h-full items-center justify-center text-[13px] text-[#aaa]">Loading claim…</div>
+            )}
+            {detailQuery.isError && (
+              <div className="flex h-full items-center justify-center text-[13px] text-[#de3d36]">Could not load this claim.</div>
+            )}
+            {selected && (
+            <>
             <div className="px-[20px] pb-[10px] pt-[22px]">
               <div className="flex items-center gap-[10px]">
-                <h2 className="pr-12 text-[17px] font-bold leading-none text-black">{selected.claimId}</h2>
+                <h2 className="pr-12 text-[17px] font-bold leading-none text-black">{selected.claimCode}</h2>
                 <span className={clsx('rounded-full px-[8px] py-[2px] text-[11px] font-semibold', GET_RISK_COLOR(selected.riskScore))}>
                   Risk {selected.riskScore}
                 </span>
+                {selected.frozen && (
+                  <span className="rounded-full bg-[#fef3c7] px-[8px] py-[2px] text-[11px] font-semibold text-[#92400e]">Frozen</span>
+                )}
+                {selected.rejected && (
+                  <span className="rounded-full bg-[#fee2e2] px-[8px] py-[2px] text-[11px] font-semibold text-[#991b1b]">Rejected</span>
+                )}
               </div>
-              <button onClick={() => setSelected(null)} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
+              <button onClick={() => setSelectedId(null)} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
                 <Icon name="x" size={18} />
               </button>
             </div>
@@ -155,21 +214,21 @@ export default function ClaimsWorkflow() {
               ))}
             </div>
 
-            <div className="px-[20px] pb-[24px] pt-[16px] space-y-[14px]">
+            <div className="px-[20px] pb-[24px] pt-[20px] space-y-[14px]">
               {/* Overview Tab */}
               {detailTab === 'overview' && (
                 <>
                   <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
-                    <SidebarDetailRow label="School"            value={selected.school} />
-                    <SidebarDetailRow label="Semester"          value={selected.semester} />
+                    <SidebarDetailRow label="School"            value={selected.schoolName} />
+                    <SidebarDetailRow label="Semester"          value={selected.semesterLabel} />
                     <SidebarDetailRow label="Verified Students" value={selected.verifiedStudents.toLocaleString()} />
-                    <SidebarDetailRow label="Claim Value"       value={selected.claimValue} valueClass="text-[#4ea4ff]" />
-                    <SidebarDetailRow label="Attendance Rate"   value={`${selected.attendancePct}%`} />
+                    <SidebarDetailRow label="Claim Value"       value={formatGHS(selected.claimValue)} valueClass="text-[#4ea4ff]" />
+                    <SidebarDetailRow label="Attendance Rate"   value={`${selected.attendancePct.toFixed(0)}%`} />
                     <SidebarDetailRow label="Risk Score"        value={String(selected.riskScore)} />
                     <SidebarDetailRow label="Fraud Flags"       value={String(selected.fraudFlags)} valueClass={selected.fraudFlags > 0 ? 'text-[#de3d36]' : ''} />
                     <SidebarDetailRow label="Current Stage"     value={GOV_WORKFLOW_COLUMNS.find(c => c.id === selected.stage)?.label ?? selected.stage} />
-                    <SidebarDetailRow label="Submitted"         value={selected.submittedAt} />
-                    <SidebarDetailRow label="Last Updated"      value={selected.updatedAt} />
+                    <SidebarDetailRow label="Submitted"         value={formatDate(selected.submittedAt)} />
+                    <SidebarDetailRow label="Last Updated"      value={formatDate(selected.updatedAt)} />
                   </div>
 
                   {/* Policy Deductions */}
@@ -179,7 +238,7 @@ export default function ClaimsWorkflow() {
                       {selected.policyDeductions.map((d, i) => (
                         <div key={i} className="flex items-center justify-between border-b border-[#f2f2f2] py-[8px] last:border-0">
                           <span className="text-[13px] text-[#555]">{d.reason}</span>
-                          <span className="text-[13px] font-semibold text-[#ef4444]">{d.amount}</span>
+                          <span className="text-[13px] font-semibold text-[#ef4444]">-{formatGHS(d.amount)}</span>
                         </div>
                       ))}
                     </div>
@@ -188,6 +247,9 @@ export default function ClaimsWorkflow() {
                   {/* Supporting Documents */}
                   <div className="rounded-[13px] border border-[#f5f5f5] bg-white p-[16px]">
                     <h4 className="text-[14px] font-semibold text-[#111] mb-[10px]">Supporting Documents</h4>
+                    {selected.supportingDocs.length === 0 && (
+                      <p className="text-[12px] text-[#aaa]">No documents on file.</p>
+                    )}
                     {selected.supportingDocs.map((doc, i) => (
                       <div key={i} className="flex items-center gap-[10px] py-[6px]">
                         <Icon name="file-text" size={14} className="text-[#aaa]" />
@@ -209,7 +271,7 @@ export default function ClaimsWorkflow() {
                   )}
 
                   {/* Role-based Actions */}
-                  {stageRoleMap[selected.stage] === role && (
+                  {stageRoleMap[selected.stage] === role && !selected.frozen && !selected.rejected && (
                     <div className="rounded-[13px] border border-[#e5e5e5] bg-white p-[16px] space-y-[8px]">
                       <div className="flex items-center gap-[8px] mb-[4px]">
                         <div className="flex h-[24px] w-[24px] items-center justify-center rounded-[6px] bg-[#3b82f6]">
@@ -229,17 +291,46 @@ export default function ClaimsWorkflow() {
                         </ul>
                       </div>
                       <button
-                        onClick={() => setSelected(null)}
-                        className="flex w-full items-center justify-center gap-[6px] rounded-[8px] bg-[#10b981] px-[16px] py-[10px] text-[13px] font-semibold text-white transition-colors hover:bg-[#059669]"
+                        disabled={actionPending}
+                        onClick={() => approve.mutate(selected.id)}
+                        className="flex w-full items-center justify-center gap-[6px] rounded-[8px] bg-[#10b981] px-[16px] py-[10px] text-[13px] font-semibold text-white transition-colors hover:bg-[#059669] disabled:opacity-60"
                       >
                         <Icon name="circle-check" size={15} /> Approve & Advance
                       </button>
-                      <button className="flex w-full items-center justify-center gap-[6px] rounded-[8px] border border-[#fecaca] bg-[#fef2f2] px-[16px] py-[10px] text-[13px] font-medium text-[#de3d36] transition-colors hover:bg-[#fee2e2]">
-                        <Icon name="x" size={15} /> Return to School
+                      <button
+                        disabled={actionPending}
+                        onClick={() => (role === 'audit_officer' ? reject.mutate(selected.id) : returnToSchool.mutate(selected.id))}
+                        className="flex w-full items-center justify-center gap-[6px] rounded-[8px] border border-[#fecaca] bg-[#fef2f2] px-[16px] py-[10px] text-[13px] font-medium text-[#de3d36] transition-colors hover:bg-[#fee2e2] disabled:opacity-60"
+                      >
+                        <Icon name="x" size={15} /> {role === 'audit_officer' ? 'Reject Claim' : role === 'financial_officer' ? 'Return for Recalculation' : 'Return to School'}
                       </button>
-                      <button className="flex w-full items-center justify-center gap-[6px] rounded-[8px] border border-[#e5e5e5] bg-white px-[16px] py-[10px] text-[13px] font-medium text-[#555] transition-colors hover:bg-[#f5f5f5]">
+                      {roleDef.canFreeze && (
+                        <button
+                          disabled={actionPending}
+                          onClick={() => freeze.mutate(selected.id)}
+                          className="flex w-full items-center justify-center gap-[6px] rounded-[8px] border border-[#fde68a] bg-[#fffbeb] px-[16px] py-[10px] text-[13px] font-medium text-[#92400e] transition-colors hover:bg-[#fef3c7] disabled:opacity-60"
+                        >
+                          <Icon name="lock" size={15} /> Freeze Claim
+                        </button>
+                      )}
+                      <button
+                        disabled={actionPending}
+                        onClick={() => escalate.mutate(selected.id)}
+                        className="flex w-full items-center justify-center gap-[6px] rounded-[8px] border border-[#e5e5e5] bg-white px-[16px] py-[10px] text-[13px] font-medium text-[#555] transition-colors hover:bg-[#f5f5f5] disabled:opacity-60"
+                      >
                         <Icon name="shield-exclamation" size={15} /> Escalate
                       </button>
+                    </div>
+                  )}
+
+                  {/* View-only notice: claim belongs to another officer's queue */}
+                  {stageRoleMap[selected.stage] && stageRoleMap[selected.stage] !== role && (
+                    <div className="flex items-center gap-[10px] rounded-[10px] border border-[#e5e5e5] bg-[#fafafa] p-[14px]">
+                      <Icon name="lock" size={16} className="text-black/30 shrink-0" />
+                      <p className="text-[12px] leading-[17px] text-[#888]">
+                        View only — this claim is in the{' '}
+                        <span className="font-medium text-[#555]">{GOV_ROLES.find(r => r.value === stageRoleMap[selected.stage])?.label}</span>'s queue.
+                      </p>
                     </div>
                   )}
 
@@ -267,13 +358,16 @@ export default function ClaimsWorkflow() {
                     <span className="flex-1">Eligible</span>
                     <span className="w-[50px] text-right">Rate</span>
                   </div>
+                  {selected.attendanceHistory.length === 0 && (
+                    <p className="px-[14px] py-[16px] text-[12px] text-[#aaa]">No meal scans recorded for this semester yet.</p>
+                  )}
                   {selected.attendanceHistory.map((row, i) => (
                     <div key={i} className="flex items-center border-b border-[#f8f8f8] px-[14px] py-[12px] last:border-0">
                       <span className="w-[60px] text-[13px] font-medium text-[#888]">{row.month}</span>
                       <span className="flex-1 text-[13px] text-[#3f3f3f]">{row.meals.toLocaleString()}</span>
                       <span className="flex-1 text-[13px] text-[#3f3f3f]">{row.eligible.toLocaleString()}</span>
                       <span className="w-[50px] text-right text-[13px] font-semibold text-[#111]">
-                        {((row.meals / row.eligible) * 100).toFixed(0)}%
+                        {row.eligible === 0 ? '—' : `${((row.meals / row.eligible) * 100).toFixed(0)}%`}
                       </span>
                     </div>
                   ))}
@@ -286,14 +380,15 @@ export default function ClaimsWorkflow() {
                   <div className="rounded-[13px] border border-[#f5f5f5] bg-white shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
                     <div className="flex items-center border-b border-[#f0f0f0] px-[14px] py-[10px] text-[12px] font-medium text-[#888]">
                       <span className="flex-1">Supply Item</span>
-                      <span className="w-[100px]">Consumed</span>
-                      <span className="w-[90px] text-right">Cost</span>
+                      <span className="w-[100px] text-right">Consumed</span>
                     </div>
+                    {selected.supplyBreakdown.length === 0 && (
+                      <p className="px-[14px] py-[16px] text-[12px] text-[#aaa]">No supply orders recorded for this semester yet.</p>
+                    )}
                     {selected.supplyBreakdown.map((row, i) => (
                       <div key={i} className="flex items-center border-b border-[#f8f8f8] px-[14px] py-[12px] last:border-0">
-                        <span className="flex-1 text-[13px] text-[#3f3f3f]">{row.item}</span>
-                        <span className="w-[100px] text-[13px] text-[#888]">{row.semester}</span>
-                        <span className="w-[90px] text-right text-[13px] font-semibold text-[#4ea4ff]">{row.cost}</span>
+                        <span className="flex-1 text-[13px] text-[#3f3f3f]">{row.itemType}</span>
+                        <span className="w-[100px] text-right text-[13px] font-semibold text-[#111]">{row.totalQuantity.toLocaleString()}</span>
                       </div>
                     ))}
                   </div>
@@ -304,7 +399,7 @@ export default function ClaimsWorkflow() {
                       {selected.policyDeductions.map((d, i) => (
                         <div key={i} className="flex items-center justify-between border-b border-[#f2f2f2] py-[8px] last:border-0">
                           <span className="text-[13px] text-[#555]">{d.reason}</span>
-                          <span className="text-[13px] font-semibold text-[#ef4444]">{d.amount}</span>
+                          <span className="text-[13px] font-semibold text-[#ef4444]">-{formatGHS(d.amount)}</span>
                         </div>
                       ))}
                     </div>
@@ -317,7 +412,7 @@ export default function ClaimsWorkflow() {
                 <div className="space-y-0">
                   {selected.approvalHistory.map((log, i) => (
                     <div key={i} className="flex items-start gap-[12px] border-b border-[#f5f5f5] py-[14px] last:border-0">
-                      <span className="shrink-0 w-[65px] text-[12px] font-medium text-[#888]">{log.date}</span>
+                      <span className="shrink-0 w-[65px] text-[12px] font-medium text-[#888]">{formatDate(log.createdAt)}</span>
                       <div className="flex-1">
                         <p className="text-[13px] font-medium text-[#111]">{log.action}</p>
                         <p className="text-[11px] text-[#888] mt-[2px]">{log.actor}</p>
@@ -328,6 +423,8 @@ export default function ClaimsWorkflow() {
                 </div>
               )}
             </div>
+            </>
+            )}
           </div>
         </div>
       )}

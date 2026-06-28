@@ -456,6 +456,14 @@ export default function SupplyLogger() {
                   <label className="text-[13px] font-medium text-[#555]">Received By</label>
                   <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="Storekeeper name" />
                 </div>
+                <div>
+                  <label className="text-[13px] font-medium text-[#555]">Proof / Receipt <span className="text-[#de3d36]">*</span></label>
+                  <div className="mt-[4px] flex h-[80px] items-center justify-center rounded-[8px] border border-dashed border-[#ccc] bg-[#fafafa] cursor-pointer hover:bg-[#f5f5f5] transition-colors">
+                    <Icon name="upload" size={18} className="text-[#aaa] mr-[6px]" />
+                    <span className="text-[13px] text-[#aaa]">Upload receipt or delivery note</span>
+                  </div>
+                  <p className="mt-[4px] text-[11px] text-[#aaa]">Required for audit compliance. Accepts PDF, JPG, PNG.</p>
+                </div>
               </div>
               <div className="mt-auto flex gap-[8px] pt-[20px]">
                 <Button variant="secondary" className="flex-1" onClick={closeForm}>Cancel</Button>
@@ -507,6 +515,14 @@ export default function SupplyLogger() {
                 <div>
                   <label className="text-[13px] font-medium text-[#555]">Government Token Reference</label>
                   <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="Optional" />
+                </div>
+                <div>
+                  <label className="text-[13px] font-medium text-[#555]">Delivery Receipt <span className="text-[#de3d36]">*</span></label>
+                  <div className="mt-[4px] flex h-[60px] items-center justify-center rounded-[8px] border border-dashed border-[#ccc] bg-[#fafafa] cursor-pointer hover:bg-[#f5f5f5] transition-colors">
+                    <Icon name="upload" size={16} className="text-[#aaa] mr-[6px]" />
+                    <span className="text-[12px] text-[#aaa]">Upload delivery note or waybill</span>
+                  </div>
+                  <p className="mt-[4px] text-[11px] text-[#aaa]">Required for audit trail.</p>
                 </div>
               </div>
               <div className="mt-auto flex gap-[8px] pt-[20px]">
@@ -560,9 +576,13 @@ export default function SupplyLogger() {
                   <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="Kitchen staff name" />
                 </div>
               </div>
-              <div className="mt-[16px] rounded-[10px] border border-[#fef3c7] bg-[#fffbeb] p-[12px]">
-                <p className="text-[11px] font-medium text-[#92400e] mb-[4px]">Reasonability Check</p>
-                <p className="text-[11px] text-[#a16207] leading-[16px]">The system will cross-check consumption against student attendance. Abnormal variance triggers fraud review.</p>
+              <div className="rounded-[10px] border border-[#fef3c7] bg-[#fffbeb] p-[12px]">
+                <p className="text-[11px] font-medium text-[#92400e] mb-[4px]">Kitchen Log Proof <span className="text-[#de3d36]">*</span></p>
+                <div className="mt-[6px] flex h-[50px] items-center justify-center rounded-[6px] border border-dashed border-[#fcd34d] bg-[#fffdf0] cursor-pointer hover:bg-[#fffbeb] transition-colors">
+                  <Icon name="upload" size={14} className="text-[#d97706] mr-[6px]" />
+                  <span className="text-[11px] text-[#b45309]">Upload kitchen log sheet or consumption record</span>
+                </div>
+                <p className="mt-[6px] text-[11px] text-[#ca8a04] leading-[16px]">The system will cross-check consumption against student attendance. Abnormal variance triggers fraud review. Proof of consumption is mandatory for audit.</p>
               </div>
               <div className="mt-auto flex gap-[8px] pt-[20px]">
                 <Button variant="secondary" className="flex-1" onClick={closeForm}>Cancel</Button>
