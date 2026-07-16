@@ -59,7 +59,7 @@ export function Sidebar() {
       <nav className="flex-1 overflow-y-auto px-[20px] pb-4 pt-[5px]">
         {navGroups.map(({ section, items }) => (
           <div key={section} className="mb-[29px] last:mb-0">
-            <p className="mb-[9px] text-[14px] font-semibold leading-5 text-[#8e8e8e]">
+            <p className="mb-[9px] text-[14px] font-semibold leading-5 text-[#000]">
               {section}
             </p>
             <ul className="space-y-[4px]">
@@ -99,7 +99,7 @@ export function Sidebar() {
       {/* footer */}
       <div className="px-[20px] pb-[24px]">
         <button className="mb-[22px] flex h-[29px] w-full items-center gap-[12px] rounded-[8px] px-[9px] text-[15px] text-[#9a9a9a] transition-colors hover:bg-[#f2f2f2]">
-          <Icon name="settings" size={15} className="text-[#9a9a9a]" />
+          <Icon name="settings" size={15} className="text-[#000]" />
           Settings
         </button>
         <button

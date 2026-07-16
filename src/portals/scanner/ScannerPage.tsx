@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
-import api from '../../lib/axios'
-import type { ScanResult } from '../../types'
+import { useScanStore } from '../../store/scanStore'
 
-const DINING_HALL_ID = 'hall-a'
 const SCAN_COOLDOWN_MS = 3000
 
 interface Stats {
@@ -19,25 +17,24 @@ export default function ScannerPage() {
   const lastCode = useRef('')
   const onCooldown = useRef(false)
   const scanLoopId = useRef<number>(0)
+  const addScan = useScanStore(s => s.addScan)
 
   const handleScan = useCallback(async (qrCode: string) => {
-    try {
-      const res = await api.post<ScanResult>('/scan', { qrCode, diningHallId: DINING_HALL_ID })
-      const result = res.data
-      if (result.status === 'served') {
-        setStats(s => ({ ...s, served: s.served + 1 }))
-        toast.success(`Served — ${result.studentName}`, { duration: 2000 })
-      } else if (result.status === 'duplicate_scan') {
-        setStats(s => ({ ...s, duplicates: s.duplicates + 1 }))
-        toast.error('Duplicate scan', { duration: 2000 })
-      } else if (result.status === 'inactive_student' || result.status === 'unknown_card') {
-        setStats(s => ({ ...s, flagged: s.flagged + 1 }))
-        toast.error(result.status === 'unknown_card' ? 'Unknown card' : 'Inactive student', { duration: 2000 })
-      }
-    } catch {
-      toast.error('Scan failed — check connection')
+    const result = addScan(qrCode)
+    if (result.studentName === 'Unknown Card') {
+      setStats(s => ({ ...s, flagged: s.flagged + 1 }))
+      toast.error('Unknown card — access denied', { duration: 2000 })
+    } else if (result.status === 'served') {
+      setStats(s => ({ ...s, served: s.served + 1 }))
+      toast.success(`${result.studentName} — Meal validated`, { duration: 2000 })
+    } else if (result.status === 'duplicate') {
+      setStats(s => ({ ...s, duplicates: s.duplicates + 1 }))
+      toast.error(`Duplicate scan — ${result.studentName} (${result.scanCount}x)`, { duration: 2000 })
+    } else {
+      setStats(s => ({ ...s, flagged: s.flagged + 1 }))
+      toast.error(`Scam attempt — ${result.studentName} (${result.scanCount}x)`, { duration: 2500 })
     }
-  }, [])
+  }, [addScan])
 
   // Camera setup
   useEffect(() => {

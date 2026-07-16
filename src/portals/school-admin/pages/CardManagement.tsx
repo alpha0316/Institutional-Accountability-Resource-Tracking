@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { QRCodeSVG } from 'qrcode.react'
 import { Icon } from '../../../components/ui/Icon'
 import { clsx } from 'clsx'
 import { Badge } from '../../../components/ui/Badge'
@@ -13,6 +15,91 @@ import {
   CARD_STATUS_MAP,
   type MockCard,
 } from '../../../lib/mockData'
+
+const CARD_PRINT_STYLES = `
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f3f4f6}
+  .card{width:520px;background:#fff;border-radius:14px;border-top:5px solid #2563eb;border-bottom:5px solid #2563eb;box-shadow:0 4px 24px rgba(0,0,0,0.10);overflow:hidden;break-inside:avoid}
+  .card-top{display:flex;align-items:flex-start;gap:10px;padding:20px 24px 4px}
+  .card-top .crest{width:26px;height:26px;border-radius:6px;border:1.5px solid #2563eb;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#2563eb;flex-shrink:0}
+  .card-top .titles{flex:1;text-align:center;margin-right:26px}
+  .card-top .titles h1{font-size:18px;font-weight:700;letter-spacing:2.5px;color:#9aa1ab;text-transform:uppercase}
+  .card-top .titles h2{font-size:11px;font-weight:600;letter-spacing:1.5px;color:#2563eb;text-transform:uppercase;margin-top:6px}
+  .card-body{display:flex;gap:18px;padding:18px 24px 20px;align-items:flex-start}
+  .photo-block{width:92px;flex-shrink:0;text-align:center}
+  .photo-box{width:92px;height:92px;border-radius:10px;border:2px solid #2563eb;background:#eef2fb;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#9aa6c4}
+  .photo-block .caption{font-size:9px;letter-spacing:1px;color:#9aa1ab;text-transform:uppercase;margin-top:8px}
+  .photo-block .id{font-size:11px;font-weight:600;color:#3f3f3f;margin-top:3px}
+  .fields{flex:1;min-width:0}
+  .field{margin-bottom:11px}
+  .field:last-child{margin-bottom:0}
+  .field .label{font-size:10px;font-weight:700;letter-spacing:1.2px;color:#2563eb;text-transform:uppercase}
+  .field .value{font-size:14px;font-weight:700;color:#1a1a1a;margin-top:2px}
+  .divider{width:0;border-left:1.5px dashed #d6d6d6;align-self:stretch}
+  .qr-block{width:122px;flex-shrink:0;text-align:center}
+  .qr-block svg{width:96px;height:96px}
+  .qr-block .scan{font-size:10px;font-weight:700;letter-spacing:1px;color:#2563eb;text-transform:uppercase;margin-top:8px}
+  .qr-block .codes{font-size:10px;color:#9aa1ab;margin-top:4px;line-height:1.5}
+  .card-footer{display:flex;justify-content:space-between;align-items:center;padding:12px 24px;border-top:1px solid #f0f0f0}
+  .card-footer .issued{font-size:11px;color:#9aa1ab}
+  .card-footer .status{font-size:11px;font-weight:700;color:#10b981;display:flex;align-items:center;gap:5px}
+  .card-footer .status::before{content:'';width:6px;height:6px;border-radius:50%;background:#10b981}
+  @media print{body{background:#fff}.card{box-shadow:none}}
+`
+
+interface PrintCardData {
+  schoolName: string
+  fullName: string
+  studentCode: string
+  programme: string
+  classLabel: string
+  house: string
+  academicYear: string
+  cardId: string
+  issuedDate: string
+  status: string
+}
+
+function buildCardHtml(c: PrintCardData) {
+  const initials = c.fullName.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
+  const crest = c.schoolName.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
+  const qrSvg = renderToStaticMarkup(<QRCodeSVG value={c.studentCode} size={96} level="M" />)
+  return `
+    <div class="card">
+      <div class="card-top">
+        <div class="crest">${crest}</div>
+        <div class="titles">
+          <h1>Student Identity Card</h1>
+          <h2>${c.schoolName} &middot; Ghana</h2>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="photo-block">
+          <div class="photo-box">${initials}</div>
+          <p class="caption">Student Photo</p>
+          <p class="id">ID: ${c.studentCode}</p>
+        </div>
+        <div class="fields">
+          <div class="field"><div class="label">Name</div><div class="value">${c.fullName}</div></div>
+          <div class="field"><div class="label">Programme</div><div class="value">${c.programme}</div></div>
+          <div class="field"><div class="label">Form &amp; Class</div><div class="value">${c.classLabel}</div></div>
+          <div class="field"><div class="label">House</div><div class="value">${c.house}</div></div>
+          <div class="field"><div class="label">Academic Year</div><div class="value">${c.academicYear}</div></div>
+        </div>
+        <div class="divider"></div>
+        <div class="qr-block">
+          ${qrSvg}
+          <p class="scan">Scan to Validate</p>
+          <p class="codes">${c.cardId}<br>${c.studentCode}</p>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="issued">Issued ${c.issuedDate} &middot; Ministry of Education, Ghana</span>
+        <span class="status">${c.status}</span>
+      </div>
+    </div>
+  `
+}
 
 type CardFilter = 'all' | 'issued' | 'pending' | 'suspended' | 'deactivated'
 type SidebarView = 'detail' | 'issue' | null
@@ -89,51 +176,55 @@ export default function CardManagement() {
   }
 
   function handleDownloadPDF() {
-    const cardHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Student ID Card — CARD-88421</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f3f4f6}
-  .card{width:380px;background:#fff;border-radius:18px;box-shadow:0 4px 24px rgba(0,0,0,0.12);overflow:hidden}
-  .card-header{background:#1e3a5f;color:#fff;padding:24px 28px;display:flex;align-items:center;gap:16px}
-  .card-header h2{font-size:13px;font-weight:400;text-transform:uppercase;letter-spacing:2px;opacity:.7;margin-bottom:4px}
-  .card-header .school{font-size:18px;font-weight:700;line-height:1.2}
-  .card-body{padding:28px}
-  .card-body .row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f0f0f0}
-  .card-body .row:last-child{border-bottom:none}
-  .card-body .label{font-size:12px;color:#888}
-  .card-body .value{font-size:14px;font-weight:600;color:#111}
-  .qr-section{display:flex;align-items:center;gap:18px;margin-top:18px;padding:18px;background:#fafafa;border-radius:12px}
-  .qr-section .qr{margin-left:auto}
-  .card-footer{padding:20px 28px;border-top:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center}
-  .card-footer .card-id{font-size:12px;color:#888}
-  .card-footer .status{font-size:12px;font-weight:600;color:#10b981;display:flex;align-items:center;gap:4px}
-  .card-footer .status::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981}
-  .crest{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}
-  @media print{body{background:#fff}.card{box-shadow:none;border:1px solid #eee}}
+    const previewStudent = MOCK_STUDENTS.find(s => s.studentId === 'SAC-2026-01482')
+    const cardHtml = buildCardHtml({
+      schoolName: 'St. Augustine SHS',
+      fullName: 'Kwesi Mensah',
+      studentCode: 'SAC-2026-01482',
+      programme: previewStudent?.programme ?? 'General Science',
+      classLabel: previewStudent ? `${previewStudent.form} — ${previewStudent.className}` : 'Form 1 — 1 Science A',
+      house: previewStudent?.house ?? 'St Augustine House',
+      academicYear: previewStudent?.academicYear ?? '2025/2026',
+      cardId: 'CARD-88421',
+      issuedDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+      status: 'Active',
+    })
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Student ID Card — CARD-88421</title>
+<style>${CARD_PRINT_STYLES} body{display:flex;justify-content:center;align-items:center;min-height:100vh}</style>
+</head><body>${cardHtml}<script>window.onload=function(){window.print()}</script></body></html>`
+    const w = window.open('', '_blank', 'width=600,height=700')
+    if (w) { w.document.write(html); w.document.close() }
+  }
+
+  function handlePrintAllCards() {
+    const cards = MOCK_CARDS.map(c => {
+      const student = MOCK_STUDENTS.find(s => s.studentId === c.studentId)
+      return `<div class="page">${buildCardHtml({
+        schoolName: 'St. Augustine SHS',
+        fullName: c.studentName,
+        studentCode: c.studentId,
+        programme: student?.programme ?? 'General Arts',
+        classLabel: student ? `${student.form} — ${student.className}` : c.form,
+        house: student?.house ?? 'St Augustine House',
+        academicYear: student?.academicYear ?? '2025/2026',
+        cardId: c.cardUid,
+        issuedDate: new Date(c.issueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+        status: CARD_STATUS_MAP[c.status]?.label ?? c.status,
+      })}</div>`
+    }).join('')
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Student ID Cards — All ${MOCK_CARDS.length}</title>
+<style>${CARD_PRINT_STYLES}
+  .page{display:flex;align-items:center;justify-content:center;min-height:100vh;page-break-after:always;break-after:page}
+  .page:last-child{page-break-after:auto;break-after:auto}
+  @page{margin:12mm}
 </style></head><body>
-<div class="card">
-  <div class="card-header"><div class="crest">SA</div><div><h2>Ministry of Education</h2><div class="school">St. Augustine SHS</div></div></div>
-  <div class="card-body">
-    <div class="row"><span class="label">Student Name</span><span class="value">Kwesi Mensah</span></div>
-    <div class="row"><span class="label">Student ID</span><span class="value">SAC-2026-01482</span></div>
-    <div class="row"><span class="label">Programme</span><span class="value">General Science</span></div>
-    <div class="row"><span class="label">Form / Class</span><span class="value">Form 1 — 1 Science A</span></div>
-    <div class="row"><span class="label">House</span><span class="value">St Augustine House</span></div>
-    <div class="row"><span class="label">Academic Year</span><span class="value">2025 / 2026</span></div>
-    <div class="qr-section">
-      <div><span class="label">Card ID</span><br><span class="value" style="font-size:16px">CARD-88421</span></div>
-      <div class="qr">[QR CODE — SAC-2026-01482]</div>
-    </div>
-  </div>
-  <div class="card-footer">
-    <span class="card-id">Issued: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-    <span class="status">Active</span>
-  </div>
-</div>
+${cards}
 <script>window.onload=function(){window.print()}</script>
 </body></html>`
-    const w = window.open('', '_blank', 'width=500,height=700')
-    if (w) { w.document.write(cardHtml); w.document.close() }
+    const w = window.open('', '_blank', 'width=700,height=800')
+    if (w) { w.document.write(html); w.document.close() }
   }
 
   function closeSidebar() { setSidebarView(null); setSelectedCard(null) }
@@ -186,7 +277,14 @@ export default function CardManagement() {
     <div>
       <PageHeader
         title="Card Management"
-        actions={<Button onClick={openIssue}><Icon name="plus" size={14} />Issue Card</Button>}
+        actions={
+          <div className="flex items-center gap-[8px]">
+            <Button variant="secondary" onClick={handlePrintAllCards}>
+              <Icon name="printer" size={14} />Print All Cards
+            </Button>
+            <Button onClick={openIssue}><Icon name="plus" size={14} />Issue Card</Button>
+          </div>
+        }
       />
 
       <div className="pl-[36px] pr-[20px] pt-[2px]">

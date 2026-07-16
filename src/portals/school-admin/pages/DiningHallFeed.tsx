@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
 import { clsx } from 'clsx'
@@ -7,67 +7,65 @@ import { PageHeader } from '../../../components/layout/PageHeader'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { type DropdownMenuItem } from '../../../components/ui/DropdownMenu'
 import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
-import {
-  MOCK_VALIDATIONS,
-  VALIDATION_STATUS_MAP,
-  type MockValidation,
-} from '../../../lib/mockData'
+import { useScanStore, type ScanLog } from '../../../store/scanStore'
 
-type FeedFilter = 'all' | 'served' | 'duplicate' | 'flagged' | 'invalid_card' | 'inactive_student'
+type FeedFilter = 'all' | 'served' | 'duplicate' | 'flagged'
 
 const filterLabels: Record<FeedFilter, string> = {
-  all: 'All Logs', served: 'Served', duplicate: 'Duplicate', flagged: 'Flagged',
-  invalid_card: 'Invalid Card', inactive_student: 'Inactive Student',
+  all: 'All', served: 'Success', duplicate: 'Duplicate', flagged: 'Scam Attempts',
 }
-
-const STATS = [
-  { label: 'Students Served',  value: '1,842',  description: 'Scanned in today across all halls',   tone: 'bg-[#f7fbff]', trend: '' },
-  { label: 'Eligible Students',value: '2,850',  description: 'Enrolled and active this semester',   tone: 'bg-[#f7fdf9]' },
-  { label: 'Utilization Rate', value: '64.6%',  description: 'Meals served vs. eligible students',  tone: 'bg-[#fcf8f5]' },
-  { label: 'Scam Flags Today', value: '0',      description: 'Suspicious activity flagged.',         tone: 'bg-[#fff7f8]', alert: true },
-]
 
 export default function DiningHallFeed() {
   const navigate = useNavigate()
   const [filter, setFilter] = useState<FeedFilter>('all')
+  const [scanInput, setScanInput] = useState('')
+  const scans = useScanStore(s => s.scans)
+  const addScan = useScanStore(s => s.addScan)
+  const [lastResult, setLastResult] = useState<ScanLog | null>(null)
 
-  const scamFlags = MOCK_VALIDATIONS.filter(v => v.status === 'flagged').length
+  const servedCount = scans.filter(s => s.status === 'served').length
+  const duplicateCount = scans.filter(s => s.status === 'duplicate').length
+  const flaggedCount = scans.filter(s => s.status === 'flagged').length
 
-  const filtered = useMemo(() => {
-    if (filter === 'all') return MOCK_VALIDATIONS
-    return MOCK_VALIDATIONS.filter(v => v.status === filter)
-  }, [filter])
+  function handleScan() {
+    const input = scanInput.trim()
+    if (!input) return
+    const result = addScan(input)
+    setLastResult(result)
+    setScanInput('')
+  }
 
-  function rowActions(_row: MockValidation): DropdownMenuItem[] {
+  const displayScans = filter === 'all' ? [...scans] : scans.filter(s => s.status === filter)
+
+  function rowActions(_row: ScanLog): DropdownMenuItem[] {
     return [
-      { label: 'View Student',    onClick: () => {} },
-      { label: 'View Card',       onClick: () => {} },
-      { label: 'Mark as Reviewed',onClick: () => {} },
+      { label: 'View Student', onClick: () => navigate('/admin/students') },
+      { label: 'View Card',    onClick: () => navigate('/admin/cards') },
     ]
   }
 
-  const columns: Column<MockValidation>[] = [
+  const columns: Column<ScanLog>[] = [
+    { key: 'time', label: 'Time', width: '12%', render: (v) => <span className="text-[14px] text-[#3f3f3f]">{v.time}</span> },
     {
-      key: 'time', label: 'Time / Date', width: '16%',
+      key: 'studentName', label: 'Student', width: '18%', primaryKey: true,
+      render: (v) => <span className="text-[14px] font-normal leading-none text-[#4ea4ff]">{v.studentName}</span>,
+    },
+    { key: 'studentId',   label: 'Student ID', width: '16%', render: (v) => v.studentId },
+    { key: 'cardUid',     label: 'Card ID',    width: '14%', render: (v) => v.cardUid },
+    { key: 'mealSession', label: 'Session',    width: '12%', render: (v) => v.mealSession },
+    {
+      key: 'scanCount', label: '#', width: '6%', align: 'center',
       render: (v) => (
-        <div>
-          <p className="text-[15px] font-normal leading-[18px]">{v.time}</p>
-          <p className="mt-[4px] text-[12px] leading-none text-[#9a9a9a]">{v.date}</p>
-        </div>
+        <span className={v.scanCount >= 4 ? 'text-[#de3d36] font-semibold' : v.scanCount > 1 ? 'text-[#df6b13] font-semibold' : 'text-[#10b981] font-semibold'}>
+          {v.scanCount}
+        </span>
       ),
     },
     {
-      key: 'studentName', label: 'Student Name', width: '20%', primaryKey: true,
-      render: (v) => <span className="text-[15px] font-normal leading-none text-[#4ea4ff]">{v.studentName}</span>,
-    },
-    { key: 'studentId',   label: 'Student ID', width: '16%', render: (v) => v.studentId },
-    { key: 'mealSession', label: 'Session',    width: '14%', render: (v) => v.mealSession },
-    {
       key: 'status', label: 'Status', width: '14%',
-      render: (v) => {
-        const m = VALIDATION_STATUS_MAP[v.status]
-        return <Badge variant={m.variant}>{m.label}</Badge>
-      },
+      render: (v) => v.status === 'flagged' ? <Badge variant="red">Scam Attempt</Badge>
+        : v.status === 'duplicate' ? <Badge variant="orange">Duplicate</Badge>
+        : <Badge variant="green">Success</Badge>,
     },
   ]
 
@@ -75,56 +73,78 @@ export default function DiningHallFeed() {
     <div>
       <PageHeader title="Dining Hall Feed" />
       <div className="pl-[36px] pr-[20px] pt-[2px]">
+
         <StatCardGroup>
-          {STATS.map((stat, i) => (
-            <StatCard
-              key={stat.label}
-              label={stat.label}
-              value={i === 3 ? scamFlags : stat.value}
-              sub={stat.alert
-                ? <span className="font-medium text-[#ff3333]">{stat.description}</span>
-                : stat.description
-              }
-              accent={
-                stat.tone === 'bg-[#f7fbff]' ? 'bg-gradient-to-br from-white to-blue-50/50' :
-                stat.tone === 'bg-[#f7fdf9]' ? 'bg-gradient-to-br from-white to-green-50/50' :
-                stat.tone === 'bg-[#fcf8f5]' ? 'bg-gradient-to-br from-white to-orange-50/50' :
-                'bg-gradient-to-br from-white to-red-50/50'
-              }
-            />
-          ))}
+          <StatCard label="Students Served" value={String(servedCount)} sub="Successfully validated today" accent="bg-gradient-to-br from-white to-green-50/60" />
+          <StatCard label="Duplicate Scans" value={String(duplicateCount)} sub="Already scanned this session" accent="bg-gradient-to-br from-white to-orange-50/60" />
+          <StatCard label="Scam Flags" value={String(flaggedCount)} sub={<span className="text-[#ff3333] font-medium">Suspicious activity detected</span>} accent="bg-gradient-to-br from-white to-red-50/60" />
+          <StatCard label="Total Scans" value={String(scans.length)} sub="All verifications today" accent="bg-gradient-to-br from-white to-blue-50/60" />
         </StatCardGroup>
 
+        {/* Scan Input */}
+        <div className="mt-[24px] rounded-[14px] border border-[#efefef] bg-white p-[16px]">
+          <div className="flex items-center gap-[10px]">
+            <div className="flex h-[44px] flex-1 items-center gap-[10px] rounded-[10px] border border-[#e5e5e5] bg-[#fcfcfc] px-[14px] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.01)]">
+              <Icon name="scan" size={18} className="shrink-0 text-[#4ea4ff]" />
+              <input
+                value={scanInput}
+                onChange={(e) => setScanInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleScan()}
+                placeholder="Scan QR code or enter card UID..."
+                className="min-w-0 flex-1 bg-transparent text-[15px] text-[#555] outline-none placeholder:text-[#aaa]"
+                autoFocus
+              />
+            </div>
+            <button onClick={handleScan} className="flex h-[44px] shrink-0 items-center gap-[8px] rounded-[10px] bg-[#4ea4ff] px-[22px] text-[14px] font-semibold text-white shadow-[0_2px_8px_rgba(78,164,255,0.3)] hover:bg-[#3d93e8]">
+              <Icon name="scan" size={16} /> Scan
+            </button>
+          </div>
+
+          {lastResult && (
+            <div className={clsx(
+              'mt-[12px] rounded-[10px] p-[12px] flex items-center gap-[10px]',
+              lastResult.status === 'served' ? 'border border-[#d1fae5] bg-[#ecfdf5]'
+                : lastResult.status === 'duplicate' ? 'border border-[#fef3c7] bg-[#fffbeb]'
+                : 'border border-[#fee2e2] bg-[#fef2f2]'
+            )}>
+              <Icon name={lastResult.status === 'served' ? 'circle-check' : 'alert-triangle'} size={18}
+                className={lastResult.status === 'served' ? 'text-[#10b981]' : lastResult.status === 'duplicate' ? 'text-[#df6b13]' : 'text-[#de3d36]'} />
+              <div>
+                <p className={clsx('text-[13px] font-semibold', lastResult.status === 'served' ? 'text-[#065f46]' : lastResult.status === 'duplicate' ? 'text-[#92400e]' : 'text-[#991b1b]')}>
+                  {lastResult.studentName === 'Unknown Card' ? 'Unknown Card — Access denied'
+                    : lastResult.status === 'served' ? `${lastResult.studentName} — Meal Validated`
+                    : lastResult.status === 'duplicate' ? `${lastResult.studentName} — Duplicate (${lastResult.scanCount}x)`
+                    : `${lastResult.studentName} — Scam Attempt (${lastResult.scanCount}x scans)`}
+                </p>
+                <p className="text-[11px] text-[#888] mt-[2px]">{lastResult.cardUid} · {lastResult.mealSession} · {lastResult.time}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Scan Feed */}
         <section className="mt-[32px]">
-          <h2 className="text-[22px] font-bold leading-[24px] text-black">Live Dining Hall Feed Today</h2>
+          <h2 className="text-[22px] font-bold leading-[24px] text-black">Scan Feed Today</h2>
           <div className="mt-[6px] flex h-[31px] items-center justify-between">
             <div className="flex h-[25px] items-center rounded-[5px] border border-[#f0f0f0] bg-[#fbfbfb] p-[1px]">
               {(Object.keys(filterLabels) as FeedFilter[]).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={clsx(
-                    'flex h-[22px] items-center rounded-[4px] px-[9px] text-[12px] font-medium leading-none transition-colors',
-                    filter === f ? 'border border-[#e7edf5] bg-white text-[#4ea4ff] shadow-[0_1px_2px_rgba(0,0,0,0.04)]' : 'text-[#7e7e7e] hover:text-[#555]'
-                  )}
-                >
-                  {filterLabels[f]}
-                </button>
+                <button key={f} onClick={() => setFilter(f)} className={clsx(
+                  'flex h-[22px] items-center rounded-[4px] px-[9px] text-[12px] font-medium leading-none transition-colors',
+                  filter === f ? 'border border-[#e7edf5] bg-white text-[#4ea4ff] shadow-[0_1px_2px_rgba(0,0,0,0.04)]' : 'text-[#7e7e7e] hover:text-[#555]'
+                )}>{filterLabels[f]}</button>
               ))}
-            </div>
-            <div className="flex h-[31px] w-[217px] items-center gap-[10px] rounded-[8px] border border-[#e5e5e5] bg-[#fcfcfc] px-[12px]">
-              <Icon name="search" size={15} className="shrink-0 text-[#767676]" />
-              <input placeholder="Search..." className="min-w-0 flex-1 bg-transparent text-[13px] text-[#555] outline-none placeholder:text-[#7e7e7e]" />
             </div>
           </div>
           <div className="mt-[12px]">
-            <DataTable
-              columns={columns}
-              data={filtered}
-              rowKey={(v) => v.id}
-              rowActions={rowActions}
-              onRowClick={() => navigate('/admin/students')}
-            />
+            {displayScans.length === 0 ? (
+              <div className="rounded-[16px] border-[0.5px] border-black/[0.06] py-[50px] text-center">
+                <Icon name="scan" size={32} className="mx-auto text-[#ccc] mb-[12px]" />
+                <p className="text-[14px] text-[#aaa]">No scans recorded yet.</p>
+                <p className="text-[12px] text-[#ccc] mt-[4px]">Scan a student card to begin.</p>
+              </div>
+            ) : (
+              <DataTable columns={columns} data={displayScans} rowKey={(v) => v.id} onRowClick={() => navigate('/admin/students')} rowActions={rowActions} />
+            )}
           </div>
         </section>
       </div>

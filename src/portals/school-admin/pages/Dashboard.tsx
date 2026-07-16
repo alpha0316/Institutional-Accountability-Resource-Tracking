@@ -8,23 +8,12 @@ import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { type DropdownMenuItem } from '../../../components/ui/DropdownMenu'
 import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import { useGovClaimsStore } from '../../gov/govClaimsStore'
-import {
-  MOCK_VALIDATIONS,
-  VALIDATION_STATUS_MAP,
-  type MockValidation,
-} from '../../../lib/mockData'
+import { useScanStore, type ScanLog } from '../../../store/scanStore'
 
-type FeedFilter = 'all' | 'served' | 'duplicate' | 'flagged' | 'invalid_card' | 'inactive_student'
+type FeedFilter = 'all' | 'served' | 'duplicate' | 'flagged'
 
 const filterLabels: Record<FeedFilter, string> = {
   all: 'All Logs', served: 'Served', duplicate: 'Duplicate', flagged: 'Flagged',
-  invalid_card: 'Invalid Card', inactive_student: 'Inactive Student',
-}
-
-const SESSION_DATA = {
-  Breakfast: { label: 'Breakfast', value: '852',  description: 'Breakfast session validations', tone: 'bg-[#f7fdf9]' },
-  Lunch:     { label: 'Lunch',     value: '910',  description: 'Lunch session validations',     tone: 'bg-[#fcf8f5]' },
-  Dinner:    { label: 'Dinner',    value: '673',  description: 'Dinner session validations',    tone: 'bg-[#f7fdf9]' },
 }
 
 export default function Dashboard() {
@@ -32,58 +21,56 @@ export default function Dashboard() {
   const [filter, setFilter] = useState<FeedFilter>('all')
   const claims = useGovClaimsStore(s => s.claims)
   const schoolClaim = claims.find(c => c.schoolId === 'SCH-001')
+  const scans = useScanStore(s => s.scans)
 
-  const isAfternoon = new Date().getHours() >= 12
+  const served = scans.filter(s => s.status === 'served').length
+  const duplicates = scans.filter(s => s.status === 'duplicate').length
+  const flagged = scans.filter(s => s.status === 'flagged').length
+
+  const breakfastScans = scans.filter(s => s.mealSession === 'Breakfast' && s.status === 'served').length
+  const lunchScans = scans.filter(s => s.mealSession === 'Lunch' && s.status === 'served').length
+
   const STATS = [
-    { label: 'Meals Served Today', value: '1,247', description: 'Verified scans across all halls', tone: 'bg-[#f7fbff]', trend: '↑ (+25%)' },
-    isAfternoon ? SESSION_DATA.Lunch     : SESSION_DATA.Breakfast,
-    isAfternoon ? SESSION_DATA.Dinner    : SESSION_DATA.Lunch,
-    { label: 'Fraud Flags',        value: '3',     description: 'Suspicious activity detected',   tone: 'bg-[#fff7f8]', alert: true },
+    { label: 'Meals Served Today', value: String(served), description: 'Verified scans across all halls', tone: 'bg-[#f7fbff]' },
+    { label: 'Breakfast', value: String(breakfastScans), description: 'Breakfast session', tone: 'bg-[#f7fdf9]' },
+    { label: 'Lunch', value: String(lunchScans), description: 'Lunch session', tone: 'bg-[#fcf8f5]' },
+    { label: 'Fraud Flags', value: String(flagged + duplicates), description: 'Suspicious activity detected', tone: 'bg-[#fff7f8]', alert: true },
   ]
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return MOCK_VALIDATIONS
-    return MOCK_VALIDATIONS.filter(v => v.status === filter)
-  }, [filter])
+    const all = [...scans]
+    if (filter === 'all') return all
+    return all.filter(s => s.status === filter)
+  }, [filter, scans])
 
-  function rowActions(_row: MockValidation): DropdownMenuItem[] {
+  function rowActions(_row: ScanLog): DropdownMenuItem[] {
     return [
-      { label: 'View Student',    onClick: () => {} },
-      { label: 'View Card',       onClick: () => {} },
-      { label: 'Mark as Reviewed',onClick: () => {} },
+      { label: 'View Student', onClick: () => navigate('/admin/students') },
+      { label: 'View Card',    onClick: () => navigate('/admin/cards') },
     ]
   }
 
-  const columns: Column<MockValidation>[] = [
+  const columns: Column<ScanLog>[] = [
+    { key: 'time', label: 'Time', width: '12%', render: (v) => <span className="text-[14px] text-[#3f3f3f]">{v.time}</span> },
     {
-      key: 'studentName',
-      label: 'Student Name',
-      width: '20%',
-      primaryKey: true,
-      render: (v) => <span className="text-[15px] font-normal leading-none text-[#4ea4ff]">{v.studentName}</span>,
+      key: 'studentName', label: 'Name', width: '18%', primaryKey: true,
+      render: (v) => <span className="text-[14px] font-normal leading-none text-[#4ea4ff]">{v.studentName}</span>,
     },
-    { key: 'studentId',    label: 'Student ID',    width: '16%', render: (v) => v.studentId },
-    { key: 'scanPoint',    label: 'Scan Point',    width: '16%', render: (v) => v.scanPoint },
-    { key: 'mealSession',  label: 'Meal Session',  width: '12%', render: (v) => v.mealSession },
+    { key: 'studentId',   label: 'Student ID', width: '16%', render: (v) => v.studentId },
+    { key: 'mealSession', label: 'Session',    width: '12%', render: (v) => v.mealSession },
     {
-      key: 'time',
-      label: 'Time',
-      width: '16%',
+      key: 'scanCount', label: '#', width: '6%', align: 'center',
       render: (v) => (
-        <div>
-          <p className="text-[15px] font-normal leading-[18px]">{v.time}</p>
-          <p className="mt-[4px] text-[12px] leading-none text-[#9a9a9a]">{v.date}</p>
-        </div>
+        <span className={v.scanCount >= 4 ? 'text-[#de3d36] font-semibold' : v.scanCount > 1 ? 'text-[#df6b13] font-semibold' : 'text-[#10b981] font-semibold'}>
+          {v.scanCount}
+        </span>
       ),
     },
     {
-      key: 'status',
-      label: 'Status',
-      width: '12%',
-      render: (v) => {
-        const m = VALIDATION_STATUS_MAP[v.status]
-        return <Badge variant={m.variant}>{m.label}</Badge>
-      },
+      key: 'status', label: 'Status', width: '14%',
+      render: (v) => v.status === 'flagged' ? <Badge variant="red">Scam Attempt</Badge>
+        : v.status === 'duplicate' ? <Badge variant="orange">Duplicate</Badge>
+        : <Badge variant="green">Success</Badge>,
     },
   ]
 
