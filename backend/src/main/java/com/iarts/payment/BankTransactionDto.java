@@ -13,7 +13,8 @@ public record BankTransactionDto(
         String supplierName,
         BigDecimal amount,
         Instant processedAt,
-        BankTransactionStatus status
+        BankTransactionStatus status,
+        String reason
 ) {
     public static BankTransactionDto from(BankTransaction t) {
         return new BankTransactionDto(
@@ -23,7 +24,8 @@ public record BankTransactionDto(
                 t.getSupplierName(),
                 t.getAmount(),
                 t.getProcessedAt(),
-                t.getStatus()
+                t.getStatus(),
+                t.getReason()
         );
     }
 }

@@ -42,6 +42,10 @@ public class MealValidation {
     @Column(name = "is_flagged", nullable = false)
     private boolean flagged;
 
+    /** Why a non-served, non-duplicate scan was rejected — "unknown_card" | "inactive_student" | null. */
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
+
     @PrePersist
     void onCreate() {
         scanTime = Instant.now();

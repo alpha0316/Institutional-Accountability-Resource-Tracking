@@ -7,10 +7,7 @@ import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import type { BankTransaction } from '../../../types'
 import { clsx } from 'clsx'
-
-import { BANK_TRANSACTIONS } from '../../../lib/mockData'
-
-const transactions: BankTransaction[] = BANK_TRANSACTIONS
+import { useBankTransactions } from '../hooks/usePaymentSessions'
 
 type Filter = 'all' | BankTransaction['status']
 
@@ -26,7 +23,7 @@ const columns: Column<BankTransaction>[] = [
   { key: 'tokenCode',   label: 'Token Code',  width: '22%', primaryKey: true, render: r => r.tokenCode },
   { key: 'supplier',    label: 'Supplier',    width: '26%', render: r => r.supplierName },
   { key: 'amount',      label: 'Amount',      width: '16%', render: r => `GH₵${r.amount.toLocaleString()}` },
-  { key: 'processed',   label: 'Processed',   width: '16%', render: r => fmtDate(r.processedAt) },
+  { key: 'processed',   label: 'Processed',   width: '16%', render: r => r.processedAt ? fmtDate(r.processedAt) : '—' },
   { key: 'status',      label: 'Status',      width: '12%', render: r => statusBadge[r.status] },
 ]
 
@@ -39,6 +36,7 @@ const FILTERS: { key: Filter; label: string }[] = [
 
 export default function TransactionLog() {
   const [filter, setFilter] = useState<Filter>('all')
+  const { data: transactions = [] } = useBankTransactions()
   const filtered = filter === 'all' ? transactions : transactions.filter(t => t.status === filter)
   const totalReleased = transactions.filter(t => t.status === 'released').reduce((a, t) => a + t.amount, 0)
 
@@ -48,10 +46,10 @@ export default function TransactionLog() {
       <div className="px-[36px] pb-[40px]">
         <StatCardGroup>
           {[
-            { label: 'Total Released',  value: `GH₵${(totalReleased / 1e6).toFixed(2)}M`, color: 'text-[#0f9f5d]' },
-            { label: 'Transactions',    value: transactions.length,                         color: 'text-[#111]' },
-            { label: 'Pending',         value: transactions.filter(t => t.status === 'pending').length,  color: 'text-[#df6b13]' },
-            { label: 'Rejected',        value: transactions.filter(t => t.status === 'rejected').length, color: 'text-[#de3d36]' },
+            { label: 'Total Released',  value: `GH₵${totalReleased.toLocaleString()}`,                     color: 'text-[#0f9f5d]' },
+            { label: 'Transactions',    value: transactions.length,                                        color: 'text-[#111]' },
+            { label: 'Pending',         value: transactions.filter(t => t.status === 'pending').length,    color: 'text-[#df6b13]' },
+            { label: 'Rejected',        value: transactions.filter(t => t.status === 'rejected').length,   color: 'text-[#de3d36]' },
           ].map(s => (
             <StatCard key={s.label} label={s.label} value={s.value} valueClassName={s.color} />
           ))}
@@ -67,13 +65,7 @@ export default function TransactionLog() {
           ))}
         </div>
 
-        <DataTable
-          columns={columns} data={filtered} rowKey={r => r.id}
-          rowActions={() => [
-            { label: 'View Details',  onClick: () => {} },
-            { label: 'Download PDF',  onClick: () => {} },
-          ]}
-        />
+        <DataTable columns={columns} data={filtered} rowKey={r => r.id} emptyMessage="No transactions yet." />
       </div>
     </>
   )

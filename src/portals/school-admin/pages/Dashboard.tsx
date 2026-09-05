@@ -7,46 +7,38 @@ import { PageHeader } from '../../../components/layout/PageHeader'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { type DropdownMenuItem } from '../../../components/ui/DropdownMenu'
 import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
-import { useGovClaimsStore } from '../../gov/govClaimsStore'
-import {
-  MOCK_VALIDATIONS,
-  VALIDATION_STATUS_MAP,
-  type MockValidation,
-} from '../../../lib/mockData'
-
-type FeedFilter = 'all' | 'served' | 'duplicate' | 'flagged' | 'invalid_card' | 'inactive_student'
-
-const filterLabels: Record<FeedFilter, string> = {
-  all: 'All Logs', served: 'Served', duplicate: 'Duplicate', flagged: 'Flagged',
-  invalid_card: 'Invalid Card', inactive_student: 'Inactive Student',
-}
-
-const SESSION_DATA = {
-  Breakfast: { label: 'Breakfast', value: '852',  description: 'Breakfast session validations', tone: 'bg-[#f7fdf9]' },
-  Lunch:     { label: 'Lunch',     value: '910',  description: 'Lunch session validations',     tone: 'bg-[#fcf8f5]' },
-  Dinner:    { label: 'Dinner',    value: '673',  description: 'Dinner session validations',    tone: 'bg-[#f7fdf9]' },
-}
+import { useClaimsQuery } from '../../gov/useClaims'
+import { useAuthStore } from '../../../store/authStore'
+import { VALIDATION_STATUS_MAP } from '../../../lib/mockData'
+import { useLiveDiningFeed, filterLabels, type FeedFilter, type FeedRow } from '../hooks/useLiveDiningFeed'
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const [filter, setFilter] = useState<FeedFilter>('all')
-  const claims = useGovClaimsStore(s => s.claims)
-  const schoolClaim = claims.find(c => c.schoolId === 'SCH-001')
+  const schoolId = useAuthStore(s => s.user?.schoolId)
+  const { data: claims = [] } = useClaimsQuery()
+  const schoolClaim = claims.find(c => c.schoolId === schoolId)
+
+  const { rows, todaysRows, studentsServedToday, scamFlagsToday } = useLiveDiningFeed()
 
   const isAfternoon = new Date().getHours() >= 12
+  const currentSession = isAfternoon ? 'Lunch' : 'Breakfast'
+  const nextSession = isAfternoon ? 'Dinner' : 'Lunch'
+  const sessionCount = (session: string) => todaysRows.filter(r => r.status === 'served' && r.mealSession === session).length
+
   const STATS = [
-    { label: 'Meals Served Today', value: '1,247', description: 'Verified scans across all halls', tone: 'bg-[#f7fbff]', trend: '↑ (+25%)' },
-    isAfternoon ? SESSION_DATA.Lunch     : SESSION_DATA.Breakfast,
-    isAfternoon ? SESSION_DATA.Dinner    : SESSION_DATA.Lunch,
-    { label: 'Fraud Flags',        value: '3',     description: 'Suspicious activity detected',   tone: 'bg-[#fff7f8]', alert: true },
+    { label: 'Meals Served Today', value: studentsServedToday, description: 'Verified scans across all halls', tone: 'bg-[#f7fbff]' },
+    { label: currentSession, value: sessionCount(currentSession), description: `${currentSession} session validations`, tone: 'bg-[#f7fdf9]' },
+    { label: nextSession,    value: sessionCount(nextSession),    description: `${nextSession} session validations`,    tone: 'bg-[#fcf8f5]' },
+    { label: 'Fraud Flags',  value: scamFlagsToday, description: 'Suspicious activity detected', tone: 'bg-[#fff7f8]', alert: true },
   ]
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return MOCK_VALIDATIONS
-    return MOCK_VALIDATIONS.filter(v => v.status === filter)
-  }, [filter])
+    if (filter === 'all') return rows
+    return rows.filter(r => r.status === filter)
+  }, [filter, rows])
 
-  function rowActions(_row: MockValidation): DropdownMenuItem[] {
+  function rowActions(): DropdownMenuItem[] {
     return [
       { label: 'View Student',    onClick: () => {} },
       { label: 'View Card',       onClick: () => {} },
@@ -54,21 +46,9 @@ export default function Dashboard() {
     ]
   }
 
-  const columns: Column<MockValidation>[] = [
+  const columns: Column<FeedRow>[] = [
     {
-      key: 'studentName',
-      label: 'Student Name',
-      width: '20%',
-      primaryKey: true,
-      render: (v) => <span className="text-[15px] font-normal leading-none text-[#4ea4ff]">{v.studentName}</span>,
-    },
-    { key: 'studentId',    label: 'Student ID',    width: '16%', render: (v) => v.studentId },
-    { key: 'scanPoint',    label: 'Scan Point',    width: '16%', render: (v) => v.scanPoint },
-    { key: 'mealSession',  label: 'Meal Session',  width: '12%', render: (v) => v.mealSession },
-    {
-      key: 'time',
-      label: 'Time',
-      width: '16%',
+      key: 'time', label: 'Time / Date', width: '16%',
       render: (v) => (
         <div>
           <p className="text-[15px] font-normal leading-[18px]">{v.time}</p>
@@ -77,9 +57,13 @@ export default function Dashboard() {
       ),
     },
     {
-      key: 'status',
-      label: 'Status',
-      width: '12%',
+      key: 'studentName', label: 'Student Name', width: '20%', primaryKey: true,
+      render: (v) => <span className="text-[15px] font-normal leading-none text-[#4ea4ff]">{v.studentName}</span>,
+    },
+    { key: 'cardNumber',  label: 'Card Number', width: '16%', render: (v) => v.cardNumber },
+    { key: 'mealSession', label: 'Session',     width: '14%', render: (v) => v.mealSession },
+    {
+      key: 'status', label: 'Status', width: '14%',
       render: (v) => {
         const m = VALIDATION_STATUS_MAP[v.status]
         return <Badge variant={m.variant}>{m.label}</Badge>
@@ -95,7 +79,7 @@ export default function Dashboard() {
 
       <div className="pl-[36px] pr-[20px] pt-[2px]">
         <StatCardGroup>
-          {STATS.map((stat: any) => (
+          {STATS.map((stat) => (
             <StatCard
               key={stat.label}
               label={stat.label}
@@ -110,10 +94,6 @@ export default function Dashboard() {
                 stat.tone === 'bg-[#fcf8f5]' ? 'bg-gradient-to-br from-white to-orange-50/50' :
                 'bg-gradient-to-br from-white to-red-50/50'
               }
-              badge={stat.trend
-                ? <span className="flex items-center gap-[3px] rounded-full bg-[#eefbf4] px-[8px] py-[3px] text-[12px] font-semibold text-[#0f9f5d]">{stat.trend}</span>
-                : undefined
-              }
               onClick={stat.alert ? () => navigate('/admin/fraud') : undefined}
             />
           ))}
@@ -127,8 +107,8 @@ export default function Dashboard() {
                 <Icon name="building" size={16} className="text-white" />
               </div>
               <div>
-                <p className="text-[13px] font-semibold text-[#1e40af]">Semester Claim — {schoolClaim.claimId}</p>
-                <p className="text-[11px] text-[#3b82f6]">{schoolClaim.semester} · {schoolClaim.claimValue} · Stage: {schoolClaim.stage.replace(/_/g, ' ')}</p>
+                <p className="text-[13px] font-semibold text-[#1e40af]">Semester Claim — {schoolClaim.claimCode}</p>
+                <p className="text-[11px] text-[#3b82f6]">{schoolClaim.semesterLabel} · GHS {schoolClaim.claimValue.toLocaleString()} · Stage: {schoolClaim.stage.replace(/_/g, ' ')}</p>
               </div>
             </div>
             <Badge variant={schoolClaim.stage === 'closed' ? 'green' : schoolClaim.stage === 'token_generated' || schoolClaim.stage === 'supplier_redemption' ? 'blue' : 'orange'}>

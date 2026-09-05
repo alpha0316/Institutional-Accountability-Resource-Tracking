@@ -1,4 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import { Icon } from '../../../components/ui/Icon'
 import { clsx } from 'clsx'
 import { Badge } from '../../../components/ui/Badge'
@@ -7,19 +9,15 @@ import { PageHeader } from '../../../components/layout/PageHeader'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { type DropdownMenuItem } from '../../../components/ui/DropdownMenu'
 import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
-import {
-  MOCK_SUPPLIES,
-  MOCK_DELIVERIES,
-  MOCK_CONSUMPTIONS,
-  MOCK_SUPPLIERS,
-  MOCK_TOKENS,
-  SUPPLY_STATUS_MAP,
-  type MockSupply,
-  type MockDelivery,
-  type MockConsumption,
-  type MockSupplier,
-  type MockToken,
-} from '../../../lib/mockData'
+import { useAuthStore } from '../../../store/authStore'
+import { listSuppliers } from '../../../lib/api/suppliers'
+import { listSupplyOrders, createSupplyOrder, listSupplyConsumptions, createSupplyConsumption } from '../../../lib/api/supply'
+import { listTokens } from '../../../lib/api/tokens'
+import { MOCK_SUPPLIES, SUPPLY_STATUS_MAP, type MockSupply } from '../../../lib/mockData'
+import type { SupplyOrder, SupplyConsumption, GovernmentToken } from '../../../types'
+
+const ITEM_OPTIONS = ['Rice', 'Cooking Oil', 'Beans', 'Tomato Paste', 'Maize', 'Salt', 'Fish (Frozen)', 'Gas Cylinders']
+const UNIT_OPTIONS = ['Bags', 'Cartons', 'Litres', 'Cylinders', 'Crates']
 
 type PageTab = 'inventory' | 'deliveries' | 'consumption' | 'suppliers' | 'tokens'
 type SidebarTab = 'overview' | 'inventory' | 'consumption' | 'supplier_history' | 'government' | 'logs'
@@ -41,10 +39,12 @@ const SIDEBAR_TABS: { label: string; value: SidebarTab; icon: string }[] = [
   { label: 'Audit Logs',       value: 'logs',              icon: 'history' },
 ]
 
-const STATS = [
+// Inventory/token-exposure figures stay mock — they need real stock-level and
+// bank-settlement tracking that's out of scope for this pass. "Deliveries This Week"
+// is computed live below, from real supply orders.
+const MOCK_STATS = [
   { label: 'Total Stock Value',       value: 'GHS 842,000',  description: 'Estimated current inventory value', tone: 'bg-[#f7fbff]', trend: '↑ (+12%)' },
   { label: 'Below Reorder Level',     value: '3',            description: 'Items requiring restocking',         tone: 'bg-[#fff7f8]', alert: true },
-  { label: 'Deliveries This Week',    value: '6',            description: 'Confirmed by storekeeper',            tone: 'bg-[#f7fdf9]' },
   { label: 'Govt Token Exposure',     value: 'GHS 1,525,000',description: 'Pending + verified supplier tokens', tone: 'bg-[#fcf8f5]' },
 ]
 
@@ -58,14 +58,120 @@ function SidebarDetailRow({ label, value, valueClass = '' }: { label: string; va
 }
 
 export default function SupplyLogger() {
-  type DetailItem = MockSupply | MockDelivery | MockConsumption | MockSupplier | MockToken
+  const schoolId = useAuthStore(s => s.user?.schoolId)
+  const queryClient = useQueryClient()
+
   const [pageTab, setPageTab] = useState<PageTab>('inventory')
   const [search, setSearch] = useState('')
-  const [selectedItem, setSelectedItem] = useState<DetailItem | null>(null)
+  const [selectedItem, setSelectedItem] = useState<MockSupply | null>(null)
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('overview')
   const [formType, setFormType] = useState<'request' | 'supply' | 'delivery' | 'consumption' | null>(null)
   const [reqOpen, setReqOpen] = useState(false)
   const reqRef = useRef<HTMLDivElement>(null)
+
+  // Live data — real backend, scoped to this school and its one demo supplier.
+  const { data: suppliers = [] } = useQuery({ queryKey: ['suppliers'], queryFn: listSuppliers })
+  const supplier = suppliers[0]
+  const { data: supplyOrders = [] } = useQuery({
+    queryKey: ['supply-orders', schoolId],
+    queryFn: () => listSupplyOrders({ schoolId }),
+    enabled: !!schoolId,
+    refetchInterval: 5000,
+  })
+  const { data: consumptions = [] } = useQuery({
+    queryKey: ['supply-consumptions', schoolId],
+    queryFn: () => listSupplyConsumptions(schoolId),
+    enabled: !!schoolId,
+    refetchInterval: 5000,
+  })
+  const { data: tokens = [] } = useQuery({ queryKey: ['tokens'], queryFn: () => listTokens(), refetchInterval: 5000 })
+
+  function refetchSupplyData() {
+    queryClient.invalidateQueries({ queryKey: ['supply-orders'] })
+    queryClient.invalidateQueries({ queryKey: ['supply-consumptions'] })
+  }
+
+  // ── Request Supply form ──
+  const [requestForm, setRequestForm] = useState({ itemType: ITEM_OPTIONS[0], quantity: '', unit: UNIT_OPTIONS[0] })
+  const [requestSubmitting, setRequestSubmitting] = useState(false)
+  async function submitRequest() {
+    if (!schoolId || !supplier || !requestForm.quantity) { toast.error('Fill in item and quantity'); return }
+    setRequestSubmitting(true)
+    try {
+      await createSupplyOrder({
+        itemType: requestForm.itemType,
+        quantity: Number(requestForm.quantity),
+        unit: requestForm.unit,
+        orderDate: new Date().toISOString().slice(0, 10),
+        supplierId: supplier.id,
+        schoolId,
+        status: 'pending',
+      })
+      toast.success(`Request sent to ${supplier.name}`)
+      refetchSupplyData()
+      setFormType(null)
+      setRequestForm({ itemType: ITEM_OPTIONS[0], quantity: '', unit: UNIT_OPTIONS[0] })
+    } catch {
+      toast.error('Could not submit request')
+    } finally {
+      setRequestSubmitting(false)
+    }
+  }
+
+  // ── Record Delivery form (also used by "Record Supply") ──
+  const [deliveryForm, setDeliveryForm] = useState({ itemType: ITEM_OPTIONS[0], quantity: '', unit: UNIT_OPTIONS[0], tokenRef: '' })
+  const [deliverySubmitting, setDeliverySubmitting] = useState(false)
+  async function submitDelivery() {
+    if (!schoolId || !supplier || !deliveryForm.quantity) { toast.error('Fill in item and quantity'); return }
+    setDeliverySubmitting(true)
+    try {
+      await createSupplyOrder({
+        itemType: deliveryForm.itemType,
+        quantity: Number(deliveryForm.quantity),
+        unit: deliveryForm.unit,
+        orderDate: new Date().toISOString().slice(0, 10),
+        supplierId: supplier.id,
+        schoolId,
+        tokenRef: deliveryForm.tokenRef || undefined,
+        receivedQuantity: Number(deliveryForm.quantity),
+        status: 'delivered',
+      })
+      toast.success('Delivery logged')
+      refetchSupplyData()
+      setFormType(null)
+      setDeliveryForm({ itemType: ITEM_OPTIONS[0], quantity: '', unit: UNIT_OPTIONS[0], tokenRef: '' })
+    } catch {
+      toast.error('Could not log delivery')
+    } finally {
+      setDeliverySubmitting(false)
+    }
+  }
+
+  // ── Log Consumption form ──
+  const [consumptionForm, setConsumptionForm] = useState({ mealSession: 'Breakfast', itemType: ITEM_OPTIONS[0], quantity: '', unit: UNIT_OPTIONS[0], studentsServed: '' })
+  const [consumptionSubmitting, setConsumptionSubmitting] = useState(false)
+  async function submitConsumption() {
+    if (!schoolId || !consumptionForm.quantity) { toast.error('Fill in item and quantity'); return }
+    setConsumptionSubmitting(true)
+    try {
+      await createSupplyConsumption({
+        schoolId,
+        itemType: consumptionForm.itemType,
+        quantity: Number(consumptionForm.quantity),
+        unit: consumptionForm.unit,
+        mealSession: consumptionForm.mealSession,
+        studentsServed: Number(consumptionForm.studentsServed) || 0,
+      })
+      toast.success('Consumption logged')
+      refetchSupplyData()
+      setFormType(null)
+      setConsumptionForm({ mealSession: 'Breakfast', itemType: ITEM_OPTIONS[0], quantity: '', unit: UNIT_OPTIONS[0], studentsServed: '' })
+    } catch {
+      toast.error('Could not log consumption')
+    } finally {
+      setConsumptionSubmitting(false)
+    }
+  }
 
   useEffect(() => {
     function close(e: MouseEvent) {
@@ -77,12 +183,7 @@ export default function SupplyLogger() {
     }
   }, [reqOpen])
 
-  function isSupply(item: DetailItem): item is MockSupply { return 'currentStock' in item }
   function openSupplyDetail(s: MockSupply) { setSelectedItem(s); setSidebarTab('overview') }
-  function openDeliveryDetail(d: MockDelivery) { setSelectedItem(d) }
-  function openConsumptionDetail(c: MockConsumption) { setSelectedItem(c) }
-  function openSupplierDetail(s: MockSupplier) { setSelectedItem(s) }
-  function openTokenDetail(t: MockToken) { setSelectedItem(t) }
   function closeItem() { setSelectedItem(null) }
   function closeForm() { setFormType(null) }
 
@@ -101,19 +202,6 @@ export default function SupplyLogger() {
     ]
   }
 
-  function deliveryActions(_d: MockDelivery): DropdownMenuItem[] {
-    return [
-      { label: 'View Supplier',     onClick: () => {} },
-      { label: 'View Token',        onClick: () => {} },
-    ]
-  }
-
-  function consumptionActions(_c: MockConsumption): DropdownMenuItem[] {
-    return [
-      { label: 'View Meal Session', onClick: () => {} },
-    ]
-  }
-
   const inventoryColumns: Column<MockSupply>[] = [
     { key: 'item',         label: 'Item',          width: '16%', primaryKey: true, render: (s) => <span className="text-[15px] font-normal leading-none text-[#4ea4ff]">{s.item}</span> },
     { key: 'unit',         label: 'Unit',          width: '9%',  render: (s) => s.unit },
@@ -126,63 +214,61 @@ export default function SupplyLogger() {
     },
   ]
 
-  const deliveryColumns: Column<MockDelivery>[] = [
-    { key: 'supplier',    label: 'Supplier',     width: '22%', primaryKey: true, render: (d) => <span className="text-[15px] font-normal leading-none text-[#4ea4ff]">{d.supplier}</span> },
-    { key: 'item',        label: 'Item',         width: '16%', render: (d) => d.item },
-    { key: 'quantity',    label: 'Quantity',     width: '14%', render: (d) => d.quantity },
-    { key: 'deliveredAt', label: 'Delivered',    width: '20%', render: (d) => d.deliveredAt },
-    { key: 'receivedBy',  label: 'Received By',  width: '14%', render: (d) => d.receivedBy },
+  const deliveredOrders = useMemo(() => supplyOrders.filter(o => o.status === 'delivered'), [supplyOrders])
+  const pendingOrders = useMemo(() => supplyOrders.filter(o => o.status !== 'delivered'), [supplyOrders])
+
+  const STATS = [
+    MOCK_STATS[0],
+    MOCK_STATS[1],
+    { label: 'Deliveries Logged', value: deliveredOrders.length, description: 'Confirmed deliveries, live', tone: 'bg-[#f7fdf9]' },
+    MOCK_STATS[2],
+  ]
+
+  const deliveryColumns: Column<SupplyOrder>[] = [
+    { key: 'itemType',  label: 'Item',              width: '20%', primaryKey: true, render: (d) => <span className="text-[15px] font-normal leading-none text-[#4ea4ff]">{d.itemType}</span> },
+    { key: 'quantity',  label: 'Requested',         width: '16%', render: (d) => `${d.quantity} ${d.unit}` },
+    { key: 'received',  label: 'Received',          width: '16%', render: (d) => d.receivedQuantity != null ? `${d.receivedQuantity} ${d.unit}` : '—' },
+    { key: 'orderDate', label: 'Date',               width: '20%', render: (d) => d.orderDate },
     {
-      key: 'tokenRef',    label: 'Token',        width: '14%',
+      key: 'tokenRef',  label: 'Token',              width: '14%',
       render: (d) => d.tokenRef ? <span className="text-[13px] text-[#4ea4ff]">{d.tokenRef}</span> : <span className="text-[13px] text-[#aaa]">—</span>,
     },
-  ]
-
-  const consumptionColumns: Column<MockConsumption>[] = [
-    { key: 'mealSession',  label: 'Session',       width: '14%', primaryKey: true, render: (c) => <span className="text-[15px] font-normal leading-none text-[#4ea4ff]">{c.mealSession}</span> },
-    { key: 'item',         label: 'Item',          width: '14%', render: (c) => c.item },
-    { key: 'quantity',     label: 'Quantity',      width: '12%', render: (c) => c.quantity },
-    { key: 'consumedAt',   label: 'Time',          width: '18%', render: (c) => c.consumedAt },
-    { key: 'preparedBy',   label: 'Prepared By',   width: '17%', render: (c) => c.preparedBy },
     {
-      key: 'studentsServed',label: 'Students',     width: '13%', align: 'center',
-      render: (c) => {
-        const ratio = c.studentsServed > 0 && c.item === 'Rice' ? (parseInt(c.quantity) / c.studentsServed * 1000) : 0
-        return (
-          <div>
-            <span>{c.studentsServed.toLocaleString()}</span>
-            {ratio > 0 && <span className={clsx('ml-[4px] text-[11px]', ratio > 12 ? 'text-[#df6b13]' : 'text-[#10b981]')}>{ratio > 12 ? '⚠' : '✓'}</span>}
-          </div>
-        )
-      },
+      key: 'status',    label: 'Status',             width: '14%',
+      render: (d) => <Badge variant={d.status === 'delivered' ? 'green' : d.status === 'in_transit' ? 'blue' : 'orange'}>{d.status === 'delivered' ? 'Delivered' : d.status === 'in_transit' ? 'In Transit' : 'Pending'}</Badge>,
     },
   ]
 
-  const supplierColumns: Column<MockSupplier>[] = [
-    { key: 'name',             label: 'Supplier',          width: '22%', primaryKey: true, render: (s) => <span className="text-[15px] font-normal leading-none text-[#4ea4ff]">{s.name}</span> },
-    { key: 'category',         label: 'Category',          width: '14%', render: (s) => s.category },
-    { key: 'contact',          label: 'Contact',           width: '18%', render: (s) => s.contact },
-    { key: 'totalDelivered',   label: 'Delivered',         width: '16%', render: (s) => s.totalDelivered },
-    { key: 'tokensRedeemed',   label: 'Tokens',            width: '10%', align: 'center', render: (s) => String(s.tokensRedeemed) },
-    {
-      key: 'status',           label: 'Status',            width: '12%',
-      render: (s) => <Badge variant={s.status === 'active' ? 'green' : s.status === 'approved' ? 'blue' : 'gray'}>{s.status === 'active' ? 'Active' : s.status === 'approved' ? 'Approved' : 'Inactive'}</Badge>,
-    },
+  const consumptionColumns: Column<SupplyConsumption>[] = [
+    { key: 'mealSession',    label: 'Session',   width: '16%', primaryKey: true, render: (c) => <span className="text-[15px] font-normal leading-none text-[#4ea4ff]">{c.mealSession}</span> },
+    { key: 'itemType',       label: 'Item',       width: '16%', render: (c) => c.itemType },
+    { key: 'quantity',       label: 'Quantity',   width: '16%', render: (c) => `${c.quantity} ${c.unit}` },
+    { key: 'consumedAt',     label: 'Time',       width: '22%', render: (c) => new Date(c.consumedAt).toLocaleString() },
+    { key: 'studentsServed', label: 'Students',   width: '14%', align: 'center', render: (c) => c.studentsServed.toLocaleString() },
   ]
 
-  const tokenColumns: Column<MockToken>[] = [
-    { key: 'code',       label: 'Token Code',    width: '24%', primaryKey: true, render: (t) => <span className="text-[15px] font-normal leading-none text-[#4ea4ff]">{t.code}</span> },
-    { key: 'supplier',   label: 'Supplier',      width: '22%', render: (t) => t.supplier },
-    { key: 'value',      label: 'Value',         width: '14%', render: (t) => t.value },
-    { key: 'issuedAt',   label: 'Issued',        width: '16%', render: (t) => t.issuedAt },
+  const supplierColumns: Column<{ id: string; name: string; contactEmail: string; delivered: number; pending: number }>[] = [
+    { key: 'name',        label: 'Supplier',   width: '30%', primaryKey: true, render: (s) => <span className="text-[15px] font-normal leading-none text-[#4ea4ff]">{s.name}</span> },
+    { key: 'contactEmail',label: 'Contact',     width: '30%', render: (s) => s.contactEmail },
+    { key: 'delivered',   label: 'Delivered',   width: '15%', align: 'center', render: (s) => String(s.delivered) },
+    { key: 'pending',     label: 'Pending',     width: '15%', align: 'center', render: (s) => String(s.pending) },
+    { key: 'status',      label: 'Status',      width: '10%', render: () => <Badge variant="green">Active</Badge> },
+  ]
+
+  const tokenColumns: Column<GovernmentToken>[] = [
+    { key: 'tokenCode',      label: 'Token Code',    width: '24%', primaryKey: true, render: (t) => <span className="text-[15px] font-normal leading-none text-[#4ea4ff]">{t.tokenCode}</span> },
+    { key: 'supplierName',   label: 'Supplier',      width: '22%', render: (t) => t.supplierName },
+    { key: 'value',          label: 'Value',         width: '14%', render: (t) => `GHS ${t.value.toLocaleString()}` },
+    { key: 'issuedDate',     label: 'Issued',        width: '16%', render: (t) => t.issuedDate },
     {
-      key: 'status',     label: 'Status',        width: '14%',
+      key: 'status',         label: 'Status',        width: '14%',
       render: (t) => {
-        const m: Record<string, { label: string; variant: 'green' | 'orange' | 'red' | 'blue' | 'gray' }> = {
+        const m: Record<GovernmentToken['status'], { label: string; variant: 'green' | 'orange' | 'red' | 'blue' | 'gray' }> = {
           pending:  { label: 'Pending',  variant: 'orange' },
-          verified: { label: 'Verified', variant: 'blue' },
+          active:   { label: 'Active',   variant: 'blue' },
           redeemed: { label: 'Redeemed', variant: 'green' },
           expired:  { label: 'Expired',  variant: 'red' },
+          rejected: { label: 'Rejected', variant: 'red' },
         }
         const status = m[t.status]
         return <Badge variant={status.variant}>{status.label}</Badge>
@@ -294,11 +380,14 @@ export default function SupplyLogger() {
           {/* ── Deliveries ─────────────────────────────── */}
           {pageTab === 'deliveries' && (
             <>
-              <h2 className="text-[22px] font-bold leading-[24px] text-black">Recent Deliveries</h2>
-              <p className="mt-[4px] text-[14px] text-[#888]">Supplier deliveries confirmed by the storekeeper.</p>
+              <h2 className="text-[22px] font-bold leading-[24px] text-black">Supply Requests &amp; Deliveries</h2>
+              <p className="mt-[4px] text-[14px] text-[#888]">Live — every request sent and delivery confirmed with {supplier?.name ?? 'the supplier'}.</p>
               <div className="mt-[12px]">
-                <DataTable columns={deliveryColumns} data={MOCK_DELIVERIES} rowKey={(d) => d.id} onRowClick={openDeliveryDetail} rowActions={deliveryActions} />
+                <DataTable columns={deliveryColumns} data={supplyOrders} rowKey={(d) => d.id} />
               </div>
+              {pendingOrders.length > 0 && (
+                <p className="mt-[10px] text-[12px] text-[#888]">{pendingOrders.length} request{pendingOrders.length === 1 ? '' : 's'} awaiting delivery.</p>
+              )}
             </>
           )}
 
@@ -306,9 +395,9 @@ export default function SupplyLogger() {
           {pageTab === 'consumption' && (
             <>
               <h2 className="text-[22px] font-bold leading-[24px] text-black">Consumption Logs</h2>
-              <p className="mt-[4px] text-[14px] text-[#888]">Kitchen consumption per meal session with reasonability checks.</p>
+              <p className="mt-[4px] text-[14px] text-[#888]">Live — kitchen consumption per meal session, feeds into daily/semester reports.</p>
               <div className="mt-[12px]">
-                <DataTable columns={consumptionColumns} data={MOCK_CONSUMPTIONS} rowKey={(c) => c.id} onRowClick={openConsumptionDetail} rowActions={consumptionActions} />
+                <DataTable columns={consumptionColumns} data={consumptions} rowKey={(c) => c.id} />
               </div>
               <div className="mt-[16px] rounded-[10px] border border-[#fef3c7] bg-[#fffbeb] p-[14px]">
                 <p className="text-[12px] font-medium text-[#92400e] mb-[6px]">Consumption Reasonability Rule</p>
@@ -323,9 +412,17 @@ export default function SupplyLogger() {
           {pageTab === 'suppliers' && (
             <>
               <h2 className="text-[22px] font-bold leading-[24px] text-black">Government Approved Suppliers</h2>
-              <p className="mt-[4px] text-[14px] text-[#888]">Schools select from the approved registry. Unlimited supplier creation is restricted.</p>
+              <p className="mt-[4px] text-[14px] text-[#888]">Live — one supplier account for this presentation, matching the Supplier portal.</p>
               <div className="mt-[12px]">
-                <DataTable columns={supplierColumns} data={MOCK_SUPPLIERS} rowKey={(s) => s.name} onRowClick={openSupplierDetail} />
+                <DataTable
+                  columns={supplierColumns}
+                  data={suppliers.map(s => ({
+                    id: s.id, name: s.name, contactEmail: s.contactEmail,
+                    delivered: supplyOrders.filter(o => o.supplierId === s.id && o.status === 'delivered').length,
+                    pending: supplyOrders.filter(o => o.supplierId === s.id && o.status !== 'delivered').length,
+                  }))}
+                  rowKey={(s) => s.id}
+                />
               </div>
             </>
           )}
@@ -334,9 +431,9 @@ export default function SupplyLogger() {
           {pageTab === 'tokens' && (
             <>
               <h2 className="text-[22px] font-bold leading-[24px] text-black">Government Token Status</h2>
-              <p className="mt-[4px] text-[14px] text-[#888]">Tokens issued by government, verified for supplier payment, redeemed at banks.</p>
+              <p className="mt-[4px] text-[14px] text-[#888]">Live — tokens issued by government (see Government &rarr; Issue Tokens).</p>
               <div className="mt-[12px]">
-                <DataTable columns={tokenColumns} data={MOCK_TOKENS} rowKey={(t) => t.code} onRowClick={openTokenDetail} />
+                <DataTable columns={tokenColumns} data={tokens} rowKey={(t) => t.id} />
               </div>
               <div className="mt-[16px] rounded-[10px] border border-[#dbeafe] bg-[#eff6ff] p-[14px]">
                 <p className="text-[12px] font-medium text-[#1e40af] mb-[6px]">Token Lifecycle</p>
@@ -356,7 +453,7 @@ export default function SupplyLogger() {
           <div className="absolute right-[12px] top-[12px] flex h-[calc(100vh-24px)] w-[460px] flex-col overflow-y-auto rounded-[22px] bg-white shadow-[0_20px_70px_rgba(0,0,0,0.2)]">
             <div className="px-[20px] pb-[10px] pt-[22px]">
               <h2 className="pr-12 text-[17px] font-bold leading-none text-black">Request Supply Point</h2>
-              <p className="mt-[6px] text-[13px] leading-[18px] text-[#888]">Submit a supply request to the district office before the next delivery cycle.</p>
+              <p className="mt-[6px] text-[13px] leading-[18px] text-[#888]">Submit a supply request to {supplier?.name ?? 'the supplier'} — lands on their Supplier portal immediately.</p>
               <button onClick={closeForm} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
                 <Icon name="x" size={18} />
               </button>
@@ -365,47 +462,48 @@ export default function SupplyLogger() {
               <div className="space-y-[14px]">
                 <div>
                   <label className="text-[13px] font-medium text-[#555]">Item Requested</label>
-                  <select className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white">
-                    <option>Select item...</option>
-                    <option>Rice</option><option>Cooking Oil</option><option>Beans</option>
-                    <option>Tomato Paste</option><option>Maize</option><option>Salt</option>
-                    <option>Fish (Frozen)</option><option>Gas Cylinders</option>
+                  <select
+                    value={requestForm.itemType}
+                    onChange={(e) => setRequestForm(f => ({ ...f, itemType: e.target.value }))}
+                    className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white"
+                  >
+                    {ITEM_OPTIONS.map(o => <option key={o}>{o}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#555]">Quantity Requested</label>
-                  <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="e.g. 200 Bags" />
+                <div className="flex gap-[10px]">
+                  <div className="flex-1">
+                    <label className="text-[13px] font-medium text-[#555]">Quantity Requested</label>
+                    <input
+                      type="number"
+                      value={requestForm.quantity}
+                      onChange={(e) => setRequestForm(f => ({ ...f, quantity: e.target.value }))}
+                      className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]"
+                      placeholder="e.g. 200"
+                    />
+                  </div>
+                  <div className="w-[110px]">
+                    <label className="text-[13px] font-medium text-[#555]">Unit</label>
+                    <select
+                      value={requestForm.unit}
+                      onChange={(e) => setRequestForm(f => ({ ...f, unit: e.target.value }))}
+                      className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white"
+                    >
+                      {UNIT_OPTIONS.map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </div>
                 </div>
                 <div>
-                  <label className="text-[13px] font-medium text-[#555]">Required By</label>
-                  <input type="date" className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" />
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#555]">Preferred Supplier</label>
-                  <select className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white">
-                    <option>Select supplier...</option>
-                    <option>Golden Harvest Foods</option><option>Ashanti Agro Supplies</option>
-                    <option>National School Foods</option><option>SunGold Oils</option>
-                    <option>FreshFoods Co.</option><option>GasPro Ghana</option>
-                    <option>ColdChain Fisheries</option><option>Essentials Ltd</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#555]">Requesting Officer</label>
-                  <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="Name and role" />
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#555]">Reason / Notes</label>
-                  <textarea rows={3} className="mt-[4px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] py-[8px] text-[14px] outline-none focus:border-[#4ea4ff] resize-none" placeholder="e.g. Current stock covers only 4 more days at current consumption rate" />
+                  <label className="text-[13px] font-medium text-[#555]">Supplier</label>
+                  <input disabled value={supplier?.name ?? 'Loading...'} className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] bg-[#fafafa] px-[12px] text-[14px] text-[#888] outline-none" />
                 </div>
               </div>
               <div className="mt-[16px] rounded-[10px] border border-[#dbeafe] bg-[#eff6ff] p-[12px]">
                 <p className="text-[11px] font-medium text-[#1e40af] mb-[4px]">How this works</p>
-                <p className="text-[11px] text-[#3b82f6] leading-[16px]">Your request is forwarded to the district education office. Once approved, a government token is issued and a supplier is notified to schedule delivery.</p>
+                <p className="text-[11px] text-[#3b82f6] leading-[16px]">Your request is sent to the supplier's portal right away, appears on Government's records for this school, and rolls into your next report.</p>
               </div>
               <div className="mt-auto flex gap-[8px] pt-[20px]">
                 <Button variant="secondary" className="flex-1" onClick={closeForm}>Cancel</Button>
-                <Button className="flex-1">Submit Request</Button>
+                <Button className="flex-1" onClick={submitRequest} disabled={requestSubmitting}>{requestSubmitting ? 'Submitting…' : 'Submit Request'}</Button>
               </div>
             </div>
           </div>
@@ -419,6 +517,7 @@ export default function SupplyLogger() {
           <div className="absolute right-[12px] top-[12px] flex h-[calc(100vh-24px)] w-[460px] flex-col overflow-y-auto rounded-[22px] bg-white shadow-[0_20px_70px_rgba(0,0,0,0.2)]">
             <div className="px-[20px] pb-[10px] pt-[22px]">
               <h2 className="pr-12 text-[17px] font-bold leading-none text-black">Record Supply Receipt</h2>
+              <p className="mt-[6px] text-[13px] leading-[18px] text-[#888]">Confirm a shipment arrived from {supplier?.name ?? 'the supplier'}.</p>
               <button onClick={closeForm} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
                 <Icon name="x" size={18} />
               </button>
@@ -427,47 +526,49 @@ export default function SupplyLogger() {
               <div className="space-y-[14px]">
                 <div>
                   <label className="text-[13px] font-medium text-[#555]">Item</label>
-                  <select className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white">
-                    <option>Select item...</option>
-                    <option>Rice</option><option>Cooking Oil</option><option>Beans</option>
-                    <option>Tomato Paste</option><option>Maize</option><option>Salt</option>
-                    <option>Fish (Frozen)</option><option>Gas Cylinders</option>
+                  <select
+                    value={deliveryForm.itemType}
+                    onChange={(e) => setDeliveryForm(f => ({ ...f, itemType: e.target.value }))}
+                    className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white"
+                  >
+                    {ITEM_OPTIONS.map(o => <option key={o}>{o}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#555]">Quantity</label>
-                  <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="e.g. 500 Bags" />
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#555]">Supplier</label>
-                  <select className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white">
-                    <option>Select supplier...</option>
-                    <option>Golden Harvest Foods</option><option>Ashanti Agro Supplies</option>
-                    <option>National School Foods</option><option>SunGold Oils</option>
-                    <option>FreshFoods Co.</option><option>GasPro Ghana</option>
-                    <option>ColdChain Fisheries</option><option>Essentials Ltd</option>
-                  </select>
+                <div className="flex gap-[10px]">
+                  <div className="flex-1">
+                    <label className="text-[13px] font-medium text-[#555]">Quantity Received</label>
+                    <input
+                      type="number"
+                      value={deliveryForm.quantity}
+                      onChange={(e) => setDeliveryForm(f => ({ ...f, quantity: e.target.value }))}
+                      className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]"
+                      placeholder="e.g. 500"
+                    />
+                  </div>
+                  <div className="w-[110px]">
+                    <label className="text-[13px] font-medium text-[#555]">Unit</label>
+                    <select
+                      value={deliveryForm.unit}
+                      onChange={(e) => setDeliveryForm(f => ({ ...f, unit: e.target.value }))}
+                      className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white"
+                    >
+                      {UNIT_OPTIONS.map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <label className="text-[13px] font-medium text-[#555]">Government Token Reference</label>
-                  <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="GOV-SAC-SEM1-XXX" />
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#555]">Received By</label>
-                  <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="Storekeeper name" />
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#555]">Proof / Receipt <span className="text-[#de3d36]">*</span></label>
-                  <div className="mt-[4px] flex h-[80px] items-center justify-center rounded-[8px] border border-dashed border-[#ccc] bg-[#fafafa] cursor-pointer hover:bg-[#f5f5f5] transition-colors">
-                    <Icon name="upload" size={18} className="text-[#aaa] mr-[6px]" />
-                    <span className="text-[13px] text-[#aaa]">Upload receipt or delivery note</span>
-                  </div>
-                  <p className="mt-[4px] text-[11px] text-[#aaa]">Required for audit compliance. Accepts PDF, JPG, PNG.</p>
+                  <input
+                    value={deliveryForm.tokenRef}
+                    onChange={(e) => setDeliveryForm(f => ({ ...f, tokenRef: e.target.value }))}
+                    className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]"
+                    placeholder="Optional — GOV-SAC-SEM1-XXX"
+                  />
                 </div>
               </div>
               <div className="mt-auto flex gap-[8px] pt-[20px]">
                 <Button variant="secondary" className="flex-1" onClick={closeForm}>Cancel</Button>
-                <Button className="flex-1">Confirm Receipt</Button>
+                <Button className="flex-1" onClick={submitDelivery} disabled={deliverySubmitting}>{deliverySubmitting ? 'Saving…' : 'Confirm Receipt'}</Button>
               </div>
             </div>
           </div>
@@ -481,6 +582,7 @@ export default function SupplyLogger() {
           <div className="absolute right-[12px] top-[12px] flex h-[calc(100vh-24px)] w-[460px] flex-col overflow-y-auto rounded-[22px] bg-white shadow-[0_20px_70px_rgba(0,0,0,0.2)]">
             <div className="px-[20px] pb-[10px] pt-[22px]">
               <h2 className="pr-12 text-[17px] font-bold leading-none text-black">Record Delivery</h2>
+              <p className="mt-[6px] text-[13px] leading-[18px] text-[#888]">Log what {supplier?.name ?? 'the supplier'} delivered today.</p>
               <button onClick={closeForm} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
                 <Icon name="x" size={18} />
               </button>
@@ -488,46 +590,50 @@ export default function SupplyLogger() {
             <div className="flex flex-1 flex-col px-[20px] pb-[24px]">
               <div className="space-y-[14px]">
                 <div>
-                  <label className="text-[13px] font-medium text-[#555]">Supplier</label>
-                  <select className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white">
-                    <option>Select supplier...</option>
-                    <option>Golden Harvest Foods</option><option>Ashanti Agro Supplies</option>
-                    <option>National School Foods</option><option>SunGold Oils</option>
-                    <option>FreshFoods Co.</option><option>GasPro Ghana</option>
+                  <label className="text-[13px] font-medium text-[#555]">Item Delivered</label>
+                  <select
+                    value={deliveryForm.itemType}
+                    onChange={(e) => setDeliveryForm(f => ({ ...f, itemType: e.target.value }))}
+                    className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white"
+                  >
+                    {ITEM_OPTIONS.map(o => <option key={o}>{o}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#555]">Item Delivered</label>
-                  <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="e.g. Rice" />
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#555]">Quantity</label>
-                  <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="e.g. 500 Bags" />
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#555]">Delivery Date & Time</label>
-                  <input type="datetime-local" className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" />
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#555]">Received By</label>
-                  <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="Storekeeper name" />
+                <div className="flex gap-[10px]">
+                  <div className="flex-1">
+                    <label className="text-[13px] font-medium text-[#555]">Quantity</label>
+                    <input
+                      type="number"
+                      value={deliveryForm.quantity}
+                      onChange={(e) => setDeliveryForm(f => ({ ...f, quantity: e.target.value }))}
+                      className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]"
+                      placeholder="e.g. 500"
+                    />
+                  </div>
+                  <div className="w-[110px]">
+                    <label className="text-[13px] font-medium text-[#555]">Unit</label>
+                    <select
+                      value={deliveryForm.unit}
+                      onChange={(e) => setDeliveryForm(f => ({ ...f, unit: e.target.value }))}
+                      className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white"
+                    >
+                      {UNIT_OPTIONS.map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <label className="text-[13px] font-medium text-[#555]">Government Token Reference</label>
-                  <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="Optional" />
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#555]">Delivery Receipt <span className="text-[#de3d36]">*</span></label>
-                  <div className="mt-[4px] flex h-[60px] items-center justify-center rounded-[8px] border border-dashed border-[#ccc] bg-[#fafafa] cursor-pointer hover:bg-[#f5f5f5] transition-colors">
-                    <Icon name="upload" size={16} className="text-[#aaa] mr-[6px]" />
-                    <span className="text-[12px] text-[#aaa]">Upload delivery note or waybill</span>
-                  </div>
-                  <p className="mt-[4px] text-[11px] text-[#aaa]">Required for audit trail.</p>
+                  <input
+                    value={deliveryForm.tokenRef}
+                    onChange={(e) => setDeliveryForm(f => ({ ...f, tokenRef: e.target.value }))}
+                    className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]"
+                    placeholder="Optional"
+                  />
                 </div>
               </div>
               <div className="mt-auto flex gap-[8px] pt-[20px]">
                 <Button variant="secondary" className="flex-1" onClick={closeForm}>Cancel</Button>
-                <Button className="flex-1">Log Delivery</Button>
+                <Button className="flex-1" onClick={submitDelivery} disabled={deliverySubmitting}>{deliverySubmitting ? 'Saving…' : 'Log Delivery'}</Button>
               </div>
             </div>
           </div>
@@ -541,6 +647,7 @@ export default function SupplyLogger() {
           <div className="absolute right-[12px] top-[12px] flex h-[calc(100vh-24px)] w-[460px] flex-col overflow-y-auto rounded-[22px] bg-white shadow-[0_20px_70px_rgba(0,0,0,0.2)]">
             <div className="px-[20px] pb-[10px] pt-[22px]">
               <h2 className="pr-12 text-[17px] font-bold leading-none text-black">Log Kitchen Consumption</h2>
+              <p className="mt-[6px] text-[13px] leading-[18px] text-[#888]">Records how much of a delivered supply was actually used.</p>
               <button onClick={closeForm} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
                 <Icon name="x" size={18} />
               </button>
@@ -549,44 +656,64 @@ export default function SupplyLogger() {
               <div className="space-y-[14px]">
                 <div>
                   <label className="text-[13px] font-medium text-[#555]">Meal Session</label>
-                  <select className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white">
-                    <option>Select session...</option>
+                  <select
+                    value={consumptionForm.mealSession}
+                    onChange={(e) => setConsumptionForm(f => ({ ...f, mealSession: e.target.value }))}
+                    className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white"
+                  >
                     <option>Breakfast</option><option>Lunch</option><option>Dinner</option>
                   </select>
                 </div>
                 <div>
                   <label className="text-[13px] font-medium text-[#555]">Item Consumed</label>
-                  <select className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white">
-                    <option>Select item...</option>
-                    <option>Rice</option><option>Cooking Oil</option><option>Beans</option>
-                    <option>Tomato Paste</option><option>Maize</option><option>Salt</option>
-                    <option>Fish (Frozen)</option>
+                  <select
+                    value={consumptionForm.itemType}
+                    onChange={(e) => setConsumptionForm(f => ({ ...f, itemType: e.target.value }))}
+                    className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white"
+                  >
+                    {ITEM_OPTIONS.map(o => <option key={o}>{o}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#555]">Quantity Consumed</label>
-                  <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="e.g. 10 Bags" />
+                <div className="flex gap-[10px]">
+                  <div className="flex-1">
+                    <label className="text-[13px] font-medium text-[#555]">Quantity Consumed</label>
+                    <input
+                      type="number"
+                      value={consumptionForm.quantity}
+                      onChange={(e) => setConsumptionForm(f => ({ ...f, quantity: e.target.value }))}
+                      className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]"
+                      placeholder="e.g. 10"
+                    />
+                  </div>
+                  <div className="w-[110px]">
+                    <label className="text-[13px] font-medium text-[#555]">Unit</label>
+                    <select
+                      value={consumptionForm.unit}
+                      onChange={(e) => setConsumptionForm(f => ({ ...f, unit: e.target.value }))}
+                      className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none bg-white"
+                    >
+                      {UNIT_OPTIONS.map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <label className="text-[13px] font-medium text-[#555]">Students Served</label>
-                  <input type="number" className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="e.g. 1200" />
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#555]">Prepared By</label>
-                  <input className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]" placeholder="Kitchen staff name" />
+                  <input
+                    type="number"
+                    value={consumptionForm.studentsServed}
+                    onChange={(e) => setConsumptionForm(f => ({ ...f, studentsServed: e.target.value }))}
+                    className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]"
+                    placeholder="e.g. 1200"
+                  />
                 </div>
               </div>
               <div className="rounded-[10px] border border-[#fef3c7] bg-[#fffbeb] p-[12px]">
-                <p className="text-[11px] font-medium text-[#92400e] mb-[4px]">Kitchen Log Proof <span className="text-[#de3d36]">*</span></p>
-                <div className="mt-[6px] flex h-[50px] items-center justify-center rounded-[6px] border border-dashed border-[#fcd34d] bg-[#fffdf0] cursor-pointer hover:bg-[#fffbeb] transition-colors">
-                  <Icon name="upload" size={14} className="text-[#d97706] mr-[6px]" />
-                  <span className="text-[11px] text-[#b45309]">Upload kitchen log sheet or consumption record</span>
-                </div>
-                <p className="mt-[6px] text-[11px] text-[#ca8a04] leading-[16px]">The system will cross-check consumption against student attendance. Abnormal variance triggers fraud review. Proof of consumption is mandatory for audit.</p>
+                <p className="text-[11px] font-medium text-[#92400e] mb-[4px]">Reasonability Check</p>
+                <p className="text-[11px] text-[#ca8a04] leading-[16px]">The system cross-checks consumption against real student scan validations. Abnormal variance is flagged for review.</p>
               </div>
               <div className="mt-auto flex gap-[8px] pt-[20px]">
                 <Button variant="secondary" className="flex-1" onClick={closeForm}>Cancel</Button>
-                <Button className="flex-1">Log Consumption</Button>
+                <Button className="flex-1" onClick={submitConsumption} disabled={consumptionSubmitting}>{consumptionSubmitting ? 'Saving…' : 'Log Consumption'}</Button>
               </div>
             </div>
           </div>
@@ -594,7 +721,7 @@ export default function SupplyLogger() {
       )}
 
       {/* ── Detail Sidebar ─────────────────────────────────────── */}
-      {selectedItem && (isSupply(selectedItem) ? (
+      {selectedItem && (
         <>
           {/* ── Supply Detail ── */}
           <div className="fixed inset-0 z-50">
@@ -751,76 +878,7 @@ export default function SupplyLogger() {
             </div>
           </div>
         </>
-      ) : (
-        <>
-          {/* ── Non-Supply Detail ── */}
-          <div className="fixed inset-0 z-50">
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" onClick={closeItem} />
-            <div className="absolute right-[12px] top-[12px] flex h-[calc(100vh-24px)] w-[460px] flex-col overflow-y-auto rounded-[22px] bg-white shadow-[0_20px_70px_rgba(0,0,0,0.2)]">
-              <div className="px-[20px] pb-[10px] pt-[22px]">
-                <h2 className="pr-12 text-[17px] font-bold leading-none text-black">
-                  {'mealSession' in selectedItem ? selectedItem.item :
-                   'code' in selectedItem ? selectedItem.code :
-                   'name' in selectedItem ? selectedItem.name :
-                   'supplier' in selectedItem ? `${selectedItem.supplier} — ${(selectedItem as MockDelivery).item}` :
-                   'Detail'}
-                </h2>
-                <button onClick={closeItem} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
-                  <Icon name="x" size={18} />
-                </button>
-              </div>
-              <div className="px-[20px] pb-[24px] pt-[16px]">
-                {(() => {
-                  const item = selectedItem as MockDelivery | MockConsumption | MockSupplier | MockToken
-                  return (
-                    <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
-                      {'mealSession' in item && (
-                        <>
-                          <SidebarDetailRow label="Meal Session"  value={item.mealSession} />
-                          <SidebarDetailRow label="Item"          value={item.item} />
-                          <SidebarDetailRow label="Quantity"      value={item.quantity} />
-                          <SidebarDetailRow label="Time"          value={item.consumedAt} />
-                          <SidebarDetailRow label="Prepared By"   value={item.preparedBy} />
-                          <SidebarDetailRow label="Students"      value={item.studentsServed.toLocaleString()} />
-                        </>
-                      )}
-                      {'code' in item && 'value' in item && (
-                        <>
-                          <SidebarDetailRow label="Token Code" value={item.code} />
-                          <SidebarDetailRow label="Supplier"    value={item.supplier} />
-                          <SidebarDetailRow label="Value"       value={item.value} />
-                          <SidebarDetailRow label="Issued"      value={item.issuedAt} />
-                          <SidebarDetailRow label="Status"      value={item.status} />
-                        </>
-                      )}
-                      {'name' in item && 'category' in item && (
-                        <>
-                          <SidebarDetailRow label="Name"            value={item.name} />
-                          <SidebarDetailRow label="Category"        value={item.category} />
-                          <SidebarDetailRow label="Contact"         value={item.contact} />
-                          <SidebarDetailRow label="Total Delivered" value={item.totalDelivered} />
-                          <SidebarDetailRow label="Tokens Redeemed" value={String(item.tokensRedeemed)} />
-                          <SidebarDetailRow label="Status"          value={item.status} />
-                        </>
-                      )}
-                      {'deliveredAt' in item && !('mealSession' in item) && (
-                        <>
-                          <SidebarDetailRow label="Supplier"    value={item.supplier} />
-                          <SidebarDetailRow label="Item"        value={item.item} />
-                          <SidebarDetailRow label="Quantity"    value={item.quantity} />
-                          <SidebarDetailRow label="Delivered"   value={item.deliveredAt} />
-                          <SidebarDetailRow label="Received By" value={item.receivedBy} />
-                          {item.tokenRef && <SidebarDetailRow label="Token" value={item.tokenRef} />}
-                        </>
-                      )}
-                    </div>
-                  )
-                })()}
-              </div>
-            </div>
-          </div>
-        </>
-      ))}
+      )}
     </div>
   )
 }

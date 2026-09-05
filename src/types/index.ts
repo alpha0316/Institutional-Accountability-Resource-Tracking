@@ -47,6 +47,8 @@ export interface MealValidation {
   served: boolean
   isDuplicate: boolean
   isFlagged: boolean
+  /** Omitted by the backend (NON_NULL) when there's nothing to report. */
+  rejectionReason?: 'unknown_card' | 'inactive_student'
 }
 
 export type ScanResult =
@@ -77,8 +79,20 @@ export interface SupplyOrder {
   orderDate: string
   supplierId: string
   schoolId: string
-  tokenRef: string
+  tokenRef?: string
+  receivedQuantity?: number
   status: 'pending' | 'delivered' | 'in_transit'
+}
+
+export interface SupplyConsumption {
+  id: string
+  schoolId: string
+  itemType: string
+  quantity: number
+  unit: string
+  mealSession: string
+  studentsServed: number
+  consumedAt: string
 }
 
 export interface ReorderLevel {
@@ -121,6 +135,23 @@ export interface BankTransaction {
   amount: number
   processedAt: string
   status: 'released' | 'rejected' | 'pending'
+  reason?: string
+}
+
+// ─── Payment Sessions (simulated Aza merchant payout) ─────────────────────────
+export interface PaymentSession {
+  id: string
+  govTokenId: string
+  tokenCode: string
+  supplierId: string
+  supplierName: string
+  institutionName: string
+  amount: number
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  reference: string
+  bankTransactionId?: string
+  createdAt: string
+  completedAt?: string
 }
 
 // ─── API ─────────────────────────────────────────────────────────────────────

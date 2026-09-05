@@ -2,6 +2,9 @@ package com.iarts.token;
 
 import com.iarts.common.ApiException;
 import com.iarts.common.ApiResponse;
+import com.iarts.notification.NotificationService;
+import com.iarts.notification.NotificationType;
+import com.iarts.user.UserRole;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -17,11 +20,13 @@ import java.util.UUID;
 public class GovernmentTokenController {
 
     private final GovernmentTokenRepository tokenRepository;
+    private final NotificationService notificationService;
 
     @GetMapping
-    public ApiResponse<List<GovernmentTokenDto>> list(@RequestParam(required = false) TokenStatus status) {
-        List<GovernmentToken> tokens = status != null
-                ? tokenRepository.findByStatus(status)
+    public ApiResponse<List<GovernmentTokenDto>> list(@RequestParam(required = false) TokenStatus status,
+                                                         @RequestParam(required = false) UUID supplierId) {
+        List<GovernmentToken> tokens = supplierId != null ? tokenRepository.findBySupplierId(supplierId)
+                : status != null ? tokenRepository.findByStatus(status)
                 : tokenRepository.findAll();
         return ApiResponse.of(tokens.stream().map(GovernmentTokenDto::from).toList());
     }
@@ -36,7 +41,11 @@ public class GovernmentTokenController {
     public ApiResponse<GovernmentTokenDto> create(@Valid @RequestBody GovernmentTokenRequest req) {
         GovernmentToken token = new GovernmentToken();
         apply(token, req);
-        return ApiResponse.of(GovernmentTokenDto.from(tokenRepository.save(token)), 201);
+        token = tokenRepository.save(token);
+        notificationService.notify(UserRole.SUPPLIER, NotificationType.TOKEN_ISSUED,
+                "New token issued", "Government issued " + token.getTokenCode() + " worth GHS "
+                        + token.getValue() + " for " + token.getInstitutionName() + ".", token.getId());
+        return ApiResponse.of(GovernmentTokenDto.from(token), 201);
     }
 
     @PutMapping("/{id}")

@@ -63,6 +63,36 @@ export interface ApiClaimDetail extends ApiClaim {
   approvalHistory: ApiClaimApprovalLog[]
 }
 
+export interface ClaimPreview {
+  verifiedStudents: number
+  fraudFlags: number
+  attendancePct: number
+}
+
+export async function fetchClaimPreview(schoolId: string, semesterStart: string, semesterEnd: string): Promise<ClaimPreview> {
+  const res = await api.get<ApiResponse<ClaimPreview>>('/claims/preview', { params: { schoolId, semesterStart, semesterEnd } })
+  return res.data.data
+}
+
+export interface CreateClaimInput {
+  claimCode: string
+  schoolId: string
+  schoolName: string
+  semesterLabel: string
+  semesterStart: string
+  semesterEnd: string
+  verifiedStudents: number
+  claimValue: number
+  riskScore: number
+  fraudFlags: number
+  governmentNotes?: string
+}
+
+export async function createClaim(input: CreateClaimInput): Promise<ApiClaimDetail> {
+  const res = await api.post<ApiResponse<ApiClaimDetail>>('/claims', input)
+  return res.data.data
+}
+
 export async function fetchClaims(stage?: ClaimStage): Promise<ApiClaim[]> {
   const res = await api.get<ApiResponse<ApiClaim[]>>('/claims', { params: stage ? { stage } : undefined })
   return res.data.data

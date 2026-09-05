@@ -7,7 +7,7 @@ import { Button } from '../../../components/ui/Button'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import { clsx } from 'clsx'
-import { useGovClaimsStore } from '../../gov/govClaimsStore'
+import { useClaimsQuery } from '../../gov/useClaims'
 import { SUPPLIER_TOKENS, SUPPLIER_DELIVERIES, type SupplierTokenItem, type SupplierDeliveryItem } from '../../../lib/mockData'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -44,8 +44,7 @@ export default function SupplierOverview() {
   const navigate = useNavigate()
   const [filter, setFilter] = useState<TokenFilter>('all')
   const [search, setSearch] = useState('')
-  const claims = useGovClaimsStore(s => s.claims)
-  const redeemToken = useGovClaimsStore(s => s.redeemToken)
+  const { data: claims = [] } = useClaimsQuery()
   const approvedClaims = claims.filter(c =>
     c.stage === 'budget' || c.stage === 'token_generated' || c.stage === 'supplier_redemption'
   )
@@ -135,34 +134,31 @@ export default function SupplierOverview() {
         {/* Claim Token Tracker */}
         <div className="mt-[28px] rounded-[14px] border border-[#efefef] bg-white p-[20px]">
           <h3 className="text-[16px] font-semibold text-black mb-[14px]">Approved Claims Awaiting Token</h3>
-          <div className="space-y-[10px]">
-            {approvedClaims.slice(0, 3).map(claim => (
-              <div key={claim.id} className="flex items-center justify-between rounded-[10px] border border-[#f5f5f5] bg-[#fafafa] p-[14px]">
-                <div>
-                  <p className="text-[13px] font-semibold text-[#111]">{claim.school}</p>
-                  <p className="text-[12px] text-[#888]">{claim.claimId} · {claim.semester}</p>
+          <p className="mb-[14px] text-[12px] text-[#888]">Live — same claims data as the Government portal.</p>
+          {approvedClaims.length === 0 ? (
+            <p className="py-[16px] text-center text-[13px] text-[#aaa]">No claims at Budget or later yet.</p>
+          ) : (
+            <div className="space-y-[10px]">
+              {approvedClaims.slice(0, 3).map(claim => (
+                <div key={claim.id} className="flex items-center justify-between rounded-[10px] border border-[#f5f5f5] bg-[#fafafa] p-[14px]">
+                  <div>
+                    <p className="text-[13px] font-semibold text-[#111]">{claim.schoolName}</p>
+                    <p className="text-[12px] text-[#888]">{claim.claimCode} · {claim.semesterLabel}</p>
+                  </div>
+                  <div className="flex items-center gap-[12px]">
+                    <span className="text-[14px] font-bold text-[#4ea4ff]">GHS {claim.claimValue.toLocaleString()}</span>
+                    <Badge variant={
+                      claim.stage === 'budget' ? 'orange' :
+                      claim.stage === 'token_generated' ? 'blue' : 'green'
+                    }>
+                      {claim.stage === 'budget' ? 'Pending Token' :
+                       claim.stage === 'token_generated' ? 'Token Issued' : 'Redeemed'}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="flex items-center gap-[12px]">
-                  <span className="text-[14px] font-bold text-[#4ea4ff]">{claim.claimValue}</span>
-                  <Badge variant={
-                    claim.stage === 'budget' ? 'orange' :
-                    claim.stage === 'token_generated' ? 'blue' : 'green'
-                  }>
-                    {claim.stage === 'budget' ? 'Pending Token' :
-                     claim.stage === 'token_generated' ? 'Token Issued' : 'Redeemed'}
-                  </Badge>
-                  {claim.stage === 'token_generated' && (
-                    <button
-                      onClick={() => redeemToken(claim.id)}
-                      className="rounded-[6px] bg-[#10b981] px-[10px] py-[5px] text-[11px] font-semibold text-white hover:bg-[#059669]"
-                    >
-                      Redeem
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Token Inbox */}

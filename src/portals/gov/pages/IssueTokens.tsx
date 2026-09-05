@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
@@ -7,13 +9,9 @@ import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import { Modal } from '../../../components/ui/Modal'
 import type { GovernmentToken } from '../../../types'
-
-import { GOV_ALL_TOKENS, GOV_INSTITUTIONS, GOV_SUPPLIERS } from '../../../lib/mockData'
-
-const INSTITUTIONS = GOV_INSTITUTIONS
-const SUPPLIERS    = GOV_SUPPLIERS
-
-const mockTokens: GovernmentToken[] = GOV_ALL_TOKENS
+import { listTokens, createToken, updateToken } from '../../../lib/api/tokens'
+import { listSuppliers } from '../../../lib/api/suppliers'
+import { GOV_INSTITUTIONS } from '../../../lib/mockData'
 
 const statusBadge: Record<GovernmentToken['status'], React.ReactNode> = {
   active:   <Badge variant="green">Active</Badge>,
@@ -24,73 +22,73 @@ const statusBadge: Record<GovernmentToken['status'], React.ReactNode> = {
 }
 
 const columns: Column<GovernmentToken>[] = [
-  {
-    key: 'tokenCode',
-    label: 'Token ID',
-    width: '22%',
-    primaryKey: true,
-    render: r => r.tokenCode,
-  },
-  {
-    key: 'value',
-    label: 'Value',
-    width: '15%',
-    render: r => `GH₵${r.value.toLocaleString()}`,
-  },
-  {
-    key: 'institution',
-    label: 'Institution',
-    width: '18%',
-    render: r => r.institutionName,
-  },
-  {
-    key: 'supplier',
-    label: 'Supplier',
-    width: '22%',
-    render: r => r.supplierName,
-  },
-  {
-    key: 'expiry',
-    label: 'Expires',
-    width: '13%',
-    render: r => new Date(r.expiryDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }),
-  },
-  {
-    key: 'status',
-    label: 'Status',
-    width: '10%',
-    render: r => statusBadge[r.status],
-  },
+  { key: 'tokenCode',   label: 'Token ID',    width: '22%', primaryKey: true, render: r => r.tokenCode },
+  { key: 'value',       label: 'Value',       width: '15%', render: r => `GH₵${r.value.toLocaleString()}` },
+  { key: 'institution', label: 'Institution', width: '18%', render: r => r.institutionName },
+  { key: 'supplier',    label: 'Supplier',    width: '22%', render: r => r.supplierName },
+  { key: 'expiry',      label: 'Expires',     width: '13%', render: r => new Date(r.expiryDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }) },
+  { key: 'status',      label: 'Status',      width: '10%', render: r => statusBadge[r.status] },
 ]
 
 interface IssueForm {
   institution: string
-  supplier: string
+  supplierId: string
   value: string
   expiryDate: string
-  notes: string
 }
 
 export default function IssueTokens() {
-  const [tokens, setTokens] = useState(mockTokens)
-  const [open, setOpen] = useState(false)
-  const [form, setForm] = useState<IssueForm>({ institution: '', supplier: '', value: '420000', expiryDate: '', notes: '' })
+  const queryClient = useQueryClient()
+  const { data: tokens = [] } = useQuery({ queryKey: ['tokens'], queryFn: () => listTokens(), refetchInterval: 5000 })
+  const { data: suppliers = [] } = useQuery({ queryKey: ['suppliers'], queryFn: listSuppliers })
 
-  function handleIssue() {
-    const next: GovernmentToken = {
-      id: String(Date.now()),
-      tokenCode: `GOV-NEW-SEM1-${String(tokens.length + 1).padStart(3, '0')}`,
-      supplierId: 'new',
-      supplierName: form.supplier,
-      institutionName: form.institution,
-      value: Number(form.value) || 0,
-      issuedDate: new Date().toISOString().slice(0, 10),
-      expiryDate: form.expiryDate || '2025-12-31',
-      status: 'pending',
+  const [open, setOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [form, setForm] = useState<IssueForm>({ institution: '', supplierId: '', value: '420000', expiryDate: '' })
+
+  async function revokeToken(token: GovernmentToken) {
+    try {
+      await updateToken(token.id, {
+        tokenCode: token.tokenCode,
+        supplierId: token.supplierId,
+        supplierName: token.supplierName,
+        institutionName: token.institutionName,
+        value: token.value,
+        issuedDate: token.issuedDate,
+        expiryDate: token.expiryDate,
+        status: 'rejected',
+      })
+      toast.success('Token revoked')
+      queryClient.invalidateQueries({ queryKey: ['tokens'] })
+    } catch {
+      toast.error('Could not revoke token')
     }
-    setTokens(prev => [next, ...prev])
-    setOpen(false)
-    setForm({ institution: '', supplier: '', value: '420000', expiryDate: '', notes: '' })
+  }
+
+  async function handleIssue() {
+    const supplier = suppliers.find(s => s.id === form.supplierId)
+    if (!supplier || !form.institution) return
+    setSubmitting(true)
+    try {
+      await createToken({
+        tokenCode: `GOV-${supplier.name.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-6)}`,
+        supplierId: supplier.id,
+        supplierName: supplier.name,
+        institutionName: form.institution,
+        value: Number(form.value) || 0,
+        issuedDate: new Date().toISOString().slice(0, 10),
+        expiryDate: form.expiryDate || '2026-12-31',
+        status: 'active',
+      })
+      toast.success('Token issued')
+      queryClient.invalidateQueries({ queryKey: ['tokens'] })
+      setOpen(false)
+      setForm({ institution: '', supplierId: '', value: '420000', expiryDate: '' })
+    } catch {
+      toast.error('Could not issue token')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -124,8 +122,7 @@ export default function IssueTokens() {
           data={tokens}
           rowKey={r => r.id}
           rowActions={r => [
-            { label: 'View Details',  onClick: () => {} },
-            { label: 'Revoke Token',  onClick: () => {}, destructive: true, disabled: r.status !== 'active' && r.status !== 'pending' },
+            { label: 'Revoke Token', onClick: () => revokeToken(r), destructive: true, disabled: r.status !== 'active' && r.status !== 'pending' },
           ]}
         />
       </div>
@@ -133,47 +130,51 @@ export default function IssueTokens() {
       {/* Issue Token Modal */}
       <Modal open={open} onClose={() => setOpen(false)} title="Issue New Token">
         <div className="space-y-[14px]">
-          {[
-            { key: 'institution', label: 'Institution', type: 'select', options: INSTITUTIONS },
-            { key: 'supplier',    label: 'Supplier',    type: 'select', options: SUPPLIERS },
-            { key: 'value',       label: 'Token Value (GH₵)', type: 'number' },
-            { key: 'expiryDate',  label: 'Expiry Date', type: 'date' },
-          ].map(field => (
-            <div key={field.key}>
-              <label className="mb-[5px] block text-[12px] font-semibold text-[#555]">{field.label}</label>
-              {field.type === 'select' ? (
-                <select
-                  value={form[field.key as keyof IssueForm]}
-                  onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
-                  className="h-[36px] w-full rounded-[9px] border border-[#e3e3e3] bg-white px-[10px] text-[13px] text-[#111] outline-none focus:border-[#4ea4ff]"
-                >
-                  <option value="">Select…</option>
-                  {field.options!.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              ) : (
-                <input
-                  type={field.type}
-                  value={form[field.key as keyof IssueForm]}
-                  onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
-                  className="h-[36px] w-full rounded-[9px] border border-[#e3e3e3] bg-white px-[10px] text-[13px] text-[#111] outline-none focus:border-[#4ea4ff]"
-                />
-              )}
-            </div>
-          ))}
           <div>
-            <label className="mb-[5px] block text-[12px] font-semibold text-[#555]">Notes (optional)</label>
-            <textarea
-              value={form.notes}
-              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-              rows={3}
-              className="w-full resize-none rounded-[9px] border border-[#e3e3e3] bg-white px-[10px] py-[8px] text-[13px] text-[#111] outline-none focus:border-[#4ea4ff]"
+            <label className="mb-[5px] block text-[12px] font-semibold text-[#555]">Institution</label>
+            <select
+              value={form.institution}
+              onChange={e => setForm(f => ({ ...f, institution: e.target.value }))}
+              className="h-[36px] w-full rounded-[9px] border border-[#e3e3e3] bg-white px-[10px] text-[13px] text-[#111] outline-none focus:border-[#4ea4ff]"
+            >
+              <option value="">Select…</option>
+              {GOV_INSTITUTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="mb-[5px] block text-[12px] font-semibold text-[#555]">Supplier</label>
+            <select
+              value={form.supplierId}
+              onChange={e => setForm(f => ({ ...f, supplierId: e.target.value }))}
+              className="h-[36px] w-full rounded-[9px] border border-[#e3e3e3] bg-white px-[10px] text-[13px] text-[#111] outline-none focus:border-[#4ea4ff]"
+            >
+              <option value="">Select…</option>
+              {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="mb-[5px] block text-[12px] font-semibold text-[#555]">Token Value (GH₵)</label>
+            <input
+              type="number"
+              value={form.value}
+              onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
+              className="h-[36px] w-full rounded-[9px] border border-[#e3e3e3] bg-white px-[10px] text-[13px] text-[#111] outline-none focus:border-[#4ea4ff]"
+            />
+          </div>
+          <div>
+            <label className="mb-[5px] block text-[12px] font-semibold text-[#555]">Expiry Date</label>
+            <input
+              type="date"
+              value={form.expiryDate}
+              onChange={e => setForm(f => ({ ...f, expiryDate: e.target.value }))}
+              className="h-[36px] w-full rounded-[9px] border border-[#e3e3e3] bg-white px-[10px] text-[13px] text-[#111] outline-none focus:border-[#4ea4ff]"
             />
           </div>
           <div className="flex justify-end gap-[8px] pt-[4px]">
             <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleIssue} disabled={!form.institution || !form.supplier}>
+            <Button onClick={handleIssue} disabled={!form.institution || !form.supplierId || submitting}>
               <Icon name="coin" size={14} />
-              Issue Token
+              {submitting ? 'Issuing…' : 'Issue Token'}
             </Button>
           </div>
         </div>

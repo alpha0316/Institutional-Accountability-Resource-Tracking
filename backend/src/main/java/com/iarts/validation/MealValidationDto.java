@@ -1,7 +1,10 @@
 package com.iarts.validation;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.time.Instant;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record MealValidationDto(
         String id,
         String cardNumber,
@@ -10,7 +13,8 @@ public record MealValidationDto(
         Instant scanTime,
         boolean served,
         boolean isDuplicate,
-        boolean isFlagged
+        boolean isFlagged,
+        String rejectionReason
 ) {
     public static MealValidationDto from(MealValidation m) {
         return new MealValidationDto(
@@ -21,7 +25,8 @@ public record MealValidationDto(
                 m.getScanTime(),
                 m.isServed(),
                 m.isDuplicate(),
-                m.isFlagged()
+                m.isFlagged(),
+                m.getRejectionReason()
         );
     }
 }

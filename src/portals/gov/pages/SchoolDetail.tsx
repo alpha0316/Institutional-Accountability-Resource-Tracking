@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { Icon } from '../../../components/ui/Icon'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
@@ -7,6 +8,11 @@ import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
 import { clsx } from 'clsx'
 import { GOV_SCHOOL_PROFILES, type GovSchoolProfile } from '../../../lib/mockData'
+import { listSupplyOrders } from '../../../lib/api/supply'
+import type { SupplyOrder } from '../../../types'
+
+/** Matches DemoScanDataSeeder.DEMO_SCHOOL_ID on the backend — the one real seeded school. */
+const DEMO_SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -67,6 +73,14 @@ export default function SchoolDetail() {
   const navigate = useNavigate()
 
   const school = GOV_SCHOOL_PROFILES.find(s => s.id === schoolId)
+  const isRealDemoSchool = schoolId === 'sac'
+
+  const { data: liveSupplyOrders = [] } = useQuery({
+    queryKey: ['supply-orders', DEMO_SCHOOL_ID],
+    queryFn: () => listSupplyOrders({ schoolId: DEMO_SCHOOL_ID }),
+    enabled: isRealDemoSchool,
+    refetchInterval: 5000,
+  })
 
   if (!school) {
     return (
@@ -123,6 +137,17 @@ export default function SchoolDetail() {
     { key: 'requestedBy', label: 'Requested By', render: req => req.requestedBy },
     { key: 'requiredBy',  label: 'Required By',  width: '17%', render: req => req.requiredBy },
     { key: 'status',      label: 'Status',       width: '14%', render: req => supplyStatusBadge(req.status) },
+  ]
+
+  const liveSupplyColumns: Column<SupplyOrder>[] = [
+    { key: 'itemType',   label: 'Item',     width: '20%', primaryKey: true, render: o => o.itemType },
+    { key: 'quantity',   label: 'Qty',      width: '16%', render: o => `${o.quantity} ${o.unit}` },
+    { key: 'orderDate',  label: 'Date',     width: '20%', render: o => o.orderDate },
+    { key: 'tokenRef',   label: 'Token',    width: '20%', render: o => o.tokenRef || '—' },
+    {
+      key: 'status', label: 'Status', width: '14%',
+      render: o => supplyStatusBadge(o.status === 'delivered' ? 'delivered' : o.status === 'in_transit' ? 'approved' : 'pending'),
+    },
   ]
 
   return (
@@ -200,14 +225,25 @@ export default function SchoolDetail() {
             <div className="rounded-[16px] border border-[#f0f0f0] bg-white">
               <div className="border-b border-[#f5f5f5] px-[20px] py-[16px]">
                 <h3 className="text-[15px] font-semibold text-[#111]">Supply Requests</h3>
-                <p className="mt-[2px] text-[13px] text-[#888]">Requests submitted by storekeeper this period</p>
+                <p className="mt-[2px] text-[13px] text-[#888]">
+                  {isRealDemoSchool ? 'Live — requests submitted from the School Admin portal' : 'Requests submitted by storekeeper this period'}
+                </p>
               </div>
-              <DataTable
-                columns={supplyColumns}
-                data={school.supplyRequests}
-                rowKey={req => `${req.item}-${req.requiredBy}`}
-                className="mb-0 rounded-none border-0"
-              />
+              {isRealDemoSchool ? (
+                <DataTable
+                  columns={liveSupplyColumns}
+                  data={liveSupplyOrders}
+                  rowKey={o => o.id}
+                  className="mb-0 rounded-none border-0"
+                />
+              ) : (
+                <DataTable
+                  columns={supplyColumns}
+                  data={school.supplyRequests}
+                  rowKey={req => `${req.item}-${req.requiredBy}`}
+                  className="mb-0 rounded-none border-0"
+                />
+              )}
             </div>
 
           </div>

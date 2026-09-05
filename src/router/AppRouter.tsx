@@ -5,7 +5,11 @@ import { useAuthStore, roleHomeRoute } from '../store/authStore'
 import { DashboardLayout } from '../components/layout/DashboardLayout'
 
 // Auth
-import LoginPage from '../portals/school-admin/pages/LoginPage'
+import PortalSelect       from '../pages/PortalSelect'
+import AdminLoginPage     from '../portals/school-admin/pages/LoginPage'
+import GovLoginPage       from '../portals/gov/pages/LoginPage'
+import SupplierLoginPage  from '../portals/supplier/pages/LoginPage'
+import BankLoginPage      from '../portals/bank/pages/LoginPage'
 
 // Scanner kiosk
 import ScannerPage from '../portals/scanner/ScannerPage'
@@ -108,9 +112,9 @@ function MobileGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-function PrivateRoute({ children }: { children: React.ReactNode }) {
+function PrivateRoute({ children, loginPath }: { children: React.ReactNode; loginPath: string }) {
   const { isAuthenticated } = useAuthStore()
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />
+  return isAuthenticated ? <>{children}</> : <Navigate to={loginPath} replace />
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -126,13 +130,17 @@ export default function AppRouter() {
       <Routes>
 
         {/* public */}
-        <Route path="/login"   element={<PublicRoute><LoginPage /></PublicRoute>} />
-        <Route path="/scanner" element={<ScannerPage />} />
+        <Route path="/"               element={<PublicRoute><PortalSelect /></PublicRoute>} />
+        <Route path="/admin/login"    element={<PublicRoute><AdminLoginPage /></PublicRoute>} />
+        <Route path="/gov/login"      element={<PublicRoute><GovLoginPage /></PublicRoute>} />
+        <Route path="/supplier/login" element={<PublicRoute><SupplierLoginPage /></PublicRoute>} />
+        <Route path="/bank/login"     element={<PublicRoute><BankLoginPage /></PublicRoute>} />
+        <Route path="/scanner"        element={<ScannerPage />} />
 
         {/* admin portal — nested under sidebar layout */}
         <Route
           path="/admin"
-          element={<PrivateRoute><DashboardLayout /></PrivateRoute>}
+          element={<PrivateRoute loginPath="/admin/login"><DashboardLayout /></PrivateRoute>}
         >
           <Route index                  element={<Dashboard />} />
           <Route path="students"        element={<StudentRegistry />} />
@@ -144,7 +152,7 @@ export default function AppRouter() {
         </Route>
 
         {/* Government portal */}
-        <Route path="/gov" element={<PrivateRoute><GovLayout /></PrivateRoute>}>
+        <Route path="/gov" element={<PrivateRoute loginPath="/gov/login"><GovLayout /></PrivateRoute>}>
           <Route index                    element={<GovIndexRedirect />} />
           <Route path="schools/:schoolId" element={<SchoolDetail />} />
           <Route path="tokens/issue"      element={<IssueTokens />} />
@@ -156,7 +164,7 @@ export default function AppRouter() {
         </Route>
 
         {/* Supplier portal */}
-        <Route path="/supplier" element={<PrivateRoute><SupplierLayout /></PrivateRoute>}>
+        <Route path="/supplier" element={<PrivateRoute loginPath="/supplier/login"><SupplierLayout /></PrivateRoute>}>
           <Route index                    element={<SupplierOverview />} />
           <Route path="tokens"            element={<TokenInbox />} />
           <Route path="reorder"           element={<ReorderMonitor />} />
@@ -166,7 +174,7 @@ export default function AppRouter() {
         </Route>
 
         {/* Bank portal */}
-        <Route path="/bank" element={<PrivateRoute><BankLayout /></PrivateRoute>}>
+        <Route path="/bank" element={<PrivateRoute loginPath="/bank/login"><BankLayout /></PrivateRoute>}>
           <Route index                    element={<BankOverview />} />
           <Route path="pending"           element={<PendingTokens />} />
           <Route path="validate"          element={<ValidateToken />} />
@@ -177,7 +185,7 @@ export default function AppRouter() {
         </Route>
 
         {/* fallback */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
 
       </Routes>
       </MobileGate>

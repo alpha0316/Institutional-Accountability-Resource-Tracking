@@ -17,8 +17,12 @@ public class SupplyOrderController {
     private final SupplyOrderRepository supplyOrderRepository;
 
     @GetMapping
-    public ApiResponse<List<SupplyOrderDto>> list() {
-        return ApiResponse.of(supplyOrderRepository.findAll().stream().map(SupplyOrderDto::from).toList());
+    public ApiResponse<List<SupplyOrderDto>> list(@RequestParam(required = false) UUID supplierId,
+                                                    @RequestParam(required = false) UUID schoolId) {
+        List<SupplyOrder> orders = supplierId != null ? supplyOrderRepository.findBySupplierId(supplierId)
+                : schoolId != null ? supplyOrderRepository.findBySchoolId(schoolId)
+                : supplyOrderRepository.findAll();
+        return ApiResponse.of(orders.stream().map(SupplyOrderDto::from).toList());
     }
 
     @GetMapping("/{id}")
@@ -55,6 +59,7 @@ public class SupplyOrderController {
         order.setSupplierId(UUID.fromString(req.supplierId()));
         order.setSchoolId(UUID.fromString(req.schoolId()));
         order.setTokenRef(req.tokenRef());
+        order.setReceivedQuantity(req.receivedQuantity());
         order.setStatus(req.status() != null ? req.status() : SupplyOrderStatus.PENDING);
     }
 }

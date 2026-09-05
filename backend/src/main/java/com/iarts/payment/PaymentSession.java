@@ -11,9 +11,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Tracks one Aza Checkout Session created against a supplier's own merchant account
- * for a single GovernmentToken cash release (Phase 3). 1 token = 1 session, kept
- * 1:1 with a BankTransaction so PENDING -> released/rejected stays traceable.
+ * Tracks one simulated Aza merchant payout for a single GovernmentToken cash release —
+ * mirrors Aza's real payout lifecycle (PENDING -> PROCESSING -> COMPLETED/FAILED, see
+ * https://www.aza.systems/developers/guides?doc=payouts) without calling the real API.
+ * bankTransactionId is set once the session resolves (COMPLETED or FAILED); null while PENDING/PROCESSING.
  */
 @Entity
 @Table(name = "payment_sessions")
@@ -33,10 +34,10 @@ public class PaymentSession {
     @Column(name = "supplier_id", nullable = false)
     private UUID supplierId;
 
-    @Column(name = "bank_transaction_id", nullable = false)
+    @Column(name = "bank_transaction_id")
     private UUID bankTransactionId;
 
-    /** Aza's own session id (sess_...), null until the Checkout Session has been created. */
+    /** Simulated Aza payout reference (sim_...) — stands in for Aza's real session id. */
     @Column(name = "aza_session_id", unique = true)
     private String azaSessionId;
 

@@ -14,6 +14,7 @@ public record SupplyOrderRequest(
         @NotBlank String supplierId,
         @NotBlank String schoolId,
         String tokenRef,
+        Integer receivedQuantity,
         SupplyOrderStatus status
 ) {
 }

@@ -1,46 +1,38 @@
 package com.iarts.auth;
 
+import com.iarts.common.ApiException;
 import com.iarts.common.ApiResponse;
 import com.iarts.user.User;
 import com.iarts.user.UserDto;
 import com.iarts.user.UserRepository;
-import com.iarts.user.UserRole;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Phase 1 stand-in for Aza QR login: mints a real IARTS JWT for a given role so every
- * portal can be wired against real persistence before Aza OAuth exists (Phase 2).
- * Active only under the "dev" profile — remove or keep profile-guarded once QR login ships.
- */
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
-@Profile("dev")
 public class AuthController {
 
     private final UserRepository userRepository;
     private final JwtService jwtService;
+    private final PasswordEncoder passwordEncoder;
 
-    @PostMapping("/dev-login")
-    public ApiResponse<LoginResponse> devLogin(@RequestParam UserRole role) {
-        User user = userRepository.findAll().stream()
-                .filter(u -> u.getRole() == role)
-                .findFirst()
-                .orElseGet(() -> seedDevUser(role));
+    /** Real credential check — email + password against the stored (hashed) password. */
+    @PostMapping("/login")
+    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        User user = userRepository.findByEmailIgnoreCase(request.email().trim())
+                .orElseThrow(() -> ApiException.unauthorized("Invalid email or password"));
+
+        if (user.getPasswordHash() == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            throw ApiException.unauthorized("Invalid email or password");
+        }
+
         String token = jwtService.issue(user);
         return ApiResponse.of(new LoginResponse(UserDto.from(user), token));
-    }
-
-    private User seedDevUser(UserRole role) {
-        User user = new User();
-        user.setName("Dev " + role.toJson());
-        user.setEmail("dev-" + role.toJson() + "@iarts.local");
-        user.setRole(role);
-        return userRepository.save(user);
     }
 }

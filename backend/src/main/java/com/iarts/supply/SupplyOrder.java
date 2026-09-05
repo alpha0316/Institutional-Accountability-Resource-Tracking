@@ -42,6 +42,10 @@ public class SupplyOrder {
     @Column(name = "token_ref")
     private String tokenRef;
 
+    /** Set when the school confirms delivery — may differ from the requested quantity. */
+    @Column(name = "received_quantity")
+    private Integer receivedQuantity;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SupplyOrderStatus status;

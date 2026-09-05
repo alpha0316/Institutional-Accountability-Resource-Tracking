@@ -7,38 +7,33 @@ import { PageHeader } from '../../../components/layout/PageHeader'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { type DropdownMenuItem } from '../../../components/ui/DropdownMenu'
 import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
-import {
-  MOCK_VALIDATIONS,
-  VALIDATION_STATUS_MAP,
-  type MockValidation,
-} from '../../../lib/mockData'
+import { VALIDATION_STATUS_MAP } from '../../../lib/mockData'
+import { useLiveDiningFeed, filterLabels, type FeedFilter, type FeedRow } from '../hooks/useLiveDiningFeed'
 
-type FeedFilter = 'all' | 'served' | 'duplicate' | 'flagged' | 'invalid_card' | 'inactive_student'
-
-const filterLabels: Record<FeedFilter, string> = {
-  all: 'All Logs', served: 'Served', duplicate: 'Duplicate', flagged: 'Flagged',
-  invalid_card: 'Invalid Card', inactive_student: 'Inactive Student',
-}
-
-const STATS = [
-  { label: 'Students Served',  value: '1,842',  description: 'Scanned in today across all halls',   tone: 'bg-[#f7fbff]', trend: '' },
-  { label: 'Eligible Students',value: '2,850',  description: 'Enrolled and active this semester',   tone: 'bg-[#f7fdf9]' },
-  { label: 'Utilization Rate', value: '64.6%',  description: 'Meals served vs. eligible students',  tone: 'bg-[#fcf8f5]' },
-  { label: 'Scam Flags Today', value: '0',      description: 'Suspicious activity flagged.',         tone: 'bg-[#fff7f8]', alert: true },
-]
+// Population-side figures — Student Registry stays mock data for now, so these
+// don't have a real denominator to compute against yet.
+const ELIGIBLE_STUDENTS = 2850
+const UTILIZATION_RATE = '64.6%'
 
 export default function DiningHallFeed() {
   const navigate = useNavigate()
   const [filter, setFilter] = useState<FeedFilter>('all')
 
-  const scamFlags = MOCK_VALIDATIONS.filter(v => v.status === 'flagged').length
+  const { rows, studentsServedToday, scamFlagsToday } = useLiveDiningFeed()
+
+  const STATS = [
+    { label: 'Students Served',   value: studentsServedToday, description: 'Scanned in today across all halls', tone: 'bg-[#f7fbff]' },
+    { label: 'Eligible Students', value: ELIGIBLE_STUDENTS,   description: 'Enrolled and active this semester', tone: 'bg-[#f7fdf9]' },
+    { label: 'Utilization Rate',  value: UTILIZATION_RATE,    description: 'Meals served vs. eligible students', tone: 'bg-[#fcf8f5]' },
+    { label: 'Scam Flags Today',  value: scamFlagsToday,      description: 'Suspicious activity flagged.', tone: 'bg-[#fff7f8]', alert: true },
+  ]
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return MOCK_VALIDATIONS
-    return MOCK_VALIDATIONS.filter(v => v.status === filter)
-  }, [filter])
+    if (filter === 'all') return rows
+    return rows.filter(r => r.status === filter)
+  }, [filter, rows])
 
-  function rowActions(_row: MockValidation): DropdownMenuItem[] {
+  function rowActions(): DropdownMenuItem[] {
     return [
       { label: 'View Student',    onClick: () => {} },
       { label: 'View Card',       onClick: () => {} },
@@ -46,7 +41,7 @@ export default function DiningHallFeed() {
     ]
   }
 
-  const columns: Column<MockValidation>[] = [
+  const columns: Column<FeedRow>[] = [
     {
       key: 'time', label: 'Time / Date', width: '16%',
       render: (v) => (
@@ -60,8 +55,8 @@ export default function DiningHallFeed() {
       key: 'studentName', label: 'Student Name', width: '20%', primaryKey: true,
       render: (v) => <span className="text-[15px] font-normal leading-none text-[#4ea4ff]">{v.studentName}</span>,
     },
-    { key: 'studentId',   label: 'Student ID', width: '16%', render: (v) => v.studentId },
-    { key: 'mealSession', label: 'Session',    width: '14%', render: (v) => v.mealSession },
+    { key: 'cardNumber',  label: 'Card Number', width: '16%', render: (v) => v.cardNumber },
+    { key: 'mealSession', label: 'Session',     width: '14%', render: (v) => v.mealSession },
     {
       key: 'status', label: 'Status', width: '14%',
       render: (v) => {
@@ -76,11 +71,11 @@ export default function DiningHallFeed() {
       <PageHeader title="Dining Hall Feed" />
       <div className="pl-[36px] pr-[20px] pt-[2px]">
         <StatCardGroup>
-          {STATS.map((stat, i) => (
+          {STATS.map((stat) => (
             <StatCard
               key={stat.label}
               label={stat.label}
-              value={i === 3 ? scamFlags : stat.value}
+              value={stat.value}
               sub={stat.alert
                 ? <span className="font-medium text-[#ff3333]">{stat.description}</span>
                 : stat.description

@@ -1,10 +1,20 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
+import { QRCodeSVG } from 'qrcode.react'
+import { Icon } from '../../components/ui/Icon'
 import api from '../../lib/axios'
+import type { ApiResponse } from '../../lib/axios'
 import type { ScanResult } from '../../types'
+import { MOCK_CARDS } from '../../lib/mockData'
 
 const DINING_HALL_ID = 'hall-a'
 const SCAN_COOLDOWN_MS = 3000
+
+// Mirrors MOCK_CARDS — the backend's DemoScanDataSeeder (dev profile) seeds each of
+// these as a real student+card in Postgres, keyed by the student ID as the QR code
+// (physical cards encode the student ID directly), so any card shown here scans as
+// the same student in Student Registry / Card Management.
+const DEMO_CARDS = MOCK_CARDS.map(c => ({ studentName: c.studentName, qrCode: c.studentId }))
 
 interface Stats {
   served: number
@@ -16,14 +26,15 @@ export default function ScannerPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [stats, setStats] = useState<Stats>({ served: 0, duplicates: 0, flagged: 0 })
   const [cameraError, setCameraError] = useState<string | null>(null)
+  const [showDemoCards, setShowDemoCards] = useState(false)
   const lastCode = useRef('')
   const onCooldown = useRef(false)
   const scanLoopId = useRef<number>(0)
 
   const handleScan = useCallback(async (qrCode: string) => {
     try {
-      const res = await api.post<ScanResult>('/scan', { qrCode, diningHallId: DINING_HALL_ID })
-      const result = res.data
+      const res = await api.post<ApiResponse<ScanResult>>('/scanner/scan', { qrCode, diningHallId: DINING_HALL_ID })
+      const result = res.data.data
       if (result.status === 'served') {
         setStats(s => ({ ...s, served: s.served + 1 }))
         toast.success(`Served — ${result.studentName}`, { duration: 2000 })
@@ -163,6 +174,40 @@ export default function ScannerPage() {
           QR scanning requires Chrome or Edge. Safari is not supported.
         </p>
       )}
+
+      {/* Demo cards — presentation-only, lets this kiosk be demoed on a single machine
+          by pointing the camera at another screen/device showing these codes. */}
+      <div className="fixed bottom-5 right-5 z-50">
+        {showDemoCards && (
+          <div className="absolute bottom-14 right-0 w-64 bg-gray-900 border border-gray-700 rounded-2xl shadow-lg p-4">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[12px] font-semibold text-gray-100">Demo cards</p>
+              <button onClick={() => setShowDemoCards(false)} className="text-gray-500 hover:text-gray-300 transition-colors">
+                <Icon name="x" size={14} />
+              </button>
+            </div>
+            <p className="text-[11px] text-gray-500 mb-3 leading-snug">
+              For presentation only — point this camera at one of these codes on another screen.
+            </p>
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+              {DEMO_CARDS.map(card => (
+                <div key={card.qrCode} className="flex items-center gap-3 bg-white rounded-lg p-2">
+                  <QRCodeSVG value={card.qrCode} size={56} />
+                  <p className="text-[11px] font-medium text-gray-900 leading-tight">{card.studentName}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setShowDemoCards(v => !v)}
+          className="w-11 h-11 rounded-full bg-gray-700 hover:bg-gray-600 text-white shadow-lg flex items-center justify-center transition-colors"
+          title="Demo cards"
+        >
+          <Icon name={showDemoCards ? 'x' : 'qrcode'} size={18} />
+        </button>
+      </div>
     </div>
   )
 }

@@ -3,7 +3,15 @@ package com.iarts.claims;
 import com.iarts.auth.AuthenticatedPrincipal;
 import com.iarts.common.ApiException;
 import com.iarts.common.ApiResponse;
+import com.iarts.notification.NotificationService;
+import com.iarts.notification.NotificationType;
+import com.iarts.supplier.Supplier;
+import com.iarts.supplier.SupplierRepository;
+import com.iarts.supply.SupplyOrder;
 import com.iarts.supply.SupplyOrderRepository;
+import com.iarts.token.GovernmentToken;
+import com.iarts.token.GovernmentTokenRepository;
+import com.iarts.token.TokenStatus;
 import com.iarts.user.UserRole;
 import com.iarts.validation.MealValidationRepository;
 import jakarta.validation.Valid;
@@ -12,6 +20,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +42,9 @@ public class ClaimController {
     private final ClaimDocumentRepository documentRepository;
     private final MealValidationRepository mealValidationRepository;
     private final SupplyOrderRepository supplyOrderRepository;
+    private final SupplierRepository supplierRepository;
+    private final GovernmentTokenRepository tokenRepository;
+    private final NotificationService notificationService;
 
     private static final Map<ClaimStage, UserRole> STAGE_ROLE = Map.of(
             ClaimStage.REGIONAL, UserRole.REGIONAL_OFFICER,
@@ -57,6 +69,23 @@ public class ClaimController {
         return ApiResponse.of(buildDetail(loadClaim(id)));
     }
 
+    /** Real numbers a School Admin sees before submitting — same computation buildDetail() uses. */
+    @GetMapping("/preview")
+    public ApiResponse<ClaimPreviewDto> preview(@RequestParam UUID schoolId,
+                                                  @RequestParam LocalDate semesterStart,
+                                                  @RequestParam LocalDate semesterEnd) {
+        Instant start = semesterStart.atStartOfDay(ZoneOffset.UTC).toInstant();
+        Instant end = semesterEnd.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+
+        var attendanceRows = mealValidationRepository.findMonthlyAttendance(schoolId, start, end);
+        long verifiedStudents = attendanceRows.stream().mapToLong(r -> r.getMeals()).sum();
+        long totalEligible = attendanceRows.stream().mapToLong(r -> r.getEligible()).sum();
+        double attendancePct = totalEligible == 0 ? 0 : (verifiedStudents * 100.0) / totalEligible;
+        long fraudFlags = mealValidationRepository.countFraudFlags(schoolId, start, end);
+
+        return ApiResponse.of(new ClaimPreviewDto(verifiedStudents, fraudFlags, attendancePct));
+    }
+
     /** Claims enter the pipeline directly at REGIONAL — RECEIVED/INTAKE have no modeled role yet. */
     @PostMapping
     public ApiResponse<ClaimDetailDto> create(@Valid @RequestBody ClaimRequest req) {
@@ -75,6 +104,9 @@ public class ClaimController {
         claim.setStage(ClaimStage.REGIONAL);
         claim = claimRepository.save(claim);
         log(claim, "Claim Submitted", null, null);
+        notificationService.notify(UserRole.REGIONAL_OFFICER, NotificationType.CLAIM_SUBMITTED,
+                "New claim submitted", claim.getSchoolName() + " submitted " + claim.getClaimCode()
+                        + " (" + claim.getSemesterLabel() + ") for regional review.", claim.getId());
         return ApiResponse.of(buildDetail(claim));
     }
 
@@ -87,7 +119,54 @@ public class ClaimController {
         claim.setStage(next);
         claimRepository.save(claim);
         log(claim, officerLabel(principal) + " Review Approved", principal, null);
+
+        UserRole nextOwner = STAGE_ROLE.get(next);
+        if (nextOwner != null) {
+            notificationService.notify(nextOwner, NotificationType.CLAIM_ADVANCED,
+                    "Claim ready for your review", claim.getClaimCode() + " (" + claim.getSchoolName()
+                            + ") was approved by " + officerLabel(principal) + " and now awaits your review.",
+                    claim.getId());
+        } else {
+            // Reached BUDGET — no further officer seat owns this stage yet, so the school hears back.
+            notificationService.notify(UserRole.SCHOOL_ADMIN, NotificationType.CLAIM_READY_FOR_TOKEN,
+                    "Claim cleared all reviews", claim.getClaimCode() + " has passed Regional, Financial, "
+                            + "and Audit review, and is now awaiting a government token.", claim.getId());
+            autoIssueToken(claim);
+        }
         return ApiResponse.of(buildDetail(claim));
+    }
+
+    /**
+     * Once a claim clears all three reviews there's no further manual step to wait on — the
+     * government token that lets the supplier redeem cash is generated immediately, addressed
+     * to whichever supplier already serves this school (derived from real supply order history,
+     * never guessed). Schools with no supply order on file simply don't get an auto-issued token;
+     * a Government officer can still issue one by hand via Issue Tokens.
+     */
+    private void autoIssueToken(Claim claim) {
+        List<SupplyOrder> orders = supplyOrderRepository.findBySchoolId(claim.getSchoolId());
+        if (orders.isEmpty()) return;
+        UUID supplierId = orders.get(0).getSupplierId();
+        Supplier supplier = supplierRepository.findById(supplierId).orElse(null);
+        if (supplier == null) return;
+
+        LocalDate issuedDate = LocalDate.now();
+        GovernmentToken token = new GovernmentToken();
+        token.setTokenCode("GOV-" + supplier.getName().replaceAll("[^A-Za-z]", "").toUpperCase()
+                .substring(0, Math.min(3, supplier.getName().replaceAll("[^A-Za-z]", "").length()))
+                + "-" + System.currentTimeMillis() % 1_000_000);
+        token.setSupplierId(supplier.getId());
+        token.setSupplierName(supplier.getName());
+        token.setInstitutionName(claim.getSchoolName());
+        token.setValue(claim.getClaimValue());
+        token.setIssuedDate(issuedDate);
+        token.setExpiryDate(issuedDate.plusMonths(6));
+        token.setStatus(TokenStatus.ACTIVE);
+        token = tokenRepository.save(token);
+
+        notificationService.notify(UserRole.SUPPLIER, NotificationType.TOKEN_ISSUED,
+                "New token issued", "Government issued " + token.getTokenCode() + " worth GHS "
+                        + token.getValue() + " for " + token.getInstitutionName() + ".", token.getId());
     }
 
     @PostMapping("/{id}/return")
@@ -97,6 +176,9 @@ public class ClaimController {
         claim.setStage(ClaimStage.RECEIVED);
         claimRepository.save(claim);
         log(claim, isFinancial ? "Returned for Recalculation" : "Returned to School", principal, null);
+        notificationService.notify(UserRole.SCHOOL_ADMIN, NotificationType.CLAIM_RETURNED,
+                "Claim returned", claim.getClaimCode() + " was returned by " + officerLabel(principal)
+                        + (isFinancial ? " for recalculation." : " to the school."), claim.getId());
         return ApiResponse.of(buildDetail(claim));
     }
 
@@ -108,6 +190,8 @@ public class ClaimController {
         claim.setRejected(true);
         claimRepository.save(claim);
         log(claim, "Rejected by Audit & Risk Officer", principal, null);
+        notificationService.notify(UserRole.SCHOOL_ADMIN, NotificationType.CLAIM_REJECTED,
+                "Claim rejected", claim.getClaimCode() + " was rejected by the Audit & Risk Officer.", claim.getId());
         return ApiResponse.of(buildDetail(claim));
     }
 

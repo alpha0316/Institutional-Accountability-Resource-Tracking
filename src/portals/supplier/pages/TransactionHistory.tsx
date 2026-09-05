@@ -1,13 +1,12 @@
+import { useQuery } from '@tanstack/react-query'
 import { Icon } from '../../../components/ui/Icon'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
+import { useAuthStore } from '../../../store/authStore'
+import { listBankTransactions } from '../../../lib/api/bankTransactions'
 import type { BankTransaction } from '../../../types'
-
-import { SUPPLIER_TRANSACTIONS } from '../../../lib/mockData'
-
-const transactions: BankTransaction[] = SUPPLIER_TRANSACTIONS
 
 const statusBadge: Record<BankTransaction['status'], React.ReactNode> = {
   released: <Badge variant="green">Released</Badge>,
@@ -18,14 +17,19 @@ const statusBadge: Record<BankTransaction['status'], React.ReactNode> = {
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })
 
 const columns: Column<BankTransaction>[] = [
-  { key: 'tokenCode', label: 'Token Code',  width: '26%', primaryKey: true, render: r => r.tokenCode },
-  { key: 'amount',    label: 'Amount',      width: '20%', render: r => `GH₵${r.amount.toLocaleString()}` },
-  { key: 'bank',      label: 'Bank',        width: '28%', render: () => 'Ghana Commercial Bank' },
-  { key: 'date',      label: 'Processed',   width: '16%', render: r => fmtDate(r.processedAt) },
-  { key: 'status',    label: 'Status',      width: '10%', render: r => statusBadge[r.status] },
+  { key: 'tokenCode', label: 'Token Code',  width: '22%', primaryKey: true, render: r => r.tokenCode },
+  { key: 'amount',    label: 'Amount',      width: '16%', render: r => `GH₵${r.amount.toLocaleString()}` },
+  { key: 'bank',      label: 'Bank',        width: '22%', render: () => 'Ghana Commercial Bank' },
+  { key: 'date',      label: 'Processed',   width: '14%', render: r => r.processedAt ? fmtDate(r.processedAt) : '—' },
+  { key: 'reason',    label: 'Reason',      width: '18%', render: r => r.reason ? <span className="text-[#888]">{r.reason}</span> : '—' },
+  { key: 'status',    label: 'Status',      width: '8%',  render: r => statusBadge[r.status] },
 ]
 
 export default function TransactionHistory() {
+  const user = useAuthStore(s => s.user)
+  const { data: allTransactions = [] } = useQuery({ queryKey: ['bank-transactions'], queryFn: listBankTransactions, refetchInterval: 5000 })
+  const transactions = allTransactions.filter(t => t.supplierName === user?.name)
+
   const total = transactions.filter(t => t.status === 'released').reduce((a, t) => a + t.amount, 0)
 
   return (

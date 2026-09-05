@@ -40,4 +40,7 @@ public class BankTransaction {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private BankTransactionStatus status;
+
+    /** Populated only for REJECTED transactions. */
+    private String reason;
 }

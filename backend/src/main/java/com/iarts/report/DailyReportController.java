@@ -17,8 +17,11 @@ public class DailyReportController {
     private final DailyReportRepository dailyReportRepository;
 
     @GetMapping
-    public ApiResponse<List<DailyReportDto>> list() {
-        return ApiResponse.of(dailyReportRepository.findAll().stream().map(DailyReportDto::from).toList());
+    public ApiResponse<List<DailyReportDto>> list(@RequestParam(required = false) UUID schoolId) {
+        List<DailyReport> reports = schoolId != null
+                ? dailyReportRepository.findBySchoolIdOrderByReportDateDesc(schoolId)
+                : dailyReportRepository.findAll();
+        return ApiResponse.of(reports.stream().map(DailyReportDto::from).toList());
     }
 
     @GetMapping("/{id}")

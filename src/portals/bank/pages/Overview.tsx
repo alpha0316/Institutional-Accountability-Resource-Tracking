@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 import { Icon } from '../../../components/ui/Icon'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '../../../components/layout/PageHeader'
@@ -6,22 +7,14 @@ import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
-import { clsx } from 'clsx'
-import type { BankTransaction } from '../../../types'
+import { usePaymentSessions, useBankTransactions } from '../hooks/usePaymentSessions'
+import type { PaymentSession, BankTransaction } from '../../../types'
 
-import { BANK_OVERVIEW_TOKENS, BANK_TRANSACTIONS, type BankOverviewToken } from '../../../lib/mockData'
-
-type PendingToken = BankOverviewToken
-
-const pendingTokens: PendingToken[] = BANK_OVERVIEW_TOKENS
-const recentTransactions: BankTransaction[] = BANK_TRANSACTIONS.slice(0, 3)
-
-type TokenFilter = 'all' | 'released' | 'pending' | 'rejected'
-
-const tokenStatusBadge: Record<PendingToken['status'], React.ReactNode> = {
-  released: <Badge variant="green">Released</Badge>,
-  pending:  <Badge variant="orange">Unsubmitted</Badge>,
-  rejected: <Badge variant="red">Flagged</Badge>,
+const sessionStatusBadge: Record<PaymentSession['status'], React.ReactNode> = {
+  pending:    <Badge variant="orange">Pending</Badge>,
+  processing: <Badge variant="blue">Validated</Badge>,
+  completed:  <Badge variant="green">Released</Badge>,
+  failed:     <Badge variant="red">Rejected</Badge>,
 }
 
 const txStatusBadge: Record<BankTransaction['status'], React.ReactNode> = {
@@ -30,45 +23,54 @@ const txStatusBadge: Record<BankTransaction['status'], React.ReactNode> = {
   rejected: <Badge variant="red">Rejected</Badge>,
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function BankOverview() {
   const navigate = useNavigate()
-  const [filter, setFilter] = useState<TokenFilter>('all')
   const [search, setSearch] = useState('')
+  const { sessions, pending, processing, failed, validate, reject } = usePaymentSessions()
+  const { data: transactions = [] } = useBankTransactions()
 
-  const filtered = pendingTokens.filter(t => {
-    const matchFilter = filter === 'all' || t.status === filter
-    const matchSearch = t.code.toLowerCase().includes(search.toLowerCase())
-    return matchFilter && matchSearch
-  })
+  const actionable = sessions.filter(s => s.status === 'pending' || s.status === 'processing')
+  const filtered = actionable.filter(t => t.tokenCode.toLowerCase().includes(search.toLowerCase()))
+  const recentTransactions = [...transactions]
+    .sort((a, b) => (b.processedAt ?? '').localeCompare(a.processedAt ?? ''))
+    .slice(0, 3)
+
+  const today = new Date().toDateString()
+  const releasedToday = transactions.filter(t => t.status === 'released' && t.processedAt && new Date(t.processedAt).toDateString() === today)
+  const cashReleasedToday = releasedToday.reduce((a, t) => a + t.amount, 0)
 
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 
-  const tokenColumns: Column<PendingToken>[] = [
-    {
-      key: 'code',
-      label: 'Token ID',
-      width: '32%',
-      render: (t) => (
-        <span className="inline-flex min-w-0 items-center gap-[6px]">
-          <span className="truncate">{t.code}</span>
-          {t.isNew && (
-            <span className="rounded-full bg-[#eefbf4] px-[6px] py-[1px] text-[10px] font-bold text-[#0f9f5d]">NEW</span>
-          )}
-        </span>
-      ),
-    },
-    { key: 'amount', label: 'Amount', width: '20%', render: (t) => `GH₵${t.amount.toLocaleString()}` },
-    { key: 'expiry', label: 'Expiry', width: '22%', render: (t) => t.expiry ? fmtDate(t.expiry) : '—' },
-    { key: 'status', label: 'Status', width: '16%', render: (t) => tokenStatusBadge[t.status] },
+  async function handleReject(session: PaymentSession) {
+    try {
+      await reject(session.id, 'Rejected from Overview')
+      toast.success('Token rejected')
+    } catch {
+      toast.error('Could not reject token')
+    }
+  }
+
+  async function handleValidate(session: PaymentSession) {
+    try {
+      await validate(session.id)
+      toast.success('Token validated — ready for cash release')
+    } catch {
+      toast.error('Could not validate token')
+    }
+  }
+
+  const tokenColumns: Column<PaymentSession>[] = [
+    { key: 'code',        label: 'Token ID',    width: '30%', render: (t) => <span className="truncate">{t.tokenCode}</span> },
+    { key: 'amount',      label: 'Amount',      width: '18%', render: (t) => `GH₵${t.amount.toLocaleString()}` },
+    { key: 'institution', label: 'Institution', width: '24%', render: (t) => t.institutionName },
+    { key: 'status',      label: 'Status',      width: '16%', render: (t) => sessionStatusBadge[t.status] },
   ]
 
   const transactionColumns: Column<BankTransaction>[] = [
     { key: 'tokenCode', label: 'Token Code', width: '26%', primaryKey: true, render: (t) => t.tokenCode },
     { key: 'supplier',  label: 'Supplier',   width: '26%', render: (t) => t.supplierName },
     { key: 'amount',    label: 'Amount',     width: '18%', render: (t) => `GH₵${t.amount.toLocaleString()}` },
-    { key: 'date',      label: 'Date',       width: '16%', render: (t) => fmtDate(t.processedAt) },
+    { key: 'date',      label: 'Date',       width: '16%', render: (t) => t.processedAt ? fmtDate(t.processedAt) : '—' },
     { key: 'status',    label: 'Status',     width: '14%', render: (t) => txStatusBadge[t.status] },
   ]
 
@@ -87,55 +89,21 @@ export default function BankOverview() {
       <div className="px-[36px] pb-[40px]">
         {/* Stat cards */}
         <StatCardGroup>
-          <StatCard
-            label="Pending Tokens"
-            value="4"
-            sub="Awaiting validation"
-            accent="bg-white"
-            badge={
-              <span className="flex items-center gap-[3px] rounded-full bg-[#eefbf4] px-[8px] py-[3px] text-[12px] font-semibold text-[#0f9f5d]">
-                <Icon name="arrow-up-right" size={12} />+25%
-              </span>
-            }
-          />
+          <StatCard label="Pending Tokens" value={pending.length} sub="Awaiting validation" accent="bg-white" />
           <StatCard
             label="Cash Released Today"
-            value="GH₵1.2M"
-            sub="3 transactions"
+            value={`GH₵${cashReleasedToday.toLocaleString()}`}
+            sub={`${releasedToday.length} transaction${releasedToday.length === 1 ? '' : 's'}`}
             accent="bg-gradient-to-br from-white to-green-50/60"
           />
-          <StatCard
-            label="Expiring Soon"
-            value="14"
-            sub="Within 7 days"
-            accent="bg-gradient-to-br from-white to-orange-50/60"
-          />
-          <StatCard
-            label="Rejected Tokens"
-            value="3"
-            sub={<span className="text-[#df6b13] font-medium">This month</span>}
-            accent="bg-gradient-to-br from-white to-red-50/60"
-          />
+          <StatCard label="Validated, Awaiting Release" value={processing.length} sub="Ready for cash release" accent="bg-gradient-to-br from-white to-orange-50/60" />
+          <StatCard label="Rejected Tokens" value={failed.length} sub={<span className="text-[#df6b13] font-medium">All time</span>} accent="bg-gradient-to-br from-white to-red-50/60" />
         </StatCardGroup>
 
         {/* Pending Token Validations */}
         <div className="mt-[36px]">
           <h2 className="mb-[16px] text-[17px] font-bold text-[#111]">Pending Token Validations</h2>
-          <div className="mb-[12px] flex items-center justify-between">
-            <div className="flex items-center gap-[4px] rounded-[10px] border border-[#efefef] bg-white p-[3px]">
-              {(['all', 'released', 'pending', 'rejected'] as TokenFilter[]).map(f => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={clsx(
-                    'rounded-[7px] px-[12px] py-[5px] text-[13px] font-medium capitalize transition-colors',
-                    filter === f ? 'bg-[#f4f4f4] text-[#111] shadow-sm' : 'text-[#888] hover:text-[#555]'
-                  )}
-                >
-                  {f === 'all' ? 'All Tokens' : f === 'released' ? 'Redeemed' : f === 'pending' ? 'Active' : 'Pending'}
-                </button>
-              ))}
-            </div>
+          <div className="mb-[12px] flex items-center justify-end">
             <div className="flex h-[34px] w-[200px] items-center gap-[8px] rounded-[10px] border border-[#ededed] bg-[#fcfcfc] px-[12px]">
               <Icon name="search" size={14} className="shrink-0 text-[#aaa]" />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="min-w-0 flex-1 bg-transparent text-[13px] text-[#555] outline-none placeholder:text-[#aaa]" />
@@ -149,15 +117,15 @@ export default function BankOverview() {
             emptyMessage="No pending tokens found."
             className="mb-[36px]"
             rowActions={(t) => [
-              { label: 'Validate Token', onClick: () => navigate('/bank/validate'), disabled: t.status !== 'pending' },
-              { label: 'Release Cash',   onClick: () => navigate('/bank/cash-release'), disabled: t.status !== 'released' },
-              { label: 'Reject Token',   onClick: () => {}, destructive: true, disabled: t.status !== 'pending' },
+              { label: 'Validate Token', onClick: () => handleValidate(t), disabled: t.status !== 'pending' },
+              { label: 'Release Cash',   onClick: () => navigate('/bank/cash-release'), disabled: t.status !== 'processing' },
+              { label: 'Reject Token',   onClick: () => handleReject(t), destructive: true },
             ]}
           />
 
           {/* Recent Transactions */}
           <h2 className="mb-[16px] text-[17px] font-bold text-[#111]">Recent Transactions</h2>
-          <DataTable columns={transactionColumns} data={recentTransactions} rowKey={(t) => t.id} />
+          <DataTable columns={transactionColumns} data={recentTransactions} rowKey={(t) => t.id} emptyMessage="No transactions yet." />
         </div>
       </div>
     </>

@@ -10,6 +10,10 @@ import java.util.UUID;
 
 public interface SupplyOrderRepository extends JpaRepository<SupplyOrder, UUID> {
 
+    List<SupplyOrder> findBySupplierId(UUID supplierId);
+
+    List<SupplyOrder> findBySchoolId(UUID schoolId);
+
     /**
      * Derived for a Claim's supplyBreakdown. No unit-cost data exists on SupplyOrder yet,
      * so this intentionally returns quantity only — cost is not fabricated.

@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import { Icon } from '../../../components/ui/Icon'
 import { clsx } from 'clsx'
 import { Badge } from '../../../components/ui/Badge'
@@ -7,6 +9,8 @@ import { PageHeader } from '../../../components/layout/PageHeader'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { type DropdownMenuItem } from '../../../components/ui/DropdownMenu'
 import { StatCard, StatCardGroup } from '../../../components/ui/StatCard'
+import { useAuthStore } from '../../../store/authStore'
+import { fetchClaimPreview, createClaim } from '../../../lib/api/claims'
 import {
   MOCK_DAILY_REPORTS,
   REIMBURSEMENT_BREAKDOWN,
@@ -158,10 +162,100 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function MealReports() {
+  const schoolId = useAuthStore(s => s.user?.schoolId)
+  const queryClient = useQueryClient()
   const [pageTab, setPageTab]         = useState<PageTab>('overview')
   const [selectedReport, setSelectedReport] = useState<MockDailyReport | null>(null)
   const [modalTab, setModalTab]       = useState<ModalTab>('overview')
   const [selectedBatch, setSelectedBatch]   = useState<BatchKind | null>(null)
+
+  // ── Submit Semester Report → real Claim, forwarded to the Ministry's Regional seat ──
+  const [submitOpen, setSubmitOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitForm, setSubmitForm] = useState({
+    semesterLabel: '',
+    semesterStart: '',
+    semesterEnd: '',
+    claimValue: '',
+  })
+  const [autoSubmitting, setAutoSubmitting] = useState(false)
+  const [autoSubmitted, setAutoSubmitted] = useState(false)
+
+  // ── One-click submit straight from the Settlement Pool card — semesters are
+  // submitted in bulk at term end, so there's no per-semester form to fill in demo ──
+  async function submitSemesterOneAutomatically() {
+    if (!schoolId) {
+      toast.error('No school linked to this account')
+      return
+    }
+    setAutoSubmitting(true)
+    try {
+      const semesterStart = '2026-01-01'
+      const semesterEnd = new Date().toISOString().slice(0, 10)
+      const preview = await fetchClaimPreview(schoolId, semesterStart, semesterEnd)
+      const claim = await createClaim({
+        claimCode: `CLM-SAC-${Date.now().toString().slice(-6)}`,
+        schoolId,
+        schoolName: 'St. Augustine SHS',
+        semesterLabel: SEMESTER_POOL.semesterLabel,
+        semesterStart,
+        semesterEnd,
+        verifiedStudents: preview.verifiedStudents,
+        claimValue: SEMESTER_POOL.currentEligibleNum,
+        riskScore: preview.fraudFlags > 5 ? 60 : preview.fraudFlags > 0 ? 25 : 0,
+        fraudFlags: preview.fraudFlags,
+      })
+      toast.success('Semester One report has been submitted successfully')
+      queryClient.invalidateQueries({ queryKey: ['claims'] })
+      setAutoSubmitted(true)
+      void claim
+    } catch {
+      toast.error('Could not submit the report — try again')
+    } finally {
+      setAutoSubmitting(false)
+    }
+  }
+
+  const previewReady = !!schoolId && !!submitForm.semesterStart && !!submitForm.semesterEnd
+  const { data: preview, isFetching: previewLoading } = useQuery({
+    queryKey: ['claim-preview', schoolId, submitForm.semesterStart, submitForm.semesterEnd],
+    queryFn: () => fetchClaimPreview(schoolId!, submitForm.semesterStart, submitForm.semesterEnd),
+    enabled: previewReady,
+  })
+
+  function closeSubmit() {
+    setSubmitOpen(false)
+    setSubmitForm({ semesterLabel: '', semesterStart: '', semesterEnd: '', claimValue: '' })
+  }
+
+  async function submitSemesterReport() {
+    if (!schoolId || !preview || !submitForm.semesterLabel || !submitForm.claimValue) {
+      toast.error('Fill in the semester label, date range, and claimed amount')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const claim = await createClaim({
+        claimCode: `CLM-SAC-${Date.now().toString().slice(-6)}`,
+        schoolId,
+        schoolName: 'St. Augustine SHS',
+        semesterLabel: submitForm.semesterLabel,
+        semesterStart: submitForm.semesterStart,
+        semesterEnd: submitForm.semesterEnd,
+        verifiedStudents: preview.verifiedStudents,
+        claimValue: Number(submitForm.claimValue),
+        riskScore: preview.fraudFlags > 5 ? 60 : preview.fraudFlags > 0 ? 25 : 0,
+        fraudFlags: preview.fraudFlags,
+      })
+      toast.success(`${claim.claimCode} sent to the Regional Officer for review`)
+      queryClient.invalidateQueries({ queryKey: ['claims'] })
+      closeSubmit()
+    } catch {
+      toast.error('Could not submit the report — check the claim code isn\'t already in use')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   function openReport(r: MockDailyReport) {
     setSelectedBatch(null)
@@ -181,8 +275,6 @@ export default function MealReports() {
       { label: 'View Details',   onClick: () => openReport(report) },
       { label: 'Export PDF',     onClick: () => {} },
       { label: 'Export Excel',   onClick: () => {} },
-      { label: 'Approve Report', onClick: () => {}, disabled: report.workflowStage === 'claim_eligible' },
-      { label: 'Lock Report',    onClick: () => {}, disabled: report.workflowStage !== 'claim_eligible' },
     ]
   }
 
@@ -209,7 +301,6 @@ export default function MealReports() {
 
   const cta: Partial<Record<PageTab, React.ReactNode>> = {
     overview:  <Button onClick={() => MOCK_DAILY_REPORTS[0] && openReport(MOCK_DAILY_REPORTS[0])}>Generate Report</Button>,
-    workflow:  <Button>Approve &amp; Lock Report</Button>,
   }
 
   // ── Batch claim count for claim_eligible column ──
@@ -217,7 +308,18 @@ export default function MealReports() {
 
   return (
     <div>
-      <PageHeader title="Daily Reports" actions={cta[pageTab]} />
+      <PageHeader
+        title="Daily Reports"
+        actions={
+          <div className="flex items-center gap-[8px]">
+            {cta[pageTab]}
+            <Button variant="secondary" onClick={() => setSubmitOpen(true)}>
+              <Icon name="send" size={14} />
+              Submit Semester Report
+            </Button>
+          </div>
+        }
+      />
 
       {/* Page-level tab nav */}
       <div className="flex border-b border-[#f0f0f0] pl-[36px]">
@@ -894,6 +996,24 @@ export default function MealReports() {
                 const sp = selectedBatch.data
                 return (
                   <>
+                    {/* Submit action — semesters are submitted in bulk at term end */}
+                    <div className="mb-[18px] flex items-center justify-between gap-[12px] rounded-[13px] border border-[#d1fae5] bg-[#f0faf5] px-[16px] py-[13px]">
+                      {autoSubmitted ? (
+                        <div className="flex items-center gap-[8px]">
+                          <Icon name="circle-check" size={16} className="shrink-0 text-[#0f9f5d]" />
+                          <span className="text-[13px] font-medium text-[#0f9f5d]">Submitted to the Ministry for review</span>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="text-[13px] text-[#3f3f3f]">Term has ended — ready to submit for review.</span>
+                          <Button onClick={submitSemesterOneAutomatically} disabled={autoSubmitting} className="shrink-0">
+                            <Icon name="send" size={14} />
+                            {autoSubmitting ? 'Submitting…' : 'Submit Semester Report'}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+
                     {/* Months included */}
                     <SectionLabel>Months Included</SectionLabel>
                     <div className="rounded-[13px] border border-[#f5f5f5] bg-white px-[17px] shadow-[0_1px_7px_rgba(0,0,0,0.05)]">
@@ -943,6 +1063,108 @@ export default function MealReports() {
                   </>
                 )
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Submit Semester Report → Claim ───────────────────────────────── */}
+      {submitOpen && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" onClick={closeSubmit} />
+          <div className="absolute right-[12px] top-[12px] flex h-[calc(100vh-24px)] w-[440px] flex-col overflow-y-auto rounded-[22px] bg-white shadow-[0_20px_70px_rgba(0,0,0,0.2)]">
+            <div className="px-[20px] pb-[10px] pt-[22px]">
+              <h2 className="pr-12 text-[17px] font-bold leading-none text-black">Submit Semester Report</h2>
+              <p className="mt-[6px] text-[13px] leading-[18px] text-[#888]">
+                Sent straight to the Ministry's Regional Officer for review — no separate copy, this becomes a real claim they see immediately.
+              </p>
+              <button onClick={closeSubmit} className="absolute right-[12px] top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#202020] shadow-[0_2px_7px_rgba(0,0,0,0.22)] hover:bg-[#f8f8f8]">
+                <Icon name="x" size={18} />
+              </button>
+            </div>
+            <div className="flex flex-1 flex-col px-[20px] pb-[24px]">
+              <div className="space-y-[14px]">
+                <div>
+                  <label className="text-[13px] font-medium text-[#555]">Semester Label</label>
+                  <input
+                    value={submitForm.semesterLabel}
+                    onChange={e => setSubmitForm(f => ({ ...f, semesterLabel: e.target.value }))}
+                    placeholder="e.g. Semester 1, 2026"
+                    className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]"
+                  />
+                </div>
+                <div className="flex gap-[10px]">
+                  <div className="flex-1">
+                    <label className="text-[13px] font-medium text-[#555]">Start</label>
+                    <input
+                      type="date"
+                      value={submitForm.semesterStart}
+                      onChange={e => setSubmitForm(f => ({ ...f, semesterStart: e.target.value }))}
+                      className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[13px] font-medium text-[#555]">End</label>
+                    <input
+                      type="date"
+                      value={submitForm.semesterEnd}
+                      onChange={e => setSubmitForm(f => ({ ...f, semesterEnd: e.target.value }))}
+                      className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]"
+                    />
+                  </div>
+                </div>
+
+                {previewReady && (
+                  <div className="rounded-[10px] border border-[#f0f0f0] bg-[#fafafa] px-[16px] py-[14px]">
+                    <p className="mb-[10px] text-[11px] font-semibold uppercase tracking-wider text-[#888]">
+                      Live, from real scan data
+                    </p>
+                    {previewLoading ? (
+                      <p className="text-[13px] text-[#aaa]">Computing…</p>
+                    ) : preview ? (
+                      <div className="grid grid-cols-3 gap-[10px]">
+                        <div>
+                          <p className="text-[18px] font-bold text-[#111]">{preview.verifiedStudents}</p>
+                          <p className="text-[11px] text-[#888]">Verified meals</p>
+                        </div>
+                        <div>
+                          <p className={clsx('text-[18px] font-bold', preview.fraudFlags > 0 ? 'text-[#de3d36]' : 'text-[#111]')}>{preview.fraudFlags}</p>
+                          <p className="text-[11px] text-[#888]">Fraud flags</p>
+                        </div>
+                        <div>
+                          <p className="text-[18px] font-bold text-[#111]">{preview.attendancePct.toFixed(1)}%</p>
+                          <p className="text-[11px] text-[#888]">Attendance</p>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-[13px] font-medium text-[#555]">Claimed Amount (GHS)</label>
+                  <input
+                    type="number"
+                    value={submitForm.claimValue}
+                    onChange={e => setSubmitForm(f => ({ ...f, claimValue: e.target.value }))}
+                    placeholder="e.g. 50000"
+                    className="mt-[4px] h-[36px] w-full rounded-[8px] border border-[#e5e5e5] px-[12px] text-[14px] outline-none focus:border-[#4ea4ff]"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-[16px] rounded-[10px] border border-[#dbeafe] bg-[#eff6ff] p-[12px]">
+                <p className="text-[11px] font-medium text-[#1e40af] mb-[4px]">What happens next</p>
+                <p className="text-[11px] text-[#3b82f6] leading-[16px]">
+                  Regional Officer reviews first, then Financial, then Audit &amp; Risk — each stage notifies the next office the moment it's approved. You'll be notified back once it clears all three.
+                </p>
+              </div>
+
+              <div className="mt-auto flex gap-[8px] pt-[20px]">
+                <Button variant="secondary" className="flex-1" onClick={closeSubmit}>Cancel</Button>
+                <Button className="flex-1" onClick={submitSemesterReport} disabled={submitting}>
+                  {submitting ? 'Submitting…' : 'Submit to Ministry'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

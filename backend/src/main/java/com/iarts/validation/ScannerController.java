@@ -33,16 +33,16 @@ public class ScannerController {
     public ApiResponse<ScanResultResponse> scan(@Valid @RequestBody ScanRequest req) {
         Optional<Card> cardOpt = cardRepository.findByQrCode(req.qrCode());
         if (cardOpt.isEmpty() || !cardOpt.get().isActive()) {
-            return ApiResponse.of(ScanResultResponse.of("unknown_card"));
+            return rejectAndLog(req, req.qrCode(), "Unknown Card", "unknown_card");
         }
         Card card = cardOpt.get();
 
         Student student = studentRepository.findById(card.getStudentId()).orElse(null);
         if (student == null) {
-            return ApiResponse.of(ScanResultResponse.of("unknown_card"));
+            return rejectAndLog(req, req.qrCode(), "Unknown Card", "unknown_card");
         }
         if (student.getEnrollmentStatus() == EnrollmentStatus.INACTIVE) {
-            return ApiResponse.of(ScanResultResponse.of("inactive_student"));
+            return rejectAndLog(req, card.getCardNumber(), student.getFullName(), "inactive_student");
         }
 
         Instant startOfDay = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant();
@@ -68,6 +68,20 @@ public class ScannerController {
         validation.setFlagged(false);
         mealValidationRepository.save(validation);
         return ApiResponse.of(ScanResultResponse.served(student.getFullName()));
+    }
+
+    /** Rejected scans are logged too — fraud/error visibility on the feed is the point of this system. */
+    private ApiResponse<ScanResultResponse> rejectAndLog(ScanRequest req, String cardNumber, String studentName, String reason) {
+        MealValidation validation = new MealValidation();
+        validation.setCardNumber(cardNumber);
+        validation.setStudentName(studentName);
+        validation.setDiningHallId(req.diningHallId());
+        validation.setServed(false);
+        validation.setDuplicate(false);
+        validation.setFlagged(true);
+        validation.setRejectionReason(reason);
+        mealValidationRepository.save(validation);
+        return ApiResponse.of(ScanResultResponse.of(reason));
     }
 
     @GetMapping("/feed")

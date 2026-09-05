@@ -39,4 +39,8 @@ public class User {
 
     @Column(name = "supplier_id")
     private UUID supplierId;
+
+    /** BCrypt hash. Null for users only ever created via the Aza QR-login path (no local password). */
+    @Column(name = "password_hash")
+    private String passwordHash;
 }
