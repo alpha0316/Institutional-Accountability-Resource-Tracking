@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
+import { mockAdapter } from './mockApi'
 
 /** Every Spring Boot endpoint wraps its payload this way — see ApiResponse.java. */
 export interface ApiResponse<T> {
@@ -8,9 +9,12 @@ export interface ApiResponse<T> {
   status: number
 }
 
+const useMock = import.meta.env.VITE_MOCK_API === 'true'
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
   headers: { 'Content-Type': 'application/json' },
+  ...(useMock ? { adapter: mockAdapter } : {}),
 })
 
 // Attach JWT on every request

@@ -217,7 +217,7 @@ export default function SupplyLogger() {
   const deliveredOrders = useMemo(() => supplyOrders.filter(o => o.status === 'delivered'), [supplyOrders])
   const pendingOrders = useMemo(() => supplyOrders.filter(o => o.status !== 'delivered'), [supplyOrders])
 
-  const STATS = [
+  const STATS: Array<{ label: string; value: string | number; description: string; tone: string; trend?: string; alert?: boolean }> = [
     MOCK_STATS[0],
     MOCK_STATS[1],
     { label: 'Deliveries Logged', value: deliveredOrders.length, description: 'Confirmed deliveries, live', tone: 'bg-[#f7fdf9]' },
